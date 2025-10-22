@@ -26,6 +26,19 @@ interface AssessmentData {
   subjective_score: number;
 }
 
+interface AssessmentHistory {
+  id: string;
+  technician_id: string;
+  timestamp: string;
+  previous_level: number;
+  new_level: number;
+  previous_points: number;
+  new_points: number;
+  previous_vestas_level: VestasLevel;
+  new_vestas_level: VestasLevel;
+  changes: string[];
+}
+
 // Vestas Level Colors
 const getVestasLevelColor = (level: VestasLevel): { bg: string; text: string; border: string } => {
   switch (level) {
@@ -118,6 +131,9 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [initialData, setInitialData] = useState<AssessmentData | null>(null);
+  const [initialPoints, setInitialPoints] = useState<number>(0);
+  const [initialLevel, setInitialLevel] = useState<number>(1);
 
   // Calculate points
   const internalExpPoints = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === data.internal_experience)?.points || 0;
@@ -154,12 +170,145 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   const finalLevel = getFinalLevel(totalPoints);
 
-  // Auto-save with debounce
+  // Load existing assessment on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(`assessment_${technicianId}`);
+    if (saved) {
+      const savedData = JSON.parse(saved);
+      setData(savedData);
+      setInitialData(savedData);
+
+      // Calculate initial points and level
+      const internalExp = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.internal_experience)?.points || 0;
+      const externalExp = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.external_experience)?.points || 0;
+      const education = savedData.education.reduce((sum: number, edu: string) => {
+        const points = EDUCATION_OPTIONS.find(e => e.value === edu)?.points || 0;
+        return sum + points;
+      }, 0);
+      const extraCourses = savedData.extra_courses.reduce((sum: number, course: string) => {
+        const points = EXTRA_COURSES.find(c => c.value === course)?.points || 0;
+        return sum + points;
+      }, 0);
+      const multiplier = getMultiplier(savedData.vestas_level);
+      const multipliedExp = Math.round((internalExp + externalExp) * multiplier);
+      const total = education + extraCourses + multipliedExp + savedData.subjective_score;
+
+      setInitialPoints(total);
+      setInitialLevel(getFinalLevel(total));
+    }
+  }, [technicianId]);
+
+  // Helper function to detect changes
+  const detectChanges = (oldData: AssessmentData, newData: AssessmentData, oldPoints: number, newPoints: number): string[] => {
+    const changes: string[] = [];
+
+    if (oldData.vestas_level !== newData.vestas_level) {
+      changes.push(`Vestas Level: ${oldData.vestas_level} → ${newData.vestas_level}`);
+    }
+
+    if (oldData.internal_experience !== newData.internal_experience) {
+      const oldLabel = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === oldData.internal_experience)?.label || 'None';
+      const newLabel = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === newData.internal_experience)?.label || 'None';
+      changes.push(`Internal Experience: ${oldLabel} → ${newLabel}`);
+    }
+
+    if (oldData.external_experience !== newData.external_experience) {
+      const oldLabel = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === oldData.external_experience)?.label || 'None';
+      const newLabel = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === newData.external_experience)?.label || 'None';
+      changes.push(`External Experience: ${oldLabel} → ${newLabel}`);
+    }
+
+    // Check education changes
+    const addedEducation = newData.education.filter(e => !oldData.education.includes(e));
+    const removedEducation = oldData.education.filter(e => !newData.education.includes(e));
+
+    addedEducation.forEach(edu => {
+      const label = EDUCATION_OPTIONS.find(e => e.value === edu)?.label;
+      if (label) changes.push(`Added Education: ${label}`);
+    });
+
+    removedEducation.forEach(edu => {
+      const label = EDUCATION_OPTIONS.find(e => e.value === edu)?.label;
+      if (label) changes.push(`Removed Education: ${label}`);
+    });
+
+    // Check extra courses changes
+    const addedCourses = newData.extra_courses.filter(c => !oldData.extra_courses.includes(c));
+    const removedCourses = oldData.extra_courses.filter(c => !newData.extra_courses.includes(c));
+
+    addedCourses.forEach(course => {
+      const label = EXTRA_COURSES.find(c => c.value === course)?.label;
+      if (label) changes.push(`Added Course: ${label}`);
+    });
+
+    removedCourses.forEach(course => {
+      const label = EXTRA_COURSES.find(c => c.value === course)?.label;
+      if (label) changes.push(`Removed Course: ${label}`);
+    });
+
+    if (oldData.subjective_score !== newData.subjective_score) {
+      changes.push(`Subjective Score: ${oldData.subjective_score} → ${newData.subjective_score}`);
+    }
+
+    if (oldPoints !== newPoints) {
+      changes.push(`Total Points: ${oldPoints} → ${newPoints}`);
+    }
+
+    return changes;
+  };
+
+  // Auto-save with debounce and history tracking
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Save to localStorage (in real app, save to Supabase)
       setIsSaving(true);
+
+      // Check if there are changes
+      if (initialData) {
+        const changes = detectChanges(initialData, data, initialPoints, totalPoints);
+
+        // If there are changes, create a history entry
+        if (changes.length > 0) {
+          const historyEntry: AssessmentHistory = {
+            id: Date.now().toString(),
+            technician_id: technicianId,
+            timestamp: new Date().toISOString(),
+            previous_level: initialLevel,
+            new_level: finalLevel,
+            previous_points: initialPoints,
+            new_points: totalPoints,
+            previous_vestas_level: initialData.vestas_level,
+            new_vestas_level: data.vestas_level,
+            changes: changes
+          };
+
+          // Get existing history
+          const existingHistory = localStorage.getItem(`assessment_history_${technicianId}`);
+          const history: AssessmentHistory[] = existingHistory ? JSON.parse(existingHistory) : [];
+
+          // Add new entry (keep last 50 entries)
+          history.unshift(historyEntry);
+          if (history.length > 50) {
+            history.pop();
+          }
+
+          // Save history
+          localStorage.setItem(`assessment_history_${technicianId}`, JSON.stringify(history));
+
+          // Update initial data to current data
+          setInitialData(data);
+          setInitialPoints(totalPoints);
+          setInitialLevel(finalLevel);
+        }
+      } else {
+        // First save - set initial data
+        setInitialData(data);
+        setInitialPoints(totalPoints);
+        setInitialLevel(finalLevel);
+      }
+
+      // Save current assessment
       localStorage.setItem(`assessment_${technicianId}`, JSON.stringify(data));
+
       setTimeout(() => {
         setIsSaving(false);
         setLastSaved(new Date());
@@ -167,7 +316,7 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [data, technicianId]);
+  }, [data, technicianId, initialData, initialPoints, totalPoints, initialLevel, finalLevel]);
 
   const toggleExtraCourse = (courseValue: string) => {
     setData(prev => ({

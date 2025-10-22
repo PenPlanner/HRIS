@@ -11,6 +11,7 @@ import Link from "next/link";
 import { use } from "react";
 import { KompetensmatrisForm } from "@/components/technician/kompetensmatris-form";
 import { TrainingNeedsManager } from "@/components/technician/training-needs-manager";
+import { AssessmentHistory } from "@/components/technician/assessment-history";
 
 type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
 
@@ -289,6 +290,9 @@ export default function TechnicianProfilePage({
                 </CardContent>
               </Card>
             </div>
+
+            {/* Assessment History */}
+            <AssessmentHistory technicianId={id} limit={5} />
           </TabsContent>
 
           <TabsContent value="kompetensmatris">

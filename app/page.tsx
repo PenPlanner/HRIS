@@ -18,6 +18,9 @@ import {
   UserCheck,
   CalendarDays,
   AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
@@ -454,26 +457,49 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentAssessments.map((assessment) => (
-                  <Link key={assessment.id} href={`/technicians/${assessment.id}`}>
-                    <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: assessment.teamColor }}
-                        />
-                        <div>
-                          <p className="font-medium">{assessment.name}</p>
-                          <p className="text-sm text-muted-foreground">{assessment.team}</p>
+                {recentAssessments.map((assessment, index) => {
+                  // Simulate some assessments having progression (in real app, this comes from history)
+                  const hasPrevious = index === 0 || index === 2; // Simulate first and third having history
+                  const previousLevel = hasPrevious ? (index === 0 ? assessment.level - 1 : assessment.level) : null;
+                  const isIncrease = hasPrevious && previousLevel !== null && assessment.level > previousLevel;
+                  const isDecrease = hasPrevious && previousLevel !== null && assessment.level < previousLevel;
+                  const noChange = hasPrevious && previousLevel !== null && assessment.level === previousLevel;
+
+                  return (
+                    <Link key={assessment.id} href={`/technicians/${assessment.id}`}>
+                      <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: assessment.teamColor }}
+                          />
+                          <div>
+                            <p className="font-medium">{assessment.name}</p>
+                            <p className="text-sm text-muted-foreground">{assessment.team}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {hasPrevious && previousLevel !== null && (
+                            <>
+                              {isIncrease && <ArrowUpRight className="h-4 w-4 text-green-500" />}
+                              {isDecrease && <ArrowDownRight className="h-4 w-4 text-red-500" />}
+                              {noChange && <Minus className="h-4 w-4 text-gray-400" />}
+                              {(isIncrease || isDecrease) && (
+                                <span className="text-xs text-muted-foreground">
+                                  L{previousLevel} → L{assessment.level}
+                                </span>
+                              )}
+                            </>
+                          )}
+                          <Badge className={isIncrease ? "bg-green-500" : isDecrease ? "bg-red-500" : "bg-blue-500"}>
+                            Level {assessment.level}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{assessment.date}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-blue-500">Level {assessment.level}</Badge>
-                        <span className="text-xs text-muted-foreground">{assessment.date}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
