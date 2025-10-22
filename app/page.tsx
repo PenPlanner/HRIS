@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,6 @@ import {
   Car,
   GraduationCap,
   TrendingUp,
-  TrendingDown,
   AlertCircle,
   CheckCircle,
   Clock,
@@ -17,12 +17,21 @@ import {
   Award,
   UserCheck,
   CalendarDays,
-  BarChart3
+  AlertTriangle,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, RadialBarChart, RadialBar } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
-
-type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
+import {
+  TEAMS,
+  getTechniciansByTeam,
+  getVehiclesByTeam,
+  calculateVehicleBalance,
+  getVestasLevelDistribution,
+  getCompetencyLevelDistribution,
+  getAverageCompetencyLevel,
+  getRecentAssessments,
+  VestasLevel,
+} from "@/lib/mock-data";
 
 // Vestas Level Colors
 const getVestasLevelColor = (level: VestasLevel): string => {
@@ -37,51 +46,46 @@ const getVestasLevelColor = (level: VestasLevel): string => {
 };
 
 export default function Home() {
-  // Mock data - in real app, fetch from Supabase
+  // Default to Travel S (user's team)
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("1");
+
+  const selectedTeam = TEAMS.find(t => t.id === selectedTeamId);
+  const technicians = getTechniciansByTeam(selectedTeamId);
+  const vehicles = getVehiclesByTeam(selectedTeamId);
+  const vehicleBalance = calculateVehicleBalance(selectedTeamId);
+  const vestasDistribution = getVestasLevelDistribution(selectedTeamId);
+  const competencyDistribution = getCompetencyLevelDistribution(selectedTeamId);
+  const avgCompetencyLevel = getAverageCompetencyLevel(selectedTeamId);
+  const recentAssessments = getRecentAssessments(selectedTeamId, 3);
+
+  // Statistics
   const stats = {
-    totalTechnicians: 117,
+    totalTechnicians: technicians.length,
     technicianChange: 2,
     technicianChangePercent: 1.7,
-    serviceVehicles: 45,
-    unassignedVehicles: 3,
-    trainingNeeds: 23,
-    highPriorityTraining: 8,
-    avgCompetencyLevel: 3.4,
+    serviceVehicles: vehicles.length,
+    unassignedVehicles: vehicles.filter(v => v.assigned_technicians.length === 0).length,
+    trainingNeeds: 8, // Mock
+    highPriorityTraining: 3, // Mock
+    avgCompetencyLevel,
     levelImprovement: 0.2,
-    totalTeams: 20,
   };
 
-  const teamDistribution = [
-    { name: "Travel S", value: 15, color: "#06b6d4" },
-    { name: "Travel U", value: 12, color: "#0ea5e9" },
-    { name: "South 1", value: 20, color: "#ef4444" },
-    { name: "South 2", value: 18, color: "#f97316" },
-    { name: "North 1", value: 22, color: "#a855f7" },
-    { name: "Other", value: 30, color: "#64748b" },
-  ];
+  // Vestas level distribution for display
+  const vestasLevelData = Object.entries(vestasDistribution).map(([level, count]) => ({
+    level: level as VestasLevel,
+    count,
+    color: getVestasLevelColor(level as VestasLevel)
+  }));
 
-  const competencyLevels = [
-    { level: "Level 1", count: 8, fill: "#ef4444" },
-    { level: "Level 2", count: 15, fill: "#f97316" },
-    { level: "Level 3", count: 35, fill: "#eab308" },
-    { level: "Level 4", count: 42, fill: "#3b82f6" },
-    { level: "Level 5", count: 17, fill: "#10b981" },
-  ];
+  // Team distribution (mock - could be calculated from all teams)
+  const teamDistribution = TEAMS.map(team => ({
+    name: team.name,
+    value: getTechniciansByTeam(team.id).length,
+    color: team.color,
+  }));
 
-  const vestasLevelDistribution = [
-    { level: "D", count: 25, color: getVestasLevelColor('D') },
-    { level: "C", count: 38, color: getVestasLevelColor('C') },
-    { level: "B", count: 32, color: getVestasLevelColor('B') },
-    { level: "A", count: 18, color: getVestasLevelColor('A') },
-    { level: "Field Trainer", count: 4, color: getVestasLevelColor('Field Trainer') },
-  ];
-
-  const recentAssessments = [
-    { id: 1, name: "Carl Emil Gryme", team: "Travel S", level: 4, date: "2025-10-20", teamColor: "#06b6d4" },
-    { id: 2, name: "Markus Anderson", team: "Travel S", level: 5, date: "2025-10-19", teamColor: "#06b6d4" },
-    { id: 3, name: "Andreas Larsson", team: "Travel U", level: 4, date: "2025-10-18", teamColor: "#0ea5e9" },
-  ];
-
+  // Upcoming training (mock)
   const upcomingTraining = [
     { course: "HV Electrical Course", technicians: 5, priority: "High", date: "Q1 2026" },
     { course: "EN50110 Training", technicians: 3, priority: "Medium", date: "Q1 2026" },
@@ -89,39 +93,130 @@ export default function Home() {
     { course: "Electrical Safety", technicians: 4, priority: "High", date: "Q1 2026" },
   ];
 
-  const alerts = [
+  // Generate alerts based on vehicle balance
+  const alerts = [];
+
+  // Vehicle balance alert
+  if (vehicleBalance.status === 'critical') {
+    if (vehicleBalance.balance < 0) {
+      alerts.push({
+        type: "warning" as const,
+        title: `Critical: ${Math.abs(vehicleBalance.balance)} vans below optimal`,
+        description: `${vehicleBalance.technicianCount} technicians with only ${vehicleBalance.vehicleCount} vans (need ${vehicleBalance.idealVehicleCount})`,
+        action: "Review Vehicles",
+        link: "/vehicles"
+      });
+    } else {
+      alerts.push({
+        type: "info" as const,
+        title: `${vehicleBalance.balance} excess vehicles`,
+        description: `${vehicleBalance.vehicleCount} vans for ${vehicleBalance.technicianCount} technicians (optimal: ${vehicleBalance.idealVehicleCount})`,
+        action: "Review Allocation",
+        link: "/vehicles"
+      });
+    }
+  } else if (vehicleBalance.status === 'warning') {
+    if (vehicleBalance.balance < 0) {
+      alerts.push({
+        type: "warning" as const,
+        title: `${Math.abs(vehicleBalance.balance)} vans below optimal`,
+        description: `Consider adding vehicles or sharing with other teams`,
+        action: "View Vehicles",
+        link: "/vehicles"
+      });
+    }
+  }
+
+  // Other standard alerts
+  alerts.push(
     {
-      type: "warning",
-      title: "5 competency matrices need updating",
+      type: "warning" as const,
+      title: "3 competency matrices need updating",
       description: "Assessments older than 12 months",
       action: "Review Assessments",
       link: "/technicians"
     },
     {
-      type: "info",
-      title: "3 vehicles without assigned technicians",
-      description: "Check vehicle assignments",
-      action: "Assign Technicians",
-      link: "/vehicles"
-    },
-    {
-      type: "success",
-      title: "8 technicians completed training this month",
+      type: "success" as const,
+      title: "6 technicians completed training this month",
       description: "Update their competency levels",
       action: "View Details",
       link: "/training"
-    },
-  ];
+    }
+  );
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
-            Real-time overview of your workforce and operations
-          </p>
+        {/* Header with Team Selector */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Dashboard</h1>
+            <p className="mt-2 text-muted-foreground">
+              {selectedTeam?.name} - Real-time overview
+            </p>
+          </div>
+
+          {/* Team Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Select Team:</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {TEAMS.map((team) => (
+                <Button
+                  key={team.id}
+                  variant={selectedTeamId === team.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedTeamId(team.id)}
+                  style={
+                    selectedTeamId === team.id
+                      ? { backgroundColor: team.color, borderColor: team.color }
+                      : {}
+                  }
+                >
+                  {team.name}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* Vehicle Balance Alert (if critical) */}
+        {vehicleBalance.status === 'critical' && (
+          <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                    Vehicle Allocation Warning
+                  </h3>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
+                    {vehicleBalance.balance < 0 ? (
+                      <>
+                        Team has <strong>{vehicleBalance.technicianCount} technicians</strong> but only{" "}
+                        <strong>{vehicleBalance.vehicleCount} vehicles</strong>.{" "}
+                        Optimal ratio is 2 technicians per van ({vehicleBalance.idealVehicleCount} vans needed).{" "}
+                        <strong>{Math.abs(vehicleBalance.balance)} vehicles short</strong> - team may need to borrow vehicles for operations.
+                      </>
+                    ) : (
+                      <>
+                        Team has <strong>{vehicleBalance.vehicleCount} vehicles</strong> for{" "}
+                        <strong>{vehicleBalance.technicianCount} technicians</strong>.{" "}
+                        Optimal is {vehicleBalance.idealVehicleCount} vehicles.{" "}
+                        <strong>{vehicleBalance.balance} excess vehicles</strong>.
+                      </>
+                    )}
+                  </p>
+                </div>
+                <Link href="/vehicles">
+                  <Button variant="outline" size="sm">
+                    Review Vehicles
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Stats - Clickable */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -129,22 +224,23 @@ export default function Home() {
             <Card className="hover:bg-accent transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Total Technicians
+                  Team Technicians
                 </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalTechnicians}</div>
-                <div className="flex items-center gap-1 text-xs text-green-600">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>+{stats.technicianChange} ({stats.technicianChangePercent}%) from last month</span>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span>Active in {selectedTeam?.name}</span>
                 </div>
               </CardContent>
             </Card>
           </Link>
 
           <Link href="/vehicles">
-            <Card className="hover:bg-accent transition-colors cursor-pointer">
+            <Card className={`hover:bg-accent transition-colors cursor-pointer ${
+              vehicleBalance.status === 'critical' ? 'border-yellow-500' : ''
+            }`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Service Vehicles
@@ -153,12 +249,22 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.serviceVehicles}</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span>Across {stats.totalTeams} teams</span>
-                  {stats.unassignedVehicles > 0 && (
-                    <Badge variant="destructive" className="ml-2 text-xs">
-                      {stats.unassignedVehicles} unassigned
-                    </Badge>
+                <div className="flex items-center gap-1 text-xs">
+                  {vehicleBalance.status === 'perfect' && (
+                    <span className="text-green-600">Perfect ratio (2:1)</span>
+                  )}
+                  {vehicleBalance.status === 'good' && (
+                    <span className="text-green-600">Good ratio</span>
+                  )}
+                  {vehicleBalance.status === 'warning' && (
+                    <span className="text-yellow-600">
+                      {vehicleBalance.balance < 0 ? `${Math.abs(vehicleBalance.balance)} below optimal` : 'Slight surplus'}
+                    </span>
+                  )}
+                  {vehicleBalance.status === 'critical' && (
+                    <span className="text-red-600">
+                      {vehicleBalance.balance < 0 ? `${Math.abs(vehicleBalance.balance)} vans short!` : `${vehicleBalance.balance} excess`}
+                    </span>
                   )}
                 </div>
               </CardContent>
@@ -205,11 +311,11 @@ export default function Home() {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Vestas Level Distribution</CardTitle>
-              <CardDescription>Technicians by Vestas certification level</CardDescription>
+              <CardDescription>Technicians by Vestas certification level in {selectedTeam?.name}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {vestasLevelDistribution.map((item) => (
+                {vestasLevelData.map((item) => (
                   <div key={item.level} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
@@ -229,7 +335,7 @@ export default function Home() {
                       <div
                         className="h-full transition-all"
                         style={{
-                          width: `${(item.count / stats.totalTechnicians) * 100}%`,
+                          width: `${stats.totalTechnicians > 0 ? (item.count / stats.totalTechnicians) * 100 : 0}%`,
                           backgroundColor: item.color
                         }}
                       />
@@ -284,8 +390,8 @@ export default function Home() {
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Team Distribution</CardTitle>
-              <CardDescription>Technicians per team</CardDescription>
+              <CardTitle>All Teams Distribution</CardTitle>
+              <CardDescription>Technicians across all teams in Sweden</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -313,16 +419,16 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle>Competency Level Distribution</CardTitle>
-              <CardDescription>Technicians by competency level (1-5)</CardDescription>
+              <CardDescription>{selectedTeam?.name} - Levels 1-5</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={competencyLevels}>
+                <BarChart data={competencyDistribution}>
                   <XAxis dataKey="level" />
                   <YAxis />
                   <Tooltip />
                   <Bar dataKey="count" name="Technicians" radius={[8, 8, 0, 0]}>
-                    {competencyLevels.map((entry, index) => (
+                    {competencyDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Bar>
@@ -338,7 +444,7 @@ export default function Home() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Recent Assessments</CardTitle>
-                <CardDescription>Latest competency matrix updates</CardDescription>
+                <CardDescription>Latest competency matrix updates in {selectedTeam?.name}</CardDescription>
               </div>
               <Link href="/technicians">
                 <Button variant="ghost" size="sm">
@@ -411,7 +517,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle>Alerts & Notifications</CardTitle>
-            <CardDescription>Important updates and actions required</CardDescription>
+            <CardDescription>Important updates and actions required for {selectedTeam?.name}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3">
