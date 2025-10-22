@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  X,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
@@ -49,14 +50,26 @@ const getVestasLevelColor = (level: VestasLevel): string => {
 };
 
 export default function Home() {
-  // Default to Travel S (user's team)
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("1");
+  // Default to "all" to show all teams
+  const [selectedTeamId, setSelectedTeamId] = useState<string>("all");
   const [mounted, setMounted] = useState(false);
 
   // Only render after mounting on client to avoid hydration errors with random data
   useEffect(() => {
     setMounted(true);
+    // Load selected team from localStorage (dashboard-specific)
+    const savedTeamId = localStorage.getItem("dashboard_selectedTeamId");
+    if (savedTeamId) {
+      setSelectedTeamId(savedTeamId);
+    }
   }, []);
+
+  // Save selected team to localStorage when it changes (dashboard-specific)
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem("dashboard_selectedTeamId", selectedTeamId);
+    }
+  }, [selectedTeamId, mounted]);
 
   if (!mounted) {
     return (
@@ -175,30 +188,52 @@ export default function Home() {
           <div>
             <h1 className="text-3xl font-bold">Dashboard</h1>
             <p className="mt-2 text-muted-foreground">
-              {selectedTeam?.name} - Real-time overview
+              {selectedTeamId === "all" ? "All Teams" : selectedTeam?.name} - Real-time overview
             </p>
           </div>
 
-          {/* Team Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Select Team:</span>
-            <div className="flex items-center gap-2 flex-wrap">
-              {TEAMS.map((team) => (
+          {/* Team Selector with Reset Button */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Select Team:</span>
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
-                  key={team.id}
-                  variant={selectedTeamId === team.id ? "default" : "outline"}
+                  variant={selectedTeamId === "all" ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedTeamId(team.id)}
-                  style={
-                    selectedTeamId === team.id
-                      ? { backgroundColor: team.color, borderColor: team.color }
-                      : {}
-                  }
+                  onClick={() => setSelectedTeamId("all")}
                 >
-                  {team.name}
+                  All Teams
                 </Button>
-              ))}
+                {TEAMS.map((team) => (
+                  <Button
+                    key={team.id}
+                    variant={selectedTeamId === team.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedTeamId(team.id)}
+                    style={
+                      selectedTeamId === team.id
+                        ? { backgroundColor: team.color, borderColor: team.color }
+                        : {}
+                    }
+                  >
+                    {team.name}
+                  </Button>
+                ))}
+              </div>
             </div>
+
+            {/* Reset Filter Button */}
+            {selectedTeamId !== "all" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTeamId("all")}
+                className="gap-2"
+              >
+                <X className="h-4 w-4" />
+                Reset Filter
+              </Button>
+            )}
           </div>
         </div>
 
@@ -253,7 +288,7 @@ export default function Home() {
               <CardContent>
                 <div className="text-2xl font-bold">{stats.totalTechnicians}</div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <span>Active in {selectedTeam?.name}</span>
+                  <span>Active in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</span>
                 </div>
               </CardContent>
             </Card>
@@ -333,7 +368,7 @@ export default function Home() {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Vestas Level Distribution</CardTitle>
-              <CardDescription>Technicians by Vestas certification level in {selectedTeam?.name}</CardDescription>
+              <CardDescription>Technicians by Vestas certification level in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -441,7 +476,7 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle>Competency Level Distribution</CardTitle>
-              <CardDescription>{selectedTeam?.name} - Levels 1-5</CardDescription>
+              <CardDescription>{selectedTeamId === "all" ? "All teams" : selectedTeam?.name} - Levels 1-5</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -466,7 +501,7 @@ export default function Home() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Recent Assessments</CardTitle>
-                <CardDescription>Latest competency matrix updates in {selectedTeam?.name}</CardDescription>
+                <CardDescription>Latest competency matrix updates in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
               </div>
               <Link href="/technicians">
                 <Button variant="ghost" size="sm">
@@ -562,7 +597,7 @@ export default function Home() {
         <Card>
           <CardHeader>
             <CardTitle>Alerts & Notifications</CardTitle>
-            <CardDescription>Important updates and actions required for {selectedTeam?.name}</CardDescription>
+            <CardDescription>Important updates and actions required for {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 md:grid-cols-3">

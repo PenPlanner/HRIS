@@ -248,10 +248,12 @@ vehicleIdCounter += 9;
 
 // Helper functions
 export const getTechniciansByTeam = (teamId: string): Technician[] => {
+  if (teamId === "all") return ALL_TECHNICIANS;
   return ALL_TECHNICIANS.filter(t => t.team_id === teamId);
 };
 
 export const getVehiclesByTeam = (teamId: string): Vehicle[] => {
+  if (teamId === "all") return ALL_VEHICLES;
   return ALL_VEHICLES.filter(v => v.team_id === teamId);
 };
 
@@ -278,6 +280,7 @@ export const calculateVehicleBalance = (teamId: string): {
   if (Math.abs(balance) === 0) status = 'perfect';
   else if (Math.abs(balance) <= 1) status = 'good';
   else if (Math.abs(balance) <= 3) status = 'warning';
+  else if (teamId === "all") status = 'good'; // For "all", always show good since it's aggregate
   else status = 'critical';
 
   return {

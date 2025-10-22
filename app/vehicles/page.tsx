@@ -5,91 +5,42 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Plus, Car, Users } from "lucide-react";
+import { Plus, Car, Users, X } from "lucide-react";
 import Link from "next/link";
-
-export type Vehicle = {
-  id: string;
-  registration: string;
-  team_id: string;
-  team_name: string;
-  team_color: string;
-  make?: string;
-  model?: string;
-  year?: number;
-  assigned_technicians?: string[];
-};
-
-const mockVehicles: Vehicle[] = [
-  {
-    id: "1",
-    registration: "ABC123",
-    team_id: "1",
-    team_name: "Travel S",
-    team_color: "#06b6d4",
-    make: "Mercedes",
-    model: "Sprinter",
-    year: 2022,
-    assigned_technicians: ["MRADR", "CLEGR"],
-  },
-  {
-    id: "2",
-    registration: "DEF456",
-    team_id: "1",
-    team_name: "Travel S",
-    team_color: "#06b6d4",
-    make: "Volkswagen",
-    model: "Crafter",
-    year: 2021,
-    assigned_technicians: [],
-  },
-  {
-    id: "3",
-    registration: "GHI789",
-    team_id: "2",
-    team_name: "Travel U",
-    team_color: "#0ea5e9",
-    make: "Mercedes",
-    model: "Sprinter",
-    year: 2023,
-    assigned_technicians: ["ANLRN"],
-  },
-  {
-    id: "4",
-    registration: "JKL012",
-    team_id: "3",
-    team_name: "South 1",
-    team_color: "#ef4444",
-    make: "Ford",
-    model: "Transit",
-    year: 2020,
-    assigned_technicians: [],
-  },
-];
+import { ALL_VEHICLES, TEAMS, Vehicle } from "@/lib/mock-data";
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(mockVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("vehicles");
-    if (saved) {
-      setVehicles(JSON.parse(saved));
+    setMounted(true);
+    // Load from centralized data source
+    setVehicles(ALL_VEHICLES);
+
+    // Load selected team from localStorage (vehicles-specific)
+    const savedTeamId = localStorage.getItem("vehicles_selectedTeamId");
+    if (savedTeamId) {
+      setSelectedTeam(savedTeamId);
     }
   }, []);
 
+  // Save selected team to localStorage when it changes (vehicles-specific)
   useEffect(() => {
-    localStorage.setItem("vehicles", JSON.stringify(vehicles));
-  }, [vehicles]);
+    if (mounted) {
+      localStorage.setItem("vehicles_selectedTeamId", selectedTeam);
+    }
+  }, [selectedTeam, mounted]);
 
-  // Group by team
-  const teams = Array.from(new Set(vehicles.map(v => v.team_name)));
+  // Filter vehicles by selected team
   const filteredVehicles = selectedTeam === "all"
     ? vehicles
-    : vehicles.filter(v => v.team_name === selectedTeam);
+    : vehicles.filter(v => v.team_id === selectedTeam);
 
-  const vehiclesByTeam = teams.reduce((acc, team) => {
-    acc[team] = vehicles.filter(v => v.team_name === team);
+  // Group vehicles by team for "all" view
+  const vehiclesByTeam = TEAMS.reduce((acc, team) => {
+    acc[team.name] = vehicles.filter(v => v.team_id === team.id);
     return acc;
   }, {} as Record<string, Vehicle[]>);
 
@@ -106,6 +57,19 @@ export default function VehiclesPage() {
     }, 0);
     return { vehicleCount, technicianCount };
   };
+
+  if (!mounted) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading vehicles...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -153,39 +117,51 @@ export default function VehiclesPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-lg px-3 py-1">{teams.length}</Badge>
+                <Badge variant="outline" className="text-lg px-3 py-1">{TEAMS.length}</Badge>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Team Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <Button
-            variant={selectedTeam === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedTeam("all")}
-          >
-            All Teams
-          </Button>
-          {teams.map((team) => {
-            const teamColor = vehicles.find(v => v.team_name === team)?.team_color;
-            return (
+        {/* Team Filter with Reset Button */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <Button
+              variant={selectedTeam === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedTeam("all")}
+            >
+              All Teams
+            </Button>
+            {TEAMS.map((team) => (
               <Button
-                key={team}
-                variant={selectedTeam === team ? "default" : "outline"}
+                key={team.id}
+                variant={selectedTeam === team.id ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedTeam(team)}
+                onClick={() => setSelectedTeam(team.id)}
                 style={
-                  selectedTeam === team
-                    ? { backgroundColor: teamColor, borderColor: teamColor }
+                  selectedTeam === team.id
+                    ? { backgroundColor: team.color, borderColor: team.color }
                     : {}
                 }
               >
-                {team}
+                {team.name}
               </Button>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Reset Filter Button */}
+          {selectedTeam !== "all" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedTeam("all")}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Reset Filter
+            </Button>
+          )}
         </div>
 
         {/* Grouped by Team */}

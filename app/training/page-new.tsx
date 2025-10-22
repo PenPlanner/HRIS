@@ -243,7 +243,6 @@ export default function TrainingPage() {
             courses={plannedCourses}
             selectedYear={selectedYear}
             selectedTeam={selectedTeam}
-            onDeleteCourse={handleDeleteCourse}
           />
         )}
 
