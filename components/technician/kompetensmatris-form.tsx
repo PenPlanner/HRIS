@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -131,9 +131,11 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const [initialData, setInitialData] = useState<AssessmentData | null>(null);
-  const [initialPoints, setInitialPoints] = useState<number>(0);
-  const [initialLevel, setInitialLevel] = useState<number>(1);
+
+  // Use refs to track initial state for history comparison
+  const initialDataRef = useRef<AssessmentData | null>(null);
+  const initialPointsRef = useRef<number>(0);
+  const initialLevelRef = useRef<number>(1);
 
   // Calculate points
   const internalExpPoints = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === data.internal_experience)?.points || 0;
@@ -176,7 +178,6 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
     if (saved) {
       const savedData = JSON.parse(saved);
       setData(savedData);
-      setInitialData(savedData);
 
       // Calculate initial points and level
       const internalExp = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.internal_experience)?.points || 0;
@@ -193,8 +194,10 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
       const multipliedExp = Math.round((internalExp + externalExp) * multiplier);
       const total = education + extraCourses + multipliedExp + savedData.subjective_score;
 
-      setInitialPoints(total);
-      setInitialLevel(getFinalLevel(total));
+      // Store in refs for history comparison
+      initialDataRef.current = savedData;
+      initialPointsRef.current = total;
+      initialLevelRef.current = getFinalLevel(total);
     }
   }, [technicianId]);
 
@@ -263,8 +266,8 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
       setIsSaving(true);
 
       // Check if there are changes
-      if (initialData) {
-        const changes = detectChanges(initialData, data, initialPoints, totalPoints);
+      if (initialDataRef.current) {
+        const changes = detectChanges(initialDataRef.current, data, initialPointsRef.current, totalPoints);
 
         // If there are changes, create a history entry
         if (changes.length > 0) {
@@ -272,11 +275,11 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
             id: Date.now().toString(),
             technician_id: technicianId,
             timestamp: new Date().toISOString(),
-            previous_level: initialLevel,
+            previous_level: initialLevelRef.current,
             new_level: finalLevel,
-            previous_points: initialPoints,
+            previous_points: initialPointsRef.current,
             new_points: totalPoints,
-            previous_vestas_level: initialData.vestas_level,
+            previous_vestas_level: initialDataRef.current.vestas_level,
             new_vestas_level: data.vestas_level,
             changes: changes
           };
@@ -294,16 +297,16 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
           // Save history
           localStorage.setItem(`assessment_history_${technicianId}`, JSON.stringify(history));
 
-          // Update initial data to current data
-          setInitialData(data);
-          setInitialPoints(totalPoints);
-          setInitialLevel(finalLevel);
+          // Update initial data to current data in refs
+          initialDataRef.current = data;
+          initialPointsRef.current = totalPoints;
+          initialLevelRef.current = finalLevel;
         }
       } else {
-        // First save - set initial data
-        setInitialData(data);
-        setInitialPoints(totalPoints);
-        setInitialLevel(finalLevel);
+        // First save - set initial data in refs
+        initialDataRef.current = data;
+        initialPointsRef.current = totalPoints;
+        initialLevelRef.current = finalLevel;
       }
 
       // Save current assessment
@@ -316,7 +319,7 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [data, technicianId, initialData, initialPoints, totalPoints, initialLevel, finalLevel]);
+  }, [data, technicianId, totalPoints, finalLevel]);
 
   const toggleExtraCourse = (courseValue: string) => {
     setData(prev => ({
