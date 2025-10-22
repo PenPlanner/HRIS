@@ -100,11 +100,15 @@ const generateTechniciansForTeam = (team: Team, startId: number, count: number =
     const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
     let initials = generateInitials(firstName, lastName);
 
-    // Ensure unique initials
+    // Ensure unique initials - with safety limit to prevent infinite loops
     let counter = 1;
-    while (usedInitials.has(initials)) {
+    while (usedInitials.has(initials) && counter < 100) {
       initials = generateInitials(firstName + counter, lastName);
       counter++;
+    }
+    // If still not unique after 100 attempts, add random number
+    if (usedInitials.has(initials)) {
+      initials = initials + Math.floor(Math.random() * 1000);
     }
     usedInitials.add(initials);
 
