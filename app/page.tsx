@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,25 @@ const getVestasLevelColor = (level: VestasLevel): string => {
 export default function Home() {
   // Default to Travel S (user's team)
   const [selectedTeamId, setSelectedTeamId] = useState<string>("1");
+  const [mounted, setMounted] = useState(false);
+
+  // Only render after mounting on client to avoid hydration errors with random data
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   const selectedTeam = TEAMS.find(t => t.id === selectedTeamId);
   const technicians = getTechniciansByTeam(selectedTeamId);
