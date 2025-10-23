@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";
-import { Plus, Car, Users, X } from "lucide-react";
+import { Plus, Car, Users, X, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { ALL_VEHICLES, TEAMS, Vehicle } from "@/lib/mock-data";
 
@@ -278,14 +278,37 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
             <p className="text-muted-foreground">Year: {vehicle.year}</p>
           )}
           {vehicle.assigned_technicians && vehicle.assigned_technicians.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <div className="flex gap-1 flex-wrap">
-                {vehicle.assigned_technicians.map((tech) => (
-                  <Badge key={tech} variant="secondary" className="text-xs">
-                    {tech}
-                  </Badge>
-                ))}
+            <div className="mt-3 flex items-start gap-2">
+              <Users className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div className="flex flex-col gap-2">
+                {/* Sort so primary driver comes first */}
+                {[...vehicle.assigned_technicians]
+                  .sort((a, b) => {
+                    if (a === vehicle.primary_driver) return -1;
+                    if (b === vehicle.primary_driver) return 1;
+                    return 0;
+                  })
+                  .map((tech) => {
+                    const isDriver = tech === vehicle.primary_driver;
+                    return (
+                      <div key={tech} className="flex items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs ${isDriver ? 'bg-green-500/10 text-green-600 border-green-500/20 font-mono' : 'font-mono'}`}
+                        >
+                          {tech}
+                        </Badge>
+                        {isDriver && (
+                          <>
+                            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                              Driver
+                            </Badge>
+                            <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { GraduationCap, Calendar, Users, X, List, LayoutGrid } from "lucide-react";
-import { TEAMS } from "@/lib/mock-data";
+import { TEAMS, ALL_TECHNICIANS } from "@/lib/mock-data";
 import { ALL_COURSES } from "@/lib/courses-data";
 import { PlanCourseDialog } from "@/components/training/plan-course-dialog";
 import { QuarterlyTimeline, PlannedCourse } from "@/components/training/quarterly-timeline";
+import { EXAMPLE_PLANNED_COURSES } from "@/lib/example-courses";
 
 export default function TrainingPage() {
   const [plannedCourses, setPlannedCourses] = useState<PlannedCourse[]>([]);
@@ -24,6 +25,9 @@ export default function TrainingPage() {
     const saved = localStorage.getItem("training_plannedCourses");
     if (saved) {
       setPlannedCourses(JSON.parse(saved));
+    } else {
+      // Load example courses if no data exists
+      setPlannedCourses(EXAMPLE_PLANNED_COURSES);
     }
 
     // Load filters
@@ -48,6 +52,20 @@ export default function TrainingPage() {
 
   const handleDeleteCourse = (courseId: string) => {
     setPlannedCourses(prev => prev.filter(c => c.id !== courseId));
+  };
+
+  const handleUpdateCourse = (courseId: string, updates: Partial<PlannedCourse>) => {
+    setPlannedCourses(prev =>
+      prev.map(course =>
+        course.id === courseId ? { ...course, ...updates } : course
+      )
+    );
+  };
+
+  const handleLoadExamples = () => {
+    if (confirm("Load example courses? This will replace your current courses.")) {
+      setPlannedCourses(EXAMPLE_PLANNED_COURSES);
+    }
   };
 
   // Reset filters
@@ -92,7 +110,12 @@ export default function TrainingPage() {
               Plan and schedule training courses for your teams
             </p>
           </div>
-          <PlanCourseDialog onCoursePlanned={handleCoursePlanned} />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleLoadExamples}>
+              Load Examples
+            </Button>
+            <PlanCourseDialog onCoursePlanned={handleCoursePlanned} />
+          </div>
         </div>
 
         {/* Quick Stats */}
@@ -244,6 +267,7 @@ export default function TrainingPage() {
             selectedYear={selectedYear}
             selectedTeam={selectedTeam}
             onDeleteCourse={handleDeleteCourse}
+            onUpdateCourse={handleUpdateCourse}
           />
         )}
 

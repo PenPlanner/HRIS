@@ -598,32 +598,32 @@ export function QuarterlyTimeline({ courses, selectedYear = "2026", selectedTeam
                     const leftPercent = (startOffset / totalDays) * 100;
 
                     return (
-                      <div key={course.id} className="flex items-center gap-4 py-1">
-                        <div className="w-36 flex-shrink-0">
-                          <p className="font-bold text-base truncate">{course.course_code}</p>
-                          <p className="text-sm text-muted-foreground font-medium">{course.quarter}</p>
+                      <div key={course.id} className="flex items-center gap-3">
+                        <div className="w-32 flex-shrink-0 text-sm">
+                          <p className="font-medium truncate">{course.course_code}</p>
+                          <p className="text-xs text-muted-foreground">{course.quarter}</p>
                         </div>
-                        <div className="flex-1 relative h-12 bg-muted/50 rounded-lg border border-border">
+                        <div className="flex-1 relative h-10 bg-muted rounded-lg">
                           <div
-                            className="absolute h-full rounded-lg flex items-center justify-between px-3 text-sm font-bold shadow-lg hover:shadow-xl transition-all cursor-pointer group border-2"
+                            className="absolute h-full rounded-lg flex items-center px-2 text-xs font-medium text-white shadow-md hover:shadow-lg transition-shadow cursor-pointer group"
                             style={{
                               left: `${leftPercent}%`,
                               width: `${widthPercent}%`,
                               backgroundColor: categoryColor,
-                              borderColor: categoryColor,
-                              color: 'white',
-                              minWidth: '80px'
+                              minWidth: '60px'
                             }}
                             onClick={() => setSelectedCourseInfo(course)}
                           >
-                            <span className="truncate">{course.technician_ids.length} technicians</span>
-                            {(conflict || capacityWarning) && (
-                              <AlertTriangle className="h-4 w-4 flex-shrink-0 ml-2" />
-                            )}
+                            <div className="flex items-center gap-1 w-full">
+                              <span className="truncate flex-1">{course.technician_ids.length} techs</span>
+                              {(conflict || capacityWarning) && (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="w-52 flex-shrink-0 text-sm font-medium">
-                          {startDate.toLocaleDateString('sv-SE')} - {endDate.toLocaleDateString('sv-SE')}
+                        <div className="w-48 flex-shrink-0 text-xs text-muted-foreground">
+                          {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
                         </div>
                       </div>
                     );

@@ -13,9 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CheckCircle, Save, Info } from "lucide-react";
+import { CheckCircle, Save, Info, Edit } from "lucide-react";
 
-type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
+type VestasLevel = 'D' | 'C' | 'B' | 'A';
 
 interface AssessmentData {
   vestas_level: VestasLevel;
@@ -50,8 +50,6 @@ const getVestasLevelColor = (level: VestasLevel): { bg: string; text: string; bo
       return { bg: '#10b981', text: '#ffffff', border: '#059669' }; // Green
     case 'A':
       return { bg: '#8b5cf6', text: '#ffffff', border: '#7c3aed' }; // Purple
-    case 'Field Trainer':
-      return { bg: '#f59e0b', text: '#ffffff', border: '#d97706' }; // Amber/Gold
     default:
       return { bg: '#9ca3af', text: '#ffffff', border: '#6b7280' };
   }
@@ -119,18 +117,72 @@ const COMPETENCY_LEVELS = [
   }
 ];
 
-export function KompetensmatrisForm({ technicianId }: { technicianId: string }) {
-  const [data, setData] = useState<AssessmentData>({
-    vestas_level: 'D',
-    internal_experience: '',
-    external_experience: '',
-    education: [],
-    extra_courses: [],
-    subjective_score: 0,
+interface KompetensmatrisFormProps {
+  technicianId: string;
+  initialData?: {
+    vestas_level: VestasLevel;
+    internal_experience: string;
+    external_experience: string;
+    education: string[];
+    extra_courses: string[];
+    subjective_score: number;
+    total_points: number;
+    final_level: number;
+    submitted_to_ecc: boolean;
+    last_updated: string;
+  };
+}
+
+export function KompetensmatrisForm({ technicianId, initialData }: KompetensmatrisFormProps) {
+  // Convert initial data to form format
+  const getInitialFormData = (): AssessmentData => {
+    if (initialData) {
+      return {
+        vestas_level: initialData.vestas_level,
+        internal_experience: initialData.internal_experience,
+        external_experience: initialData.external_experience,
+        education: initialData.education,
+        extra_courses: initialData.extra_courses,
+        subjective_score: initialData.subjective_score,
+      };
+    }
+
+    return {
+      vestas_level: 'D',
+      internal_experience: '',
+      external_experience: '',
+      education: [],
+      extra_courses: [],
+      subjective_score: 0,
+    };
+  };
+
+  // Initialize with empty state - let useEffect handle data loading
+  const [data, setData] = useState<AssessmentData>(() => {
+    // Only use initialData if it exists, otherwise empty state
+    if (initialData) {
+      return {
+        vestas_level: initialData.vestas_level,
+        internal_experience: initialData.internal_experience,
+        external_experience: initialData.external_experience,
+        education: initialData.education,
+        extra_courses: initialData.extra_courses,
+        subjective_score: initialData.subjective_score,
+      };
+    }
+    return {
+      vestas_level: 'D',
+      internal_experience: '',
+      external_experience: '',
+      education: [],
+      extra_courses: [],
+      subjective_score: 0,
+    };
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isEditMode, setIsEditMode] = useState(!initialData); // Edit mode ON if no initial data (new assessment)
 
   // Use refs to track initial state for history comparison
   const initialDataRef = useRef<AssessmentData | null>(null);
@@ -151,7 +203,6 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   // Experience multiplier based on Vestas level
   const getMultiplier = (level: VestasLevel): number => {
-    if (level === 'Field Trainer') return 2.5;
     if (level === 'A' || level === 'B') return 2.0;
     if (level === 'C') return 1.5;
     return 1.0; // D
@@ -174,32 +225,60 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   // Load existing assessment on mount
   useEffect(() => {
-    const saved = localStorage.getItem(`assessment_${technicianId}`);
-    if (saved) {
-      const savedData = JSON.parse(saved);
-      setData(savedData);
+    // Prioritize initialData over localStorage
+    if (initialData) {
+      // Use the passed initial data (from technician profile)
+      const formData = getInitialFormData();
+      setData(formData);
 
-      // Calculate initial points and level
-      const internalExp = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.internal_experience)?.points || 0;
-      const externalExp = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.external_experience)?.points || 0;
-      const education = savedData.education.reduce((sum: number, edu: string) => {
+      // Calculate points from initialData
+      const internalExp = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === initialData.internal_experience)?.points || 0;
+      const externalExp = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === initialData.external_experience)?.points || 0;
+      const education = initialData.education.reduce((sum: number, edu: string) => {
         const points = EDUCATION_OPTIONS.find(e => e.value === edu)?.points || 0;
         return sum + points;
       }, 0);
-      const extraCourses = savedData.extra_courses.reduce((sum: number, course: string) => {
+      const extraCourses = initialData.extra_courses.reduce((sum: number, course: string) => {
         const points = EXTRA_COURSES.find(c => c.value === course)?.points || 0;
         return sum + points;
       }, 0);
-      const multiplier = getMultiplier(savedData.vestas_level);
+      const multiplier = getMultiplier(initialData.vestas_level);
       const multipliedExp = Math.round((internalExp + externalExp) * multiplier);
-      const total = education + extraCourses + multipliedExp + savedData.subjective_score;
+      const total = education + extraCourses + multipliedExp + initialData.subjective_score;
 
       // Store in refs for history comparison
-      initialDataRef.current = savedData;
+      initialDataRef.current = formData;
       initialPointsRef.current = total;
       initialLevelRef.current = getFinalLevel(total);
+    } else {
+      // Fall back to localStorage if no initial data
+      const saved = localStorage.getItem(`assessment_${technicianId}`);
+      if (saved) {
+        const savedData = JSON.parse(saved);
+        setData(savedData);
+
+        // Calculate initial points and level
+        const internalExp = INTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.internal_experience)?.points || 0;
+        const externalExp = EXTERNAL_EXPERIENCE_OPTIONS.find(opt => opt.value === savedData.external_experience)?.points || 0;
+        const education = savedData.education.reduce((sum: number, edu: string) => {
+          const points = EDUCATION_OPTIONS.find(e => e.value === edu)?.points || 0;
+          return sum + points;
+        }, 0);
+        const extraCourses = savedData.extra_courses.reduce((sum: number, course: string) => {
+          const points = EXTRA_COURSES.find(c => c.value === course)?.points || 0;
+          return sum + points;
+        }, 0);
+        const multiplier = getMultiplier(savedData.vestas_level);
+        const multipliedExp = Math.round((internalExp + externalExp) * multiplier);
+        const total = education + extraCourses + multipliedExp + savedData.subjective_score;
+
+        // Store in refs for history comparison
+        initialDataRef.current = savedData;
+        initialPointsRef.current = total;
+        initialLevelRef.current = getFinalLevel(total);
+      }
     }
-  }, [technicianId]);
+  }, [technicianId, initialData]);
 
   // Helper function to detect changes
   const detectChanges = (oldData: AssessmentData, newData: AssessmentData, oldPoints: number, newPoints: number): string[] => {
@@ -262,6 +341,11 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   // Auto-save with debounce and history tracking
   useEffect(() => {
+    // Skip auto-save if we're using initialData from parent (read-only mode)
+    if (initialData) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       setIsSaving(true);
 
@@ -319,7 +403,7 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [data, technicianId, totalPoints, finalLevel]);
+  }, [data, technicianId, totalPoints, finalLevel, initialData]);
 
   const toggleExtraCourse = (courseValue: string) => {
     setData(prev => ({
@@ -341,324 +425,428 @@ export function KompetensmatrisForm({ technicianId }: { technicianId: string }) 
 
   const currentLevelInfo = COMPETENCY_LEVELS.find(l => l.level === finalLevel);
 
+  // Save changes function
+  const handleSaveChanges = () => {
+    setIsSaving(true);
+
+    // Create history entry if there are changes
+    if (initialDataRef.current) {
+      const changes = detectChanges(initialDataRef.current, data, initialPointsRef.current, totalPoints);
+
+      if (changes.length > 0) {
+        const historyEntry: AssessmentHistory = {
+          id: Date.now().toString(),
+          technician_id: technicianId,
+          timestamp: new Date().toISOString(),
+          previous_level: initialLevelRef.current,
+          new_level: finalLevel,
+          previous_points: initialPointsRef.current,
+          new_points: totalPoints,
+          previous_vestas_level: initialDataRef.current.vestas_level,
+          new_vestas_level: data.vestas_level,
+          changes: changes
+        };
+
+        // Get existing history
+        const existingHistory = localStorage.getItem(`assessment_history_${technicianId}`);
+        const history: AssessmentHistory[] = existingHistory ? JSON.parse(existingHistory) : [];
+
+        // Add new entry
+        history.unshift(historyEntry);
+        if (history.length > 50) {
+          history.pop();
+        }
+
+        // Save history
+        localStorage.setItem(`assessment_history_${technicianId}`, JSON.stringify(history));
+      }
+    }
+
+    // Save current assessment
+    localStorage.setItem(`assessment_${technicianId}`, JSON.stringify(data));
+
+    // Update refs
+    initialDataRef.current = data;
+    initialPointsRef.current = totalPoints;
+    initialLevelRef.current = finalLevel;
+
+    setTimeout(() => {
+      setIsSaving(false);
+      setLastSaved(new Date());
+      setIsEditMode(false);
+    }, 500);
+  };
+
+  // Cancel changes function
+  const handleCancelChanges = () => {
+    if (initialDataRef.current) {
+      setData(initialDataRef.current);
+    }
+    setIsEditMode(false);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Save indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {isSaving ? (
-            <>
-              <Save className="h-4 w-4 animate-pulse" />
-              Saving...
-            </>
-          ) : lastSaved ? (
-            <>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Saved {lastSaved.toLocaleTimeString()}
-            </>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Points</p>
-            <p className="text-2xl font-bold">{totalPoints}</p>
-          </div>
-          <div className="text-right">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">Competency Level</p>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Info className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Competency Level Descriptions</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
-                    {COMPETENCY_LEVELS.map((level) => (
-                      <Card key={level.level} className={finalLevel === level.level ? "border-primary border-2" : ""}>
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center gap-3">
-                            <Badge className="text-base px-3 py-1">Level {level.level}</Badge>
-                            <CardTitle className="text-base">{level.title}</CardTitle>
-                            {finalLevel === level.level && (
-                              <Badge variant="secondary" className="ml-auto">Current Level</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{level.pointRange}</p>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm">{level.description}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-            <div className="group relative inline-block">
-              <Badge className="text-lg px-3 py-1 cursor-help">Level {finalLevel}</Badge>
-              {currentLevelInfo && (
-                <div className="invisible group-hover:visible absolute right-0 top-full mt-2 w-80 z-50 rounded-lg border bg-popover p-4 text-popover-foreground shadow-md">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className="text-sm">Level {currentLevelInfo.level}</Badge>
-                      <p className="text-sm font-semibold">{currentLevelInfo.title}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{currentLevelInfo.pointRange}</p>
-                    <p className="text-sm">{currentLevelInfo.description}</p>
-                  </div>
+      {/* Assessment Header - Combined View */}
+      <Card className="bg-muted/50">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium">Current Assessment</p>
+              {initialData && (
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    Last updated: {initialData.last_updated} ({new Date(initialData.last_updated).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })})
+                  </p>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <p className="text-xs text-muted-foreground">
+                    Last points: <span className="font-semibold text-foreground">{initialData.total_points} pts</span>
+                  </p>
+                  <span className="text-xs text-muted-foreground">•</span>
+                  <p className="text-xs text-muted-foreground">
+                    Last level: <span className="font-semibold text-foreground">Level {initialData.final_level}</span>
+                  </p>
                 </div>
               )}
+              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                {isSaving ? (
+                  <>
+                    <Save className="h-3 w-3 animate-pulse" />
+                    Saving...
+                  </>
+                ) : lastSaved ? (
+                  <>
+                    <CheckCircle className="h-3 w-3 text-green-500" />
+                    Saved {lastSaved.toLocaleTimeString()}
+                  </>
+                ) : null}
+              </div>
             </div>
+
+            {/* Current Values */}
+            <div className="flex items-center gap-3 mr-4">
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Total Points</p>
+                <Badge className="text-sm px-2 py-0.5 font-semibold" variant={totalPoints !== initialData?.total_points ? "default" : "secondary"}>
+                  {totalPoints}
+                </Badge>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-muted-foreground mb-0.5">Competency Level</p>
+                <div className="group relative">
+                  <Badge className="text-sm px-2 py-0.5 font-semibold cursor-help" variant={finalLevel !== initialData?.final_level ? "default" : "secondary"}>
+                    Level {finalLevel}
+                  </Badge>
+                  {currentLevelInfo && (
+                    <div className="invisible group-hover:visible absolute right-0 top-full mt-2 w-80 z-50 rounded-lg border-2 bg-popover p-3 text-popover-foreground shadow-xl">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="text-sm bg-primary">Level {currentLevelInfo.level}</Badge>
+                          <p className="text-sm font-bold">{currentLevelInfo.title}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-medium">{currentLevelInfo.pointRange}</p>
+                        <p className="text-sm leading-relaxed">{currentLevelInfo.description}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Edit/Save/Cancel Actions */}
+            {initialData && (
+              <div className="flex items-center gap-2">
+                {!isEditMode ? (
+                  <Button
+                    onClick={() => setIsEditMode(true)}
+                    variant="default"
+                    className="gap-2"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Matrix
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleSaveChanges}
+                      variant="default"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                      disabled={isSaving}
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                    <Button
+                      onClick={handleCancelChanges}
+                      variant="outline"
+                      disabled={isSaving}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Compact Grid Layout */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Vestas Internal Level */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Vestas Internal Level</CardTitle>
+            <CardDescription className="text-xs">Choose only 1 option</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {(['D', 'C', 'B', 'A'] as VestasLevel[]).map((level) => {
+              const colors = getVestasLevelColor(level);
+              const isSelected = data.vestas_level === level;
+              return (
+                <label
+                  key={level}
+                  className={`flex items-center gap-2 p-2 rounded border transition-all text-sm ${isEditMode ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
+                  style={{
+                    backgroundColor: isSelected ? `${colors.bg}15` : 'transparent',
+                    borderColor: isSelected ? colors.border : 'transparent',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="vestas_level"
+                    value={level}
+                    checked={isSelected}
+                    onChange={(e) => setData({ ...data, vestas_level: e.target.value as VestasLevel })}
+                    className="h-3 w-3"
+                    style={{ accentColor: colors.bg }}
+                    disabled={!isEditMode}
+                  />
+                  <Badge
+                    style={{
+                      backgroundColor: colors.bg,
+                      color: colors.text,
+                      borderColor: colors.border
+                    }}
+                    className="text-xs px-2 py-0.5"
+                  >
+                    {level}
+                  </Badge>
+                  <span className="text-xs">
+                    {level === 'A' && '2.0x'}
+                    {level === 'B' && '2.0x'}
+                    {level === 'C' && '1.5x'}
+                    {level === 'D' && '1.0x'}
+                  </span>
+                </label>
+              );
+            })}
+          </CardContent>
+        </Card>
+
+        {/* Experience Section */}
+        <div className="space-y-4">
+          {/* Internal Experience */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Internal Experience</CardTitle>
+              <CardDescription className="text-xs">Multiplied by {multiplier}x</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <select
+                value={data.internal_experience}
+                onChange={(e) => setData({ ...data, internal_experience: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isEditMode}
+              >
+                <option value="">Select...</option>
+                {INTERNAL_EXPERIENCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label} - {opt.points}pts
+                  </option>
+                ))}
+              </select>
+              {internalExpPoints > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {internalExpPoints} × {multiplier} = {Math.round(internalExpPoints * multiplier)}pts
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* External Experience */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">External Experience</CardTitle>
+              <CardDescription className="text-xs">Multiplied by {multiplier}x</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <select
+                value={data.external_experience}
+                onChange={(e) => setData({ ...data, external_experience: e.target.value })}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!isEditMode}
+              >
+                <option value="">Select...</option>
+                {EXTERNAL_EXPERIENCE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label} - {opt.points}pts
+                  </option>
+                ))}
+              </select>
+              {externalExpPoints > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {externalExpPoints} × {multiplier} = {Math.round(externalExpPoints * multiplier)}pts
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Vestas Internal Level */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Vestas Internal Level</CardTitle>
-          <CardDescription>Choose only 1 option</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {(['D', 'C', 'B', 'A', 'Field Trainer'] as VestasLevel[]).map((level) => {
-            const colors = getVestasLevelColor(level);
-            const isSelected = data.vestas_level === level;
-            return (
-              <label
-                key={level}
-                className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border-2 transition-all"
-                style={{
-                  backgroundColor: isSelected ? `${colors.bg}15` : 'transparent',
-                  borderColor: isSelected ? colors.border : 'transparent',
-                }}
-              >
+      {/* Education and Courses Grid */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Education */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">External Education</CardTitle>
+            <CardDescription className="text-xs">Multiple selections possible</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {EDUCATION_OPTIONS.map((opt) => (
+              <label key={opt.value} className={`flex items-center gap-2 text-sm p-1.5 rounded ${isEditMode ? 'cursor-pointer hover:bg-accent' : 'cursor-not-allowed opacity-50'}`}>
                 <input
-                  type="radio"
-                  name="vestas_level"
-                  value={level}
-                  checked={isSelected}
-                  onChange={(e) => setData({ ...data, vestas_level: e.target.value as VestasLevel })}
-                  className="h-4 w-4"
-                  style={{ accentColor: colors.bg }}
+                  type="checkbox"
+                  value={opt.value}
+                  checked={data.education.includes(opt.value)}
+                  onChange={() => toggleEducation(opt.value)}
+                  className="h-3 w-3 rounded"
+                  disabled={!isEditMode}
                 />
-                <Badge
-                  style={{
-                    backgroundColor: colors.bg,
-                    color: colors.text,
-                    borderColor: colors.border
-                  }}
-                  className="min-w-[40px] justify-center"
-                >
-                  {level}
-                </Badge>
-                <span className="font-medium flex-1">
-                  {level === 'Field Trainer' && 'Field Trainer (Highest level) - 2.5x multiplier'}
-                  {level === 'A' && 'A-Level (Turbine specific experts) - 2.0x multiplier'}
-                  {level === 'B' && 'B-Level (Turbine specific) - 2.0x multiplier'}
-                  {level === 'C' && 'C-Level (Turbine specific) - 1.5x multiplier'}
-                  {level === 'D' && 'D-Level - 1.0x multiplier'}
-                </span>
+                <span className="flex-1">{opt.label}</span>
+                <span className="font-medium text-xs">{opt.points}pts</span>
               </label>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      {/* Internal Experience */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Internal Experience (Electrical Works)</CardTitle>
-          <CardDescription>Experience multiplied by {multiplier}x</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <select
-            value={data.internal_experience}
-            onChange={(e) => setData({ ...data, internal_experience: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Select...</option>
-            {INTERNAL_EXPERIENCE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label} - {opt.points} points
-              </option>
             ))}
-          </select>
-          {internalExpPoints > 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {internalExpPoints} points × {multiplier} = {Math.round(internalExpPoints * multiplier)} points
-            </p>
-          )}
-        </CardContent>
-      </Card>
+            {educationPoints > 0 && (
+              <p className="mt-2 text-xs font-medium text-primary pt-2 border-t">
+                Total: {educationPoints} points
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* External Experience */}
-      <Card>
-        <CardHeader>
-          <CardTitle>External Experience on Electrical Work</CardTitle>
-          <CardDescription>Experience multiplied by {multiplier}x</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <select
-            value={data.external_experience}
-            onChange={(e) => setData({ ...data, external_experience: e.target.value })}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Select...</option>
-            {EXTERNAL_EXPERIENCE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label} - {opt.points} points
-              </option>
-            ))}
-          </select>
-          {externalExpPoints > 0 && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {externalExpPoints} points × {multiplier} = {Math.round(externalExpPoints * multiplier)} points
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        {/* Extra Courses and Subjective */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Extra Internal Education</CardTitle>
+              <CardDescription className="text-xs">Max 28 points</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1.5">
+              {EXTRA_COURSES.map((course) => (
+                <label key={course.value} className={`flex items-center gap-2 text-sm p-1.5 rounded ${isEditMode ? 'cursor-pointer hover:bg-accent' : 'cursor-not-allowed opacity-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={data.extra_courses.includes(course.value)}
+                    onChange={() => toggleExtraCourse(course.value)}
+                    className="h-3 w-3"
+                    disabled={!isEditMode}
+                  />
+                  <span className="flex-1">{course.label}</span>
+                  <span className="font-medium text-xs">{course.points}pts</span>
+                </label>
+              ))}
+              {extraCoursesPoints > 0 && (
+                <p className="mt-2 text-xs font-medium pt-2 border-t">
+                  Total: {extraCoursesPoints} points
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Education */}
-      <Card>
-        <CardHeader>
-          <CardTitle>External Education</CardTitle>
-          <CardDescription>Select all that apply (Multiple selections possible)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {EDUCATION_OPTIONS.map((opt) => (
-            <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                value={opt.value}
-                checked={data.education.includes(opt.value)}
-                onChange={() => toggleEducation(opt.value)}
-                className="h-4 w-4 rounded border-gray-300"
-              />
-              <span>
-                {opt.label} - <span className="font-medium">{opt.points} points</span>
-              </span>
-            </label>
-          ))}
-          {educationPoints > 0 && (
-            <p className="mt-2 text-sm font-medium text-primary">
-              Total Education Points: {educationPoints}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          {/* Subjective Assessment */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Subjective Assessment</CardTitle>
+              <CardDescription className="text-xs">
+                Electrical Safety Awareness (0-5 pts)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <Slider
+                  value={[data.subjective_score]}
+                  onValueChange={(value) => setData({ ...data, subjective_score: value[0] })}
+                  max={5}
+                  step={1}
+                  disabled={!isEditMode}
+                  className="flex-1"
+                />
+                <Badge variant="secondary" className="text-base px-3 min-w-[45px] justify-center">
+                  {data.subjective_score}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* Extra Courses */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Extra Internal Education</CardTitle>
-          <CardDescription>Select all that apply (Max 28 points)</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {EXTRA_COURSES.map((course) => (
-            <label key={course.value} className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={data.extra_courses.includes(course.value)}
-                onChange={() => toggleExtraCourse(course.value)}
-                className="h-4 w-4"
-              />
-              <span>
-                {course.label} - <span className="font-medium">{course.points} points</span>
-              </span>
-            </label>
-          ))}
-          {extraCoursesPoints > 0 && (
-            <p className="mt-2 text-sm font-medium">
-              Total: {extraCoursesPoints} points
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Subjective Assessment */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Subjective Assessment of Electrical Safety Awareness</CardTitle>
-          <CardDescription>
-            0-5 points. 5 = role model who never bends on electrical safety, 0 = lacks awareness
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Slider
-              value={[data.subjective_score]}
-              onValueChange={(value) => setData({ ...data, subjective_score: value[0] })}
-              max={5}
-              step={1}
-              className="flex-1"
-            />
-            <Badge variant="secondary" className="text-lg px-3">
-              {data.subjective_score}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
+      {/* Summary - Compact */}
       <Card className="border-primary">
-        <CardHeader>
-          <CardTitle>Assessment Summary</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Assessment Summary</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent>
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 text-sm">
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Vestas Level</p>
+              <p className="text-xs text-muted-foreground mb-1">Vestas Level</p>
               <Badge
                 style={{
                   backgroundColor: getVestasLevelColor(data.vestas_level).bg,
                   color: getVestasLevelColor(data.vestas_level).text,
                   borderColor: getVestasLevelColor(data.vestas_level).border
                 }}
-                className="text-lg px-3 py-1"
+                className="text-sm px-2 py-1"
               >
                 {data.vestas_level}
               </Badge>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Experience Multiplier</p>
-              <p className="text-2xl font-bold">{multiplier}x</p>
+              <p className="text-xs text-muted-foreground">Multiplier</p>
+              <p className="text-lg font-bold">{multiplier}x</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Education Points</p>
-              <p className="text-xl font-semibold">{educationPoints}</p>
+              <p className="text-xs text-muted-foreground">Education</p>
+              <p className="text-lg font-semibold">{educationPoints}pts</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Extra Courses Points</p>
-              <p className="text-xl font-semibold">{extraCoursesPoints}</p>
+              <p className="text-xs text-muted-foreground">Extra Courses</p>
+              <p className="text-lg font-semibold">{extraCoursesPoints}pts</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Experience Points (Multiplied)</p>
-              <p className="text-xl font-semibold">{multipliedExperience}</p>
+              <p className="text-xs text-muted-foreground">Experience</p>
+              <p className="text-lg font-semibold">{multipliedExperience}pts</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Subjective Points</p>
-              <p className="text-xl font-semibold">{data.subjective_score}</p>
+              <p className="text-xs text-muted-foreground">Subjective</p>
+              <p className="text-lg font-semibold">{data.subjective_score}pts</p>
             </div>
           </div>
-          <div className="border-t pt-4">
+          <div className="border-t pt-3 mt-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Points (Max 163)</p>
-                <p className="text-3xl font-bold">{totalPoints}</p>
+                <p className="text-xs text-muted-foreground">Total Points (Max 163)</p>
+                <p className="text-2xl font-bold">{totalPoints}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Behörighetsnivå</p>
-                <Badge className="text-2xl px-4 py-2" variant={finalLevel >= 4 ? "default" : "secondary"}>
+                <p className="text-xs text-muted-foreground">Competency Level</p>
+                <Badge className="text-xl px-3 py-1.5" variant={finalLevel >= 4 ? "default" : "secondary"}>
                   Level {finalLevel}
                 </Badge>
               </div>
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Level 1: 0-14 points | Level 2: 15-43 points | Level 3: 44-79 points | Level 4: 80-100 points | Level 5: 100+ points
+            <p className="mt-3 text-xs text-muted-foreground">
+              L1: 0-14 | L2: 15-43 | L3: 44-79 | L4: 80-99 | L5: 100+
             </p>
           </div>
         </CardContent>

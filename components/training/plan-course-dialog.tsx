@@ -19,6 +19,9 @@ type PlannedCourse = {
   course_name: string;
   quarter: string;
   year: string;
+  month?: string;
+  start_date?: string;
+  end_date?: string;
   technician_ids: string[];
   created_at: string;
 };
@@ -33,10 +36,23 @@ export function PlanCourseDialog({ onCoursePlanned }: PlanCourseDialogProps) {
   const [selectedTechnicians, setSelectedTechnicians] = useState<string[]>([]);
   const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
   const [selectedYear, setSelectedYear] = useState<string>("2026");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
   const course = ALL_COURSES.find(c => c.id === selectedCourse);
+
+  // Auto-calculate end date when start date or course changes
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    if (date && course) {
+      const start = new Date(date);
+      const end = new Date(start.getTime() + course.duration_days * 24 * 60 * 60 * 1000);
+      setEndDate(end.toISOString().split('T')[0]);
+    }
+  };
 
   // Get unique teams
   const teams = Array.from(new Set(ALL_TECHNICIANS.map(t => t.team_name)));
@@ -101,6 +117,9 @@ export function PlanCourseDialog({ onCoursePlanned }: PlanCourseDialogProps) {
       course_name: courseData.name,
       quarter: selectedQuarter,
       year: selectedYear,
+      month: selectedMonth || undefined,
+      start_date: startDate || undefined,
+      end_date: endDate || undefined,
       technician_ids: selectedTechnicians,
       created_at: new Date().toISOString(),
     };
@@ -112,6 +131,9 @@ export function PlanCourseDialog({ onCoursePlanned }: PlanCourseDialogProps) {
     setSelectedTechnicians([]);
     setSelectedQuarter("Q1");
     setSelectedYear("2026");
+    setSelectedMonth("");
+    setStartDate("");
+    setEndDate("");
     setSearchQuery("");
     setSelectedTeam("all");
     setOpen(false);
@@ -227,6 +249,60 @@ export function PlanCourseDialog({ onCoursePlanned }: PlanCourseDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Month Selection (Optional) */}
+          <div className="space-y-2">
+            <Label>Month (Optional - for more specific planning)</Label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a month..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No specific month</SelectItem>
+                <SelectItem value="1">January</SelectItem>
+                <SelectItem value="2">February</SelectItem>
+                <SelectItem value="3">March</SelectItem>
+                <SelectItem value="4">April</SelectItem>
+                <SelectItem value="5">May</SelectItem>
+                <SelectItem value="6">June</SelectItem>
+                <SelectItem value="7">July</SelectItem>
+                <SelectItem value="8">August</SelectItem>
+                <SelectItem value="9">September</SelectItem>
+                <SelectItem value="10">October</SelectItem>
+                <SelectItem value="11">November</SelectItem>
+                <SelectItem value="12">December</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date Range (Optional) */}
+          <div className="space-y-2">
+            <Label>Specific Dates (Optional - required for Gantt view)</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Start Date</Label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">End Date</Label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+            {startDate && course && (
+              <p className="text-xs text-muted-foreground">
+                Course duration: {course.duration_days} days
+                {endDate && ` (${Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (24 * 60 * 60 * 1000))} days selected)`}
+              </p>
+            )}
           </div>
 
           {/* Technician Selection */}

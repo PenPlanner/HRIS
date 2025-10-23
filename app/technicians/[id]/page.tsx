@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Upload, CheckCircle } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle, Info } from "lucide-react";
 import Link from "next/link";
-import { use } from "react";
+import { use, useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { KompetensmatrisForm } from "@/components/technician/kompetensmatris-form";
 import { TrainingNeedsManager } from "@/components/technician/training-needs-manager";
 import { AssessmentHistory } from "@/components/technician/assessment-history";
@@ -76,15 +77,17 @@ const mockTechnician = {
   email: "markus.anderson@example.com",
   phone: "+46 70 123 4567",
   vestas_level: "B" as const,
-  competency_level: 4,
+  competency_level: 5,
   profile_picture_url: undefined,
   assessment: {
     vestas_level: "B",
-    internal_experience: "2 Years",
-    external_experience: "2-3 Years as Electrician",
-    education: "Electrical Education",
-    total_points: 101,
-    final_level: 4,
+    internal_experience: "2years", // 20 points × 2.0 = 40
+    external_experience: "2-3", // 10 points × 2.0 = 20
+    education: ["electrical"], // 40 points
+    extra_courses: [], // 0 points
+    subjective_score: 1, // 1 point
+    total_points: 101, // 40 + 40 + 20 + 1 = 101
+    final_level: 5, // 101 points = Level 5 (100+ points)
     submitted_to_ecc: false,
     last_updated: "2025-09-23",
   }
@@ -96,6 +99,8 @@ export default function TechnicianProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const [selectedLevelInfo, setSelectedLevelInfo] = useState<typeof COMPETENCY_LEVELS[0] | null>(null);
+
   // In real app, fetch tech by ID
   const tech = mockTechnician;
   const currentLevelInfo = COMPETENCY_LEVELS.find(l => l.level === tech.competency_level);
@@ -115,7 +120,7 @@ export default function TechnicianProfilePage({
         {/* Profile Header */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-start gap-6">
+            <div className="grid grid-cols-[auto_1fr_auto] gap-8 items-start">
               <div className="relative">
                 <Avatar className="h-24 w-24 border-4" style={{ borderColor: tech.team_color }}>
                   {tech.profile_picture_url ? (
@@ -138,7 +143,7 @@ export default function TechnicianProfilePage({
                 </Button>
               </div>
 
-              <div className="flex-1">
+              <div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-2xl font-bold">
                     {tech.first_name} {tech.last_name}
@@ -169,28 +174,93 @@ export default function TechnicianProfilePage({
                   >
                     Vestas Level {tech.vestas_level}
                   </Badge>
-                  <div className="group relative inline-block">
-                    <Badge className="bg-blue-500 text-white cursor-help">
-                      Competency Level {tech.competency_level}
-                    </Badge>
-                    {currentLevelInfo && (
-                      <div className="invisible group-hover:visible absolute left-0 top-full mt-2 w-80 z-50 rounded-lg border bg-popover p-4 text-popover-foreground shadow-md">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className="text-sm">Level {currentLevelInfo.level}</Badge>
-                            <p className="text-sm font-semibold">{currentLevelInfo.title}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{currentLevelInfo.pointRange}</p>
-                          <p className="text-sm">{currentLevelInfo.description}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
                 <div className="mt-4 space-y-1 text-sm">
                   <p><span className="text-muted-foreground">Email:</span> {tech.email}</p>
                   <p><span className="text-muted-foreground">Phone:</span> {tech.phone}</p>
                 </div>
+              </div>
+
+              {/* Competency Level Progression */}
+              <div className="border-l pl-6 w-[300px]">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Competency Level</p>
+                <div className="space-y-1.5">
+                  {COMPETENCY_LEVELS.map((level) => {
+                    const isActive = level.level === tech.competency_level;
+                    const isPassed = level.level < tech.competency_level;
+
+                    return (
+                      <div
+                        key={level.level}
+                        className={`rounded-md px-2 py-1.5 transition-all ${
+                          isActive
+                            ? 'bg-blue-500/10 border-2 border-blue-500'
+                            : isPassed
+                            ? 'bg-green-500/5 border border-green-500/30'
+                            : 'bg-muted/30 border border-muted-foreground/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-bold text-xs transition-all ${
+                              isActive
+                                ? 'bg-blue-500 border-blue-500 text-white'
+                                : isPassed
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'bg-muted border-muted-foreground/30 text-muted-foreground'
+                            }`}
+                          >
+                            {level.level}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className={`text-xs font-semibold truncate ${isActive ? 'text-blue-600' : isPassed ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                {level.title}
+                              </p>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isActive && (
+                                  <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0">Now</Badge>
+                                )}
+                                {isPassed && (
+                                  <span className="text-green-500 text-xs">✓</span>
+                                )}
+                                {/* Info Icon with hover and click */}
+                                <div className="group/info relative">
+                                  <button
+                                    onClick={() => setSelectedLevelInfo(level)}
+                                    className="p-0.5 hover:bg-accent rounded transition-colors"
+                                  >
+                                    <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                  </button>
+
+                                  {/* Hover Tooltip on Icon */}
+                                  <div className="invisible group-hover/info:visible absolute right-0 top-full mt-1 z-50 w-64 rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg whitespace-normal">
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-2">
+                                        <Badge className="text-xs bg-primary shrink-0">Level {level.level}</Badge>
+                                        <p className="text-xs font-bold leading-tight">{level.title}</p>
+                                      </div>
+                                      <p className="text-[10px] text-muted-foreground font-medium">{level.pointRange}</p>
+                                      <p className="text-xs leading-relaxed">{level.description}</p>
+                                      <p className="text-[10px] text-muted-foreground italic mt-2">Click for more details</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-[10px] text-muted-foreground">{level.pointRange}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {tech.assessment && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-[10px] text-muted-foreground">Total Points</p>
+                    <p className="text-xl font-bold">{tech.assessment.total_points}</p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -296,7 +366,7 @@ export default function TechnicianProfilePage({
           </TabsContent>
 
           <TabsContent value="kompetensmatris">
-            <KompetensmatrisForm technicianId={id} />
+            <KompetensmatrisForm technicianId={id} initialData={tech.assessment} />
           </TabsContent>
 
           <TabsContent value="courses">
@@ -317,6 +387,43 @@ export default function TechnicianProfilePage({
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Competency Level Info Dialog */}
+      <Dialog open={!!selectedLevelInfo} onOpenChange={(open) => !open && setSelectedLevelInfo(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
+                {selectedLevelInfo?.level}
+              </div>
+              <div>
+                <p className="text-xl font-bold">{selectedLevelInfo?.title}</p>
+                <p className="text-sm text-muted-foreground font-normal">{selectedLevelInfo?.pointRange}</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Description</h4>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {selectedLevelInfo?.description}
+              </p>
+            </div>
+
+            {/* Additional context based on level */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <h4 className="text-sm font-semibold">Responsibilities & Permissions</h4>
+              <p className="text-sm text-muted-foreground">
+                {selectedLevelInfo?.level === 1 && "At this level, technicians can only work under direct supervision of a Person in Charge. They are learning the fundamentals and building foundational skills."}
+                {selectedLevelInfo?.level === 2 && "Technicians at this level can act as Person in Charge for mechanical work activities. They can perform mechanical lockouts but are not yet authorized for electrical lockouts."}
+                {selectedLevelInfo?.level === 3 && "This level allows technicians to be Person in Charge for both mechanical and low voltage electrical lockouts. However, troubleshooting activities are still restricted."}
+                {selectedLevelInfo?.level === 4 && "At this level, technicians have full authorization for mechanical and low voltage electrical work, including troubleshooting. This represents advanced operational capability."}
+                {selectedLevelInfo?.level === 5 && "The highest competency level, authorizing technicians for all types of work including high voltage electrical systems and troubleshooting. Represents expert-level capability."}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

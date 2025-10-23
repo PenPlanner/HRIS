@@ -34,6 +34,7 @@ export type Vehicle = {
   model: string;
   year: number;
   assigned_technicians: string[]; // initials
+  primary_driver?: string; // initials of primary driver
 };
 
 export const TEAMS: Team[] = [
@@ -48,7 +49,7 @@ export const TEAMS: Team[] = [
 // Helper function to generate realistic Vestas level distribution
 const getRandomVestasLevel = (): VestasLevel => {
   const rand = Math.random();
-  if (rand < 0.05) return 'Field Trainer'; // 5% Field Trainers
+  if (rand < 0.05) return 'Field Trainer'; // 5% Field Trainers (rare)
   if (rand < 0.15) return 'A'; // 10% A-Level
   if (rand < 0.50) return 'B'; // 35% B-Level (most common)
   if (rand < 0.85) return 'C'; // 35% C-Level (most common)
@@ -57,7 +58,7 @@ const getRandomVestasLevel = (): VestasLevel => {
 
 // Generate competency level based on Vestas level
 const getCompetencyLevel = (vestasLevel: VestasLevel): number => {
-  if (vestasLevel === 'Field Trainer') return 5;
+  if (vestasLevel === 'Field Trainer') return 5; // Field Trainers are always Level 5
   if (vestasLevel === 'A') return Math.random() < 0.7 ? 5 : 4;
   if (vestasLevel === 'B') return Math.random() < 0.5 ? 4 : 3;
   if (vestasLevel === 'C') return Math.random() < 0.6 ? 3 : 2;
@@ -130,13 +131,15 @@ const generateTechniciansForTeam = (team: Team, startId: number, count: number =
     });
   }
 
-  // Ensure at least 1-2 Field Trainers per team
-  const fieldTrainers = technicians.filter(t => t.vestas_level === 'Field Trainer').length;
-  if (fieldTrainers === 0) {
-    // Convert a high-level technician to Field Trainer
-    const highLevel = technicians.find(t => t.vestas_level === 'A' && t.competency_level === 5);
-    if (highLevel) {
-      highLevel.vestas_level = 'Field Trainer';
+  // Ensure each team has at least 1-2 Field Trainers
+  const fieldTrainerCount = technicians.filter(t => t.vestas_level === 'Field Trainer').length;
+  if (fieldTrainerCount === 0) {
+    // Promote 1-2 random A-level technicians to Field Trainer
+    const aLevelTechs = technicians.filter(t => t.vestas_level === 'A');
+    const numToPromote = Math.min(Math.floor(Math.random() * 2) + 1, aLevelTechs.length);
+    for (let i = 0; i < numToPromote; i++) {
+      aLevelTechs[i].vestas_level = 'Field Trainer';
+      aLevelTechs[i].competency_level = 5; // Field Trainers are always Level 5
     }
   }
 
@@ -191,6 +194,7 @@ const generateVehiclesForTeam = (
       model: vehicleType.model,
       year,
       assigned_technicians: assigned,
+      primary_driver: assigned.length > 0 ? assigned[0] : undefined,
     });
   }
 

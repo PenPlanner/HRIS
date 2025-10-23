@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Car, Users, Edit, Calendar } from "lucide-react";
+import { ArrowLeft, Car, Users, Edit, Calendar, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { use, useState, useEffect } from "react";
 import { ALL_VEHICLES, ALL_TECHNICIANS, Vehicle, Technician } from "@/lib/mock-data";
@@ -60,10 +60,14 @@ export default function VehicleDetailPage({
     );
   }
 
-  // Find assigned technicians
-  const assignedTechs = ALL_TECHNICIANS.filter(tech =>
-    vehicle.assigned_technicians.includes(tech.initials)
-  );
+  // Find assigned technicians and sort so primary driver is first
+  const assignedTechs = ALL_TECHNICIANS
+    .filter(tech => vehicle.assigned_technicians.includes(tech.initials))
+    .sort((a, b) => {
+      if (a.initials === vehicle.primary_driver) return -1;
+      if (b.initials === vehicle.primary_driver) return 1;
+      return 0;
+    });
 
   return (
     <MainLayout>
@@ -167,33 +171,49 @@ export default function VehicleDetailPage({
             <CardContent>
               {assignedTechs.length > 0 ? (
                 <div className="space-y-3">
-                  {assignedTechs.map((tech) => (
-                    <Link
-                      key={tech.id}
-                      href={`/technicians/${tech.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback
-                          style={{ backgroundColor: tech.team_color + "20" }}
-                          className="text-sm font-bold"
-                        >
-                          {tech.initials.substring(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {tech.first_name} {tech.last_name}
-                        </p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {tech.initials}
-                        </p>
-                      </div>
-                      {tech.vestas_level && (
-                        <Badge variant="secondary">{tech.vestas_level}</Badge>
-                      )}
-                    </Link>
-                  ))}
+                  {assignedTechs.map((tech) => {
+                    const isPrimaryDriver = vehicle.primary_driver === tech.initials;
+
+                    return (
+                      <Link
+                        key={tech.id}
+                        href={`/technicians/${tech.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback
+                            style={{ backgroundColor: tech.team_color + "20" }}
+                            className="text-sm font-bold"
+                          >
+                            {tech.initials.substring(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">
+                              {tech.first_name} {tech.last_name}
+                            </p>
+                            {isPrimaryDriver && (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-sm text-muted-foreground font-mono">
+                              {tech.initials}
+                            </p>
+                            {isPrimaryDriver && (
+                              <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+                                Driver
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {tech.vestas_level && (
+                          <Badge variant="secondary">{tech.vestas_level}</Badge>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">No technicians assigned to this vehicle.</p>
