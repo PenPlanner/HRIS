@@ -2,14 +2,15 @@
 
 import { FlowchartStep, FlowchartTask } from "@/lib/flowchart-data";
 import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, SIIReference } from "@/lib/sii-documents";
+import { extractPDFMetadata, PDFMetadata } from "@/lib/pdf-metadata";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface StepDetailDrawerProps {
@@ -44,6 +45,45 @@ export function StepDetailDrawer({
   // Extract SII references from task descriptions
   const siiReferences = useMemo(() => extractSIIReferences(step.tasks), [step.tasks]);
   const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
+
+  // State for PDF metadata
+  const [pdfMetadata, setPdfMetadata] = useState<Map<number, PDFMetadata>>(new Map());
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+
+  // Load PDF metadata when modal opens
+  useEffect(() => {
+    if (!open || siiReferences.length === 0) return;
+
+    const loadMetadata = async () => {
+      setLoadingMetadata(true);
+      const metadata = new Map<number, PDFMetadata>();
+
+      // Get unique document numbers
+      const docNumbers = Array.from(new Set(siiReferences.map(ref => ref.documentNumber)));
+
+      // Load metadata for each document
+      await Promise.all(
+        docNumbers.map(async (docNum) => {
+          const ref = siiReferences.find(r => r.documentNumber === docNum);
+          if (ref) {
+            try {
+              const meta = await extractPDFMetadata(ref.documentPath);
+              if (meta) {
+                metadata.set(docNum, meta);
+              }
+            } catch (error) {
+              console.error(`Failed to load metadata for doc ${docNum}:`, error);
+            }
+          }
+        })
+      );
+
+      setPdfMetadata(metadata);
+      setLoadingMetadata(false);
+    };
+
+    loadMetadata();
+  }, [open, siiReferences]);
 
   // Helper to find the task that matches a SII reference
   const findTaskForReference = (reference: SIIReference): FlowchartTask | undefined => {
@@ -248,29 +288,52 @@ export function StepDetailDrawer({
 
                     {/* List SII documents */}
                     <div className="space-y-2">
-                      {Array.from(groupedReferences.entries()).map(([docNum, refs]) => (
-                        <Card key={docNum} className="hover:bg-accent cursor-pointer transition-colors">
-                          <CardContent
-                            className="pt-4 pb-4"
-                            onClick={() => openSIIDocument(refs[0])}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                                <div>
-                                  <p className="text-sm font-medium">
-                                    Doc {docNum}: {refs[0].documentTitle}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {refs.length} section{refs.length > 1 ? 's' : ''} referenced
-                                  </p>
+                      {Array.from(groupedReferences.entries()).map(([docNum, refs]) => {
+                        const metadata = pdfMetadata.get(docNum);
+
+                        return (
+                          <Card key={docNum} className="hover:bg-accent cursor-pointer transition-colors">
+                            <CardContent
+                              className="pt-4 pb-4"
+                              onClick={() => openSIIDocument(refs[0])}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium">
+                                      Doc {docNum}: {refs[0].documentTitle}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {refs.length} section{refs.length > 1 ? 's' : ''} referenced
+                                    </p>
+
+                                    {/* Metadata */}
+                                    {metadata ? (
+                                      <div className="mt-1 flex items-center gap-2 text-xs">
+                                        <Badge variant="outline" className="font-mono text-[10px]">
+                                          {metadata.documentNumber} {metadata.version}
+                                        </Badge>
+                                        <span className="text-muted-foreground">·</span>
+                                        <Badge variant="secondary" className="text-[10px]">
+                                          {metadata.type}
+                                        </Badge>
+                                        <span className="text-muted-foreground">·</span>
+                                        <span className="text-muted-foreground">{metadata.date}</span>
+                                      </div>
+                                    ) : loadingMetadata ? (
+                                      <div className="mt-1 text-xs text-muted-foreground">
+                                        Loading metadata...
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 </div>
+                                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                               </div>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </>
                 )}

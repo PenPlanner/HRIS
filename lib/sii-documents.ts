@@ -14,6 +14,19 @@ export interface SIIReference {
   documentTitle: string;
 }
 
+export interface SIIDocumentInfo {
+  documentNumber: number;
+  filename: string;
+  title: string;
+  path: string;
+  // Metadata (loaded dynamically from PDF)
+  docNumber?: string;
+  version?: string;
+  classification?: string;
+  type?: string;
+  date?: string;
+}
+
 /**
  * Mapping of SII document numbers to their PDF filenames
  */
@@ -155,4 +168,16 @@ export function openSIIDocument(reference: SIIReference, section?: string): void
  */
 export function formatSIIReference(reference: SIIReference): string {
   return `Doc ${reference.documentNumber}: ${reference.documentTitle} - Section ${reference.section}`;
+}
+
+/**
+ * Get all SII documents as SIIDocumentInfo objects
+ */
+export function getAllSIIDocuments(): SIIDocumentInfo[] {
+  return Object.entries(SII_DOCUMENTS).map(([num, doc]) => ({
+    documentNumber: parseInt(num, 10),
+    filename: doc.filename,
+    title: doc.title,
+    path: `/files/flowchart/sii/${doc.filename}`,
+  }));
 }
