@@ -8,7 +8,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
 import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
@@ -89,6 +89,26 @@ export default function FlowchartViewerPage() {
 
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const savedData = localStorage.getItem(storageKey);
+
+    // Clear old corrupted data (temporary fix)
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        // Check if data has corrupted positions (all steps at 0,0)
+        if (parsed.steps && parsed.steps.length > 1) {
+          const allAtZero = parsed.steps.every((s: FlowchartStep) => s.position?.x === 0 && s.position?.y === 0);
+          if (allAtZero) {
+            console.log('Clearing corrupted localStorage data');
+            localStorage.removeItem(storageKey);
+            setSteps(flowchartData.steps);
+            return;
+          }
+        }
+      } catch (e) {
+        // Invalid JSON, clear it
+        localStorage.removeItem(storageKey);
+      }
+    }
 
     if (savedData) {
       try {
@@ -222,6 +242,88 @@ export default function FlowchartViewerPage() {
     // Clear localStorage
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     localStorage.removeItem(storageKey);
+  };
+
+  // Auto-layout handler - intelligently arrange steps based on flowchart pattern
+  const handleAutoLayout = () => {
+    if (!confirm("Auto-arrange all steps based on their sequence? This will reset all positions.")) {
+      return;
+    }
+
+    // Sort steps by colorCode (1Y, 2Y, 3Y, etc.)
+    const sortedSteps = [...steps].sort((a, b) => {
+      const aNum = parseInt(a.colorCode.replace(/\D/g, '')) || 0;
+      const bNum = parseInt(b.colorCode.replace(/\D/g, '')) || 0;
+      return aNum - bNum;
+    });
+
+    // Smart layout algorithm:
+    // - Detect parallel steps (consecutive steps where one is T1 and next is T2)
+    // - Place parallel steps side-by-side
+    // - After parallel group, move to next row and start from left
+    // - Continue in snake/zig-zag pattern
+
+    const updatedSteps: FlowchartStep[] = [];
+    let currentRow = 0;
+    let currentCol = 0;
+    let i = 0;
+
+    while (i < sortedSteps.length) {
+      const currentStep = sortedSteps[i];
+      const nextStep = sortedSteps[i + 1];
+
+      // Check if current and next steps are parallel (T1 and T2)
+      const isParallel = nextStep &&
+        ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
+         (currentStep.technician === "T2" && nextStep.technician === "T1"));
+
+      if (isParallel) {
+        // Place parallel steps side by side
+        updatedSteps.push({
+          ...currentStep,
+          position: { x: currentCol, y: currentRow }
+        });
+        updatedSteps.push({
+          ...nextStep,
+          position: { x: currentCol + 1, y: currentRow }
+        });
+
+        // Move to next row, start from left
+        currentRow++;
+        currentCol = 0;
+        i += 2;
+      } else if (currentStep.technician === "both") {
+        // "Both" steps take full width, centered
+        updatedSteps.push({
+          ...currentStep,
+          position: { x: 0, y: currentRow }
+        });
+
+        // Move to next row
+        currentRow++;
+        currentCol = 0;
+        i++;
+      } else {
+        // Single step in snake pattern
+        updatedSteps.push({
+          ...currentStep,
+          position: { x: currentCol, y: currentRow }
+        });
+
+        currentCol++;
+
+        // If we've filled 2 columns, move to next row
+        if (currentCol >= 2) {
+          currentRow++;
+          currentCol = 0;
+        }
+
+        i++;
+      }
+    }
+
+    setSteps(updatedSteps);
+    setHasUnsavedChanges(true);
   };
 
   // Edit mode handlers
@@ -391,6 +493,15 @@ export default function FlowchartViewerPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoLayout}
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Auto-Layout
+                </Button>
 
                 <Button
                   variant="outline"
