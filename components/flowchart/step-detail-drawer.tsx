@@ -1,13 +1,15 @@
 "use client"
 
 import { FlowchartStep, FlowchartTask } from "@/lib/flowchart-data";
+import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, SIIReference } from "@/lib/sii-documents";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useMemo } from "react";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;
@@ -37,6 +39,10 @@ export function StepDetailDrawer({
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks;
+
+  // Extract SII references from task descriptions
+  const siiReferences = useMemo(() => extractSIIReferences(step.tasks), [step.tasks]);
+  const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,20 +159,82 @@ export function StepDetailDrawer({
           </TabsContent>
 
           <TabsContent value="documents" className="space-y-3">
-            {step.documents && step.documents.length > 0 ? (
-              step.documents.map((doc, idx) => (
-                <Card key={idx} className="hover:bg-accent cursor-pointer">
-                  <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                    <span className="text-sm">{doc}</span>
-                  </CardContent>
-                </Card>
-              ))
+            {siiReferences.length > 0 ? (
+              <>
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm font-medium">Service Instruction Instructions (SII)</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click to open the relevant SII document. {siiReferences.length} reference{siiReferences.length > 1 ? 's' : ''} found in this step.
+                  </p>
+                </div>
+
+                {/* Group references by document */}
+                {Array.from(groupedReferences.entries()).map(([docNum, refs]) => (
+                  <Card key={docNum} className="border-l-4 border-l-blue-500">
+                    <CardContent className="pt-4 pb-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-blue-600" />
+                              Doc {docNum}: {refs[0].documentTitle}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {refs.length} section{refs.length > 1 ? 's' : ''} referenced
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openSIIDocument(refs[0])}
+                            className="gap-2"
+                          >
+                            Open PDF
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {/* List all sections from this document */}
+                        <div className="space-y-1 pl-6 border-l-2 border-gray-200">
+                          {refs.map((ref, idx) => (
+                            <div key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <span className="font-mono text-blue-600 font-medium">§ {ref.section}</span>
+                              <span>{ref.description || '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* Show additional manual documents if any */}
+                {step.documents && step.documents.length > 0 && (
+                  <>
+                    <div className="mt-6 mb-2">
+                      <p className="text-sm font-medium">Additional Documents</p>
+                    </div>
+                    {step.documents.map((doc, idx) => (
+                      <Card key={idx} className="hover:bg-accent cursor-pointer">
+                        <CardContent className="pt-4 pb-4 flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-gray-600" />
+                          <span className="text-sm">{doc}</span>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                )}
+              </>
             ) : (
               <div className="text-center py-12">
                 <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">No documents available for this step</p>
-                <p className="text-xs text-muted-foreground mt-2">Documents will be added soon</p>
+                <p className="text-sm text-muted-foreground">No SII references found in this step</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Task descriptions should start with references like "11.5.1 Description"
+                </p>
               </div>
             )}
           </TabsContent>
