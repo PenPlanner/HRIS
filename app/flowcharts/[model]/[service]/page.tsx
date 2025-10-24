@@ -95,12 +95,13 @@ export default function FlowchartViewerPage() {
       console.log('No saved data found - will auto-arrange on first load');
 
       // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-      // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
-      // Box height is ~140px, so we need y spacing of ~6 grid units for vertical separation
+      // Box width is ~200px, so we need x spacing of ~7 grid units (at 30px grid) for horizontal separation
+      // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
       const arrangedSteps: FlowchartStep[] = [];
       let currentCol = 0; // Horizontal position (steps go left to right)
-      const COL_SPACING = 10; // 10 * 30px = 300px horizontal spacing
-      const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
+      const COL_SPACING = 7; // 7 * 30px = 210px horizontal spacing (tighter)
+      const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
+      const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
       let stepNumber = 1; // For automatic step numbering
       let i = 0;
 
@@ -117,10 +118,10 @@ export default function FlowchartViewerPage() {
            (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
         if (is4YOnly) {
-          // Standalone 4Y step - place at top of current column
+          // Standalone 4Y step - place at baseline of current column
           arrangedSteps.push({
             ...currentStep,
-            position: { x: currentCol, y: 0 },
+            position: { x: currentCol, y: BASELINE_Y },
             colorCode: "4Y Only" // Mark as 4Y only
           });
           console.log(`Col ${currentCol}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
@@ -133,12 +134,12 @@ export default function FlowchartViewerPage() {
 
           arrangedSteps.push({
             ...leftStep,
-            position: { x: currentCol, y: 0 }, // Top position
+            position: { x: currentCol, y: BASELINE_Y }, // Top position
             colorCode: `${stepNumber}.1` // e.g., "2.1"
           });
           arrangedSteps.push({
             ...rightStep,
-            position: { x: currentCol, y: ROW_SPACING }, // Below, stacked vertically
+            position: { x: currentCol, y: BASELINE_Y + ROW_SPACING }, // Below, stacked vertically
             colorCode: `${stepNumber}.2` // e.g., "2.2"
           });
           console.log(`Col ${currentCol}: Step ${stepNumber}.1 (top) | ${stepNumber}.2 (bottom)`);
@@ -147,10 +148,10 @@ export default function FlowchartViewerPage() {
           currentCol += COL_SPACING; // Move to next column
           i += 2; // Skip both steps
         } else {
-          // Single step - place at top of current column
+          // Single step - place at baseline of current column
           arrangedSteps.push({
             ...currentStep,
-            position: { x: currentCol, y: 0 },
+            position: { x: currentCol, y: BASELINE_Y },
             colorCode: `${stepNumber}` // e.g., "1", "3"
           });
           console.log(`Col ${currentCol}: Step ${stepNumber} - ${currentStep.title.substring(0, 30)}`);
@@ -337,12 +338,13 @@ export default function FlowchartViewerPage() {
     console.log("Starting auto-layout with steps:", steps.length);
 
     // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-    // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
-    // Box height is ~140px, so we need y spacing of ~6 grid units for vertical separation
+    // Box width is ~200px, so we need x spacing of ~7 grid units (at 30px grid) for horizontal separation
+    // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
     const arrangedSteps: FlowchartStep[] = [];
     let currentCol = 0; // Horizontal position (steps go left to right)
-    const COL_SPACING = 10; // 10 * 30px = 300px horizontal spacing
-    const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
+    const COL_SPACING = 7; // 7 * 30px = 210px horizontal spacing (tighter)
+    const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
+    const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
     let stepNumber = 1; // For automatic step numbering
     let i = 0;
 
@@ -359,10 +361,10 @@ export default function FlowchartViewerPage() {
          (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
       if (is4YOnly) {
-        // Standalone 4Y step - place at top of current column
+        // Standalone 4Y step - place at baseline of current column
         arrangedSteps.push({
           ...currentStep,
-          position: { x: currentCol, y: 0 },
+          position: { x: currentCol, y: BASELINE_Y },
           colorCode: "4Y Only" // Mark as 4Y only
         });
         console.log(`Col ${currentCol}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
@@ -375,12 +377,12 @@ export default function FlowchartViewerPage() {
 
         arrangedSteps.push({
           ...leftStep,
-          position: { x: currentCol, y: 0 }, // Top position
+          position: { x: currentCol, y: BASELINE_Y }, // Top position
           colorCode: `${stepNumber}.1` // e.g., "2.1"
         });
         arrangedSteps.push({
           ...rightStep,
-          position: { x: currentCol, y: ROW_SPACING }, // Below, stacked vertically
+          position: { x: currentCol, y: BASELINE_Y + ROW_SPACING }, // Below, stacked vertically
           colorCode: `${stepNumber}.2` // e.g., "2.2"
         });
         console.log(`Col ${currentCol}: Step ${stepNumber}.1 (top) | ${stepNumber}.2 (bottom)`);
@@ -389,10 +391,10 @@ export default function FlowchartViewerPage() {
         currentCol += COL_SPACING; // Move to next column
         i += 2; // Skip both steps
       } else {
-        // Single step - place at top of current column
+        // Single step - place at baseline of current column
         arrangedSteps.push({
           ...currentStep,
-          position: { x: currentCol, y: 0 },
+          position: { x: currentCol, y: BASELINE_Y },
           colorCode: `${stepNumber}` // e.g., "1", "3"
         });
         console.log(`Col ${currentCol}: Step ${stepNumber} - ${currentStep.title.substring(0, 30)}`);
