@@ -95,11 +95,11 @@ export default function FlowchartViewerPage() {
       console.log('No saved data found - will auto-arrange on first load');
 
       // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-      // Box width is ~200px, so we need x spacing of ~7 grid units (at 30px grid) for horizontal separation
+      // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
       // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
       const arrangedSteps: FlowchartStep[] = [];
       let currentCol = 0; // Horizontal position (steps go left to right)
-      const COL_SPACING = 7; // 7 * 30px = 210px horizontal spacing (tighter)
+      const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
       const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
       const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
       let stepNumber = 1; // For automatic step numbering
@@ -338,11 +338,11 @@ export default function FlowchartViewerPage() {
     console.log("Starting auto-layout with steps:", steps.length);
 
     // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-    // Box width is ~200px, so we need x spacing of ~7 grid units (at 30px grid) for horizontal separation
+    // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
     // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
     const arrangedSteps: FlowchartStep[] = [];
     let currentCol = 0; // Horizontal position (steps go left to right)
-    const COL_SPACING = 7; // 7 * 30px = 210px horizontal spacing (tighter)
+    const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
     const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
     const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
     let stepNumber = 1; // For automatic step numbering
