@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp } from "lucide-react";
@@ -11,7 +12,12 @@ import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
 import { ProgressTracker } from "@/components/flowchart/progress-tracker";
 import { FlowchartEditor } from "@/components/flowchart/flowchart-editor";
 import { StepEditorDialog } from "@/components/flowchart/step-editor-dialog";
-import { PDFImportDialog } from "@/components/flowchart/pdf-import-dialog";
+
+// Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
+const PDFImportDialog = dynamic(
+  () => import("@/components/flowchart/pdf-import-dialog").then(mod => mod.PDFImportDialog),
+  { ssr: false }
+);
 
 export default function FlowchartViewerPage() {
   const params = useParams();

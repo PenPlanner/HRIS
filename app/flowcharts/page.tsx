@@ -8,9 +8,15 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { Search, Wind, Clock, Users, FileText, Plus, Settings, FileUp } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getAllFlowcharts } from "@/lib/flowchart-data";
 import { FlowchartManagerDialog } from "@/components/flowchart/flowchart-manager-dialog";
-import { PDFImportDialog } from "@/components/flowchart/pdf-import-dialog";
+
+// Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
+const PDFImportDialog = dynamic(
+  () => import("@/components/flowchart/pdf-import-dialog").then(mod => mod.PDFImportDialog),
+  { ssr: false }
+);
 
 export default function FlowchartsPage() {
   const [searchQuery, setSearchQuery] = useState("");
