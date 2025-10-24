@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,17 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FlowchartData, FlowchartStep, generateFlowchartId, generateStepId, generateTaskId } from "@/lib/flowchart-data";
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-
-// Dynamically import PDF.js only on client side
-let pdfjsLib: any = null;
-if (typeof window !== "undefined") {
-  import("pdfjs-dist").then((pdfjs) => {
-    pdfjsLib = pdfjs;
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-  }).catch((err) => {
-    console.error("Failed to load PDF.js:", err);
-  });
-}
 
 interface PDFImportDialogProps {
   open: boolean;
@@ -47,6 +36,20 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
   const [parsedData, setParsedData] = useState<ParsedData | null>(null);
   const [model, setModel] = useState("");
   const [serviceType, setServiceType] = useState("");
+  const [pdfjsLib, setPdfjsLib] = useState<any>(null);
+
+  // Load PDF.js library when component mounts
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("pdfjs-dist").then((pdfjs) => {
+        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        setPdfjsLib(pdfjs);
+      }).catch((err) => {
+        console.error("Failed to load PDF.js:", err);
+        setError("Failed to load PDF processing library. PDF import will not work.");
+      });
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -58,13 +61,9 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     }
   };
 
-  const extractTextFromPDF = async (pdfFile: File): Promise<string> => {
-    if (!pdfjsLib) {
-      throw new Error("PDF.js library not loaded yet. Please try again in a moment.");
-    }
-
+  const extractTextFromPDF = async (pdfFile: File, pdfLib: any): Promise<string> => {
     const arrayBuffer = await pdfFile.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfLib.getDocument({ data: arrayBuffer }).promise;
 
     let fullText = "";
 
@@ -158,7 +157,7 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
 
     // Wait for PDF.js to load if not ready
     if (!pdfjsLib) {
-      setError("PDF library is loading, please wait a moment and try again...");
+      setError("PDF library is still loading, please wait a moment and try again...");
       return;
     }
 
@@ -166,7 +165,7 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     setError(null);
 
     try {
-      const text = await extractTextFromPDF(file);
+      const text = await extractTextFromPDF(file, pdfjsLib);
       setExtractedText(text);
 
       const parsed = parseFlowchartData(text);
