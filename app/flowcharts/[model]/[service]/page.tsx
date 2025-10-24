@@ -94,52 +94,42 @@ export default function FlowchartViewerPage() {
     if (!savedData) {
       console.log('No saved data found - will auto-arrange on first load');
 
-      // SMART REGROUP: Separate T1 and T2 steps, then pair them
-      const bothSteps = flowchartData.steps.filter(s => s.technician === "both");
-      const t1Steps = flowchartData.steps.filter(s => s.technician === "T1");
-      const t2Steps = flowchartData.steps.filter(s => s.technician === "T2");
-
-      console.log(`Regrouping: ${bothSteps.length} both, ${t1Steps.length} T1, ${t2Steps.length} T2`);
-
+      // SEQUENTIAL LAYOUT: Follow the exact order in data, pair CONSECUTIVE T1/T2 steps
       const arrangedSteps: FlowchartStep[] = [];
       let currentRow = 0;
+      let i = 0;
 
-      // Add first "both" step if exists
-      if (bothSteps.length > 0) {
-        arrangedSteps.push({ ...bothSteps[0], position: { x: 0, y: currentRow } });
-        currentRow++;
-      }
+      while (i < flowchartData.steps.length) {
+        const currentStep = flowchartData.steps[i];
+        const nextStep = flowchartData.steps[i + 1];
 
-      // Pair T1 and T2 steps side by side
-      // Box width is 200px, so we need x spacing of ~8-9 grid units (at 30px grid) for proper separation
-      const maxPairs = Math.max(t1Steps.length, t2Steps.length);
-      for (let i = 0; i < maxPairs; i++) {
-        const t1 = t1Steps[i];
-        const t2 = t2Steps[i];
+        // Check if current and next steps should be parallel (consecutive T1 & T2)
+        const isParallel = nextStep &&
+          ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
+           (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
-        if (t1 && t2) {
-          // Both exist - place side by side with proper spacing
-          arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
-          arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
+        if (isParallel) {
+          // Place parallel steps side by side (T1 left, T2 right)
+          const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
+          const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
+
+          arrangedSteps.push({ ...leftStep, position: { x: 0, y: currentRow } });
+          arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
+          console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
+
           currentRow++;
-        } else if (t1) {
-          // Only T1 exists
-          arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
+          i += 2; // Skip both steps
+        } else {
+          // Single step - place alone on its row
+          arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
+          console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
+
           currentRow++;
-        } else if (t2) {
-          // Only T2 exists
-          arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
-          currentRow++;
+          i++;
         }
       }
 
-      // Add remaining "both" steps at the end
-      for (let i = 1; i < bothSteps.length; i++) {
-        arrangedSteps.push({ ...bothSteps[i], position: { x: 0, y: currentRow } });
-        currentRow++;
-      }
-
-      console.log('First load - auto-arranged steps');
+      console.log('First load - auto-arranged steps sequentially');
       setSteps(arrangedSteps);
 
       // Save the arranged positions
@@ -314,54 +304,41 @@ export default function FlowchartViewerPage() {
 
     console.log("Starting auto-layout with steps:", steps.length);
 
-    // SMART REGROUP: Separate T1 and T2 steps, then pair them
-    const bothSteps = steps.filter(s => s.technician === "both");
-    const t1Steps = steps.filter(s => s.technician === "T1");
-    const t2Steps = steps.filter(s => s.technician === "T2");
-
-    console.log(`Regrouping: ${bothSteps.length} both, ${t1Steps.length} T1, ${t2Steps.length} T2`);
-
+    // SEQUENTIAL LAYOUT: Follow the exact order in data, pair CONSECUTIVE T1/T2 steps
+    // This respects the flowchart logic where some steps must be done sequentially,
+    // and only consecutive T1/T2 pairs should be placed in parallel
     const arrangedSteps: FlowchartStep[] = [];
     let currentRow = 0;
+    let i = 0;
 
-    // Add first "both" step if exists
-    if (bothSteps.length > 0) {
-      arrangedSteps.push({ ...bothSteps[0], position: { x: 0, y: currentRow } });
-      console.log(`Row ${currentRow}: Both step - ${bothSteps[0].title.substring(0, 30)}`);
-      currentRow++;
-    }
+    while (i < steps.length) {
+      const currentStep = steps[i];
+      const nextStep = steps[i + 1];
 
-    // Pair T1 and T2 steps side by side
-    // Box width is 200px, so we need x spacing of ~8-9 grid units (at 30px grid) for proper separation
-    const maxPairs = Math.max(t1Steps.length, t2Steps.length);
-    for (let i = 0; i < maxPairs; i++) {
-      const t1 = t1Steps[i];
-      const t2 = t2Steps[i];
+      // Check if current and next steps should be parallel (consecutive T1 & T2)
+      const isParallel = nextStep &&
+        ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
+         (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
-      if (t1 && t2) {
-        // Both exist - place side by side with proper spacing
-        arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
-        arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
-        console.log(`Row ${currentRow}: T1 (${t1.title.substring(0, 20)}) | T2 (${t2.title.substring(0, 20)})`);
+      if (isParallel) {
+        // Place parallel steps side by side (T1 left, T2 right)
+        const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
+        const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
+
+        arrangedSteps.push({ ...leftStep, position: { x: 0, y: currentRow } });
+        arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
+        console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
+
         currentRow++;
-      } else if (t1) {
-        // Only T1 exists
-        arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
-        console.log(`Row ${currentRow}: T1 only - ${t1.title.substring(0, 30)}`);
+        i += 2; // Skip both steps
+      } else {
+        // Single step - place alone on its row
+        arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
+        console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
+
         currentRow++;
-      } else if (t2) {
-        // Only T2 exists
-        arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
-        console.log(`Row ${currentRow}: T2 only - ${t2.title.substring(0, 30)}`);
-        currentRow++;
+        i++;
       }
-    }
-
-    // Add remaining "both" steps at the end
-    for (let i = 1; i < bothSteps.length; i++) {
-      arrangedSteps.push({ ...bothSteps[i], position: { x: 0, y: currentRow } });
-      console.log(`Row ${currentRow}: Both step - ${bothSteps[i].title.substring(0, 30)}`);
-      currentRow++;
     }
 
     console.log("Auto-layout complete. New positions:", arrangedSteps.map(s => ({ title: s.title.substring(0, 20), pos: s.position })));
