@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { CheckCircle, Save, Info, Edit } from "lucide-react";
 
-type VestasLevel = 'D' | 'C' | 'B' | 'A';
+type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
 
 interface AssessmentData {
   vestas_level: VestasLevel;

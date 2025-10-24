@@ -293,16 +293,12 @@ export default function TechniciansPage() {
               >
                 <div className="flex items-start gap-4">
                   <Avatar className="h-12 w-12">
-                    {tech.profile_picture_url ? (
-                      <AvatarImage src={tech.profile_picture_url} />
-                    ) : (
-                      <AvatarFallback
-                        style={{ backgroundColor: tech.team_color + "20" }}
-                        className="text-sm font-bold"
-                      >
-                        {tech.initials.substring(0, 2)}
-                      </AvatarFallback>
-                    )}
+                    <AvatarFallback
+                      style={{ backgroundColor: tech.team_color + "20" }}
+                      className="text-sm font-bold"
+                    >
+                      {tech.initials.substring(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

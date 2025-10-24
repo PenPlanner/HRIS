@@ -26,7 +26,7 @@ const VESTAS_COURSES: Course[] = [
   { id: "3", name: "Safety Introduction for Technicians", code: "951100", category: "Safety & GWO", type: "internal" },
 
   // Electrical
-  { id: "4", name: "Electrical Knowledge Sweden (Ellära)", code: "951500", category: "Electrical", type: "internal", validity_period_months: null },
+  { id: "4", name: "Electrical Knowledge Sweden (Ellära)", code: "951500", category: "Electrical", type: "internal" },
   { id: "5", name: "Electrical Safety for Qualified", code: "252037", category: "Electrical", type: "internal", validity_period_months: 36 },
   { id: "6", name: "Lock Out Level 2 - Person in Charge", code: "LOTO-2", category: "Electrical", type: "internal", validity_period_months: 36 },
   { id: "7", name: "HV Safety", code: "HV-SAFETY", category: "Electrical", type: "internal", prerequisites: "Minimum 100 points in Electrical matrix" },

@@ -323,9 +323,9 @@ export default function TechnicianProfilePage({
                       <p className="text-sm text-muted-foreground mb-2">Vestas Level</p>
                       <Badge
                         style={{
-                          backgroundColor: getVestasLevelColor(tech.assessment.vestas_level).bg,
-                          color: getVestasLevelColor(tech.assessment.vestas_level).text,
-                          borderColor: getVestasLevelColor(tech.assessment.vestas_level).border
+                          backgroundColor: getVestasLevelColor(tech.assessment.vestas_level as VestasLevel).bg,
+                          color: getVestasLevelColor(tech.assessment.vestas_level as VestasLevel).text,
+                          borderColor: getVestasLevelColor(tech.assessment.vestas_level as VestasLevel).border
                         }}
                         className="text-lg px-3 py-1"
                       >
@@ -366,7 +366,7 @@ export default function TechnicianProfilePage({
           </TabsContent>
 
           <TabsContent value="kompetensmatris">
-            <KompetensmatrisForm technicianId={id} initialData={tech.assessment} />
+            <KompetensmatrisForm technicianId={id} initialData={{...tech.assessment, vestas_level: tech.assessment.vestas_level as VestasLevel}} />
           </TabsContent>
 
           <TabsContent value="courses">

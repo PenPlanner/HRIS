@@ -8,6 +8,8 @@ import {
   GraduationCap,
   LayoutDashboard,
   Settings,
+  Shield,
+  FileText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -31,6 +33,16 @@ const navigation = [
     name: "Training",
     href: "/training",
     icon: GraduationCap,
+  },
+  {
+    name: "LOTO",
+    href: "/loto",
+    icon: Shield,
+  },
+  {
+    name: "Flowcharts",
+    href: "/flowcharts",
+    icon: FileText,
   },
   {
     name: "Admin",

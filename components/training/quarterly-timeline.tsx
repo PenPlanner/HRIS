@@ -57,6 +57,10 @@ const hasConflict = (course: PlannedCourse, allCourses: PlannedCourse[]): boolea
     if (sharedTechs.length === 0) return false;
 
     // Check date overlap
+    if (!course.start_date || !course.end_date || !otherCourse.start_date || !otherCourse.end_date) {
+      return false;
+    }
+
     const start1 = new Date(course.start_date);
     const end1 = new Date(course.end_date);
     const start2 = new Date(otherCourse.start_date);
