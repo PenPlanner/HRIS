@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Webpack configuration to prevent cache corruption issues
+  webpack: (config, { isServer, dev }) => {
+    // Disable webpack caching during development to prevent corruption
+    // This makes builds slightly slower but more reliable
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -3,11 +3,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut } from "lucide-react";
-import { TURBINE_MODELS, FlowchartData, FlowchartStep } from "@/lib/flowchart-data";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp } from "lucide-react";
+import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
 import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
 import { ProgressTracker } from "@/components/flowchart/progress-tracker";
+import { FlowchartEditor } from "@/components/flowchart/flowchart-editor";
+import { StepEditorDialog } from "@/components/flowchart/step-editor-dialog";
+import { PDFImportDialog } from "@/components/flowchart/pdf-import-dialog";
 
 export default function FlowchartViewerPage() {
   const params = useParams();
@@ -15,22 +19,36 @@ export default function FlowchartViewerPage() {
   const modelId = params.model as string;
   const serviceId = params.service as string;
 
-  // Find the flowchart data
-  const flowchartData = useMemo(() => {
-    const model = TURBINE_MODELS.find(m => m.id === modelId);
-    if (!model) return null;
-    return model.flowcharts.find(f => f.id === serviceId);
+  // Find the flowchart data (including custom flowcharts)
+  const [flowchartData, setFlowchartData] = useState<FlowchartData | null>(null);
+
+  useEffect(() => {
+    const allModels = getAllFlowcharts();
+    const model = allModels.find(m => m.id === modelId);
+    if (!model) {
+      setFlowchartData(null);
+      return;
+    }
+    const flowchart = model.flowcharts.find(f => f.id === serviceId);
+    setFlowchartData(flowchart || null);
   }, [modelId, serviceId]);
 
   // State for UI
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // State for progress tracking
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
   const [selectedStep, setSelectedStep] = useState<FlowchartStep | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // State for edit mode
+  const [editingStep, setEditingStep] = useState<FlowchartStep | null>(null);
+  const [stepEditorOpen, setStepEditorOpen] = useState(false);
+  const [pdfImportOpen, setPdfImportOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Calculate grid dimensions and connections
   const gridInfo = useMemo(() => {
@@ -170,6 +188,96 @@ export default function FlowchartViewerPage() {
     localStorage.removeItem(storageKey);
   };
 
+  // Edit mode handlers
+  const handleSaveFlowchart = () => {
+    if (!flowchartData) return;
+
+    const updatedFlowchart: FlowchartData = {
+      ...flowchartData,
+      steps
+    };
+
+    saveFlowchart(updatedFlowchart);
+    setHasUnsavedChanges(false);
+    alert("Flowchart saved successfully!");
+  };
+
+  const handleAddStep = () => {
+    const newStep: FlowchartStep = {
+      id: generateStepId(),
+      title: "New Step",
+      duration: "60m",
+      durationMinutes: 60,
+      color: "#2196F3",
+      colorCode: "New",
+      technician: "both",
+      position: { x: 0, y: 0 },
+      tasks: [
+        {
+          id: generateTaskId(),
+          description: "Task 1",
+          completed: false
+        }
+      ]
+    };
+
+    setSteps([...steps, newStep]);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleEditStep = (step: FlowchartStep) => {
+    setEditingStep(step);
+    setStepEditorOpen(true);
+  };
+
+  const handleSaveStep = (updatedStep: FlowchartStep) => {
+    setSteps(steps.map(s => s.id === updatedStep.id ? updatedStep : s));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleStepsChange = (newSteps: FlowchartStep[]) => {
+    setSteps(newSteps);
+    setHasUnsavedChanges(true);
+  };
+
+  const handlePDFImport = (importedFlowchart: FlowchartData) => {
+    // Save the imported flowchart
+    saveFlowchart(importedFlowchart);
+
+    // Navigate to the new flowchart
+    const newModelId = importedFlowchart.model.toLowerCase().replace(/\s+/g, "-");
+    router.push(`/flowcharts/${newModelId}/${importedFlowchart.id}`);
+  };
+
+  const handleExportFlowchart = () => {
+    if (!flowchartData) return;
+
+    const exportData: FlowchartData = {
+      ...flowchartData,
+      steps
+    };
+
+    exportFlowchartJSON(exportData);
+  };
+
+  const toggleEditMode = () => {
+    if (isEditMode && hasUnsavedChanges) {
+      if (!confirm("You have unsaved changes. Do you want to discard them?")) {
+        return;
+      }
+    }
+
+    setIsEditMode(!isEditMode);
+
+    if (!isEditMode) {
+      // Entering edit mode - ensure we have the latest data
+      if (flowchartData) {
+        setSteps([...flowchartData.steps]);
+      }
+      setHasUnsavedChanges(false);
+    }
+  };
+
   if (!flowchartData) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -202,12 +310,78 @@ export default function FlowchartViewerPage() {
               </Button>
             )}
             <div>
-              <h1 className="text-xl font-bold">{flowchartData.model}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold">{flowchartData.model}</h1>
+                {flowchartData.isCustom && (
+                  <Badge variant="secondary">Custom</Badge>
+                )}
+                {hasUnsavedChanges && isEditMode && (
+                  <Badge variant="destructive">Unsaved</Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{flowchartData.serviceType}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Edit Mode Controls */}
+            {isEditMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddStep}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Step
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPdfImportOpen(true)}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Import PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportFlowchart}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSaveFlowchart}
+                  disabled={!hasUnsavedChanges}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleEditMode}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Mode
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={toggleEditMode}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Mode
+              </Button>
+            )}
+
+            {/* Zoom Controls */}
+            {!isEditMode && (
             <div className="flex items-center gap-1 border rounded-md">
               <Button
                 variant="ghost"
@@ -229,6 +403,7 @@ export default function FlowchartViewerPage() {
                 <ZoomIn className="h-4 w-4" />
               </Button>
             </div>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -247,7 +422,18 @@ export default function FlowchartViewerPage() {
         </div>
 
         {/* Flowchart Area */}
-        <div
+        {isEditMode ? (
+          // Edit Mode - Show Editor
+          <FlowchartEditor
+            steps={steps}
+            onStepsChange={handleStepsChange}
+            onEditStep={handleEditStep}
+            onAddStep={handleAddStep}
+            zoom={zoom}
+          />
+        ) : (
+          // View Mode - Show Normal Flowchart
+          <div
           className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 p-4"
           onWheel={(e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -299,6 +485,7 @@ export default function FlowchartViewerPage() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       {/* Progress Tracker Sidebar */}
@@ -329,6 +516,21 @@ export default function FlowchartViewerPage() {
         isStepRunning={false}
         stepStartTime={null}
         elapsedTime="00:00:00"
+      />
+
+      {/* Step Editor Dialog */}
+      <StepEditorDialog
+        step={editingStep}
+        open={stepEditorOpen}
+        onOpenChange={setStepEditorOpen}
+        onSave={handleSaveStep}
+      />
+
+      {/* PDF Import Dialog */}
+      <PDFImportDialog
+        open={pdfImportOpen}
+        onOpenChange={setPdfImportOpen}
+        onImport={handlePDFImport}
       />
     </div>
   );

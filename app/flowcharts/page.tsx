@@ -5,15 +5,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { Search, Wind, Clock, Users, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Wind, Clock, Users, FileText, Plus, Settings, FileUp } from "lucide-react";
 import Link from "next/link";
-import { TURBINE_MODELS } from "@/lib/flowchart-data";
+import { getAllFlowcharts } from "@/lib/flowchart-data";
+import { FlowchartManagerDialog } from "@/components/flowchart/flowchart-manager-dialog";
+import { PDFImportDialog } from "@/components/flowchart/pdf-import-dialog";
 
 export default function FlowchartsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [allModels, setAllModels] = useState(getAllFlowcharts());
+  const [managerOpen, setManagerOpen] = useState(false);
+  const [pdfImportOpen, setPdfImportOpen] = useState(false);
 
-  const filteredModels = TURBINE_MODELS.filter(model => {
+  const refreshFlowcharts = () => {
+    setAllModels(getAllFlowcharts());
+  };
+
+  const filteredModels = allModels.filter(model => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return model.name.toLowerCase().includes(query) ||
@@ -31,6 +40,16 @@ export default function FlowchartsPage() {
               Interactive service procedure flowcharts for wind turbines
             </p>
           </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setPdfImportOpen(true)} variant="outline">
+              <FileUp className="h-4 w-4 mr-2" />
+              Import PDF
+            </Button>
+            <Button onClick={() => setManagerOpen(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Manage
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -42,7 +61,7 @@ export default function FlowchartsPage() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Wind className="h-5 w-5 text-primary" />
-                <p className="text-3xl font-bold">{TURBINE_MODELS.length}</p>
+                <p className="text-3xl font-bold">{allModels.length}</p>
               </div>
             </CardContent>
           </Card>
@@ -54,7 +73,7 @@ export default function FlowchartsPage() {
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-primary" />
                 <p className="text-3xl font-bold">
-                  {TURBINE_MODELS.reduce((sum, model) => sum + model.flowcharts.length, 0)}
+                  {allModels.reduce((sum, model) => sum + model.flowcharts.length, 0)}
                 </p>
               </div>
             </CardContent>
@@ -162,6 +181,23 @@ export default function FlowchartsPage() {
           </div>
         )}
       </div>
+
+      {/* Flowchart Manager Dialog */}
+      <FlowchartManagerDialog
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        onRefresh={refreshFlowcharts}
+      />
+
+      {/* PDF Import Dialog */}
+      <PDFImportDialog
+        open={pdfImportOpen}
+        onOpenChange={setPdfImportOpen}
+        onImport={(flowchart) => {
+          setPdfImportOpen(false);
+          refreshFlowcharts();
+        }}
+      />
     </MainLayout>
   );
 }

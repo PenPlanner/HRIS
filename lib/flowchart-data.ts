@@ -34,6 +34,9 @@ export interface FlowchartData {
   workHours: string;
   duration: string;
   steps: FlowchartStep[];
+  isCustom?: boolean; // True for user-created flowcharts
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // EnVentus Mk 0 - 1Y Service Flowchart
@@ -330,3 +333,183 @@ export const TURBINE_MODELS = [
     flowcharts: [ENVENTUS_MK0_1Y]
   }
 ];
+
+// ==========================================
+// Local Storage Management Functions
+// ==========================================
+
+const STORAGE_KEY = "custom_flowcharts";
+
+/**
+ * Load custom flowcharts from localStorage
+ */
+export function loadCustomFlowcharts(): FlowchartData[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [];
+
+    const data = JSON.parse(stored);
+    return Object.values(data) as FlowchartData[];
+  } catch (error) {
+    console.error("Failed to load custom flowcharts:", error);
+    return [];
+  }
+}
+
+/**
+ * Save a flowchart to localStorage
+ */
+export function saveFlowchart(flowchart: FlowchartData): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    // Mark as custom and add timestamps
+    const flowchartToSave: FlowchartData = {
+      ...flowchart,
+      isCustom: true,
+      updatedAt: new Date().toISOString(),
+      createdAt: flowchart.createdAt || new Date().toISOString()
+    };
+
+    // Load existing flowcharts
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+
+    // Add/update flowchart
+    data[flowchart.id] = flowchartToSave;
+
+    // Save back to localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error("Failed to save flowchart:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a custom flowchart from localStorage
+ */
+export function deleteFlowchart(flowchartId: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return;
+
+    const data = JSON.parse(stored);
+    delete data[flowchartId];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.error("Failed to delete flowchart:", error);
+    throw error;
+  }
+}
+
+/**
+ * Export flowchart as JSON file
+ */
+export function exportFlowchartJSON(flowchart: FlowchartData): void {
+  try {
+    const json = JSON.stringify(flowchart, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${flowchart.id}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Failed to export flowchart:", error);
+    throw error;
+  }
+}
+
+/**
+ * Import flowchart from JSON file
+ */
+export async function importFlowchartJSON(file: File): Promise<FlowchartData> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        const flowchart = JSON.parse(json) as FlowchartData;
+
+        // Validate required fields
+        if (!flowchart.id || !flowchart.model || !flowchart.steps) {
+          throw new Error("Invalid flowchart format");
+        }
+
+        resolve(flowchart);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Get all flowcharts (hardcoded + custom)
+ */
+export function getAllFlowcharts(): { model: string; flowcharts: FlowchartData[] }[] {
+  const customFlowcharts = loadCustomFlowcharts();
+
+  // Group custom flowcharts by model
+  const customByModel = new Map<string, FlowchartData[]>();
+  customFlowcharts.forEach(fc => {
+    const existing = customByModel.get(fc.model) || [];
+    customByModel.set(fc.model, [...existing, fc]);
+  });
+
+  // Merge with hardcoded models
+  const allModels = [...TURBINE_MODELS];
+
+  customByModel.forEach((flowcharts, modelName) => {
+    const existingModel = allModels.find(m => m.name === modelName);
+    if (existingModel) {
+      existingModel.flowcharts = [...existingModel.flowcharts, ...flowcharts];
+    } else {
+      allModels.push({
+        id: `custom-${modelName.toLowerCase().replace(/\s+/g, "-")}`,
+        name: modelName,
+        flowcharts
+      });
+    }
+  });
+
+  return allModels;
+}
+
+/**
+ * Generate a unique ID for a new flowchart
+ */
+export function generateFlowchartId(model: string, serviceType: string): string {
+  const timestamp = Date.now();
+  const modelSlug = model.toLowerCase().replace(/\s+/g, "-");
+  const serviceSlug = serviceType.toLowerCase().replace(/\s+/g, "-");
+  return `custom-${modelSlug}-${serviceSlug}-${timestamp}`;
+}
+
+/**
+ * Generate a unique ID for a new step
+ */
+export function generateStepId(): string {
+  return `step-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Generate a unique ID for a new task
+ */
+export function generateTaskId(): string {
+  return `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
