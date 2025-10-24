@@ -98,6 +98,7 @@ export default function FlowchartViewerPage() {
       // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
       // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
       const arrangedSteps: FlowchartStep[] = [];
+      const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
       let currentCol = 0; // Horizontal position (steps go left to right)
       const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
       const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
@@ -114,18 +115,17 @@ export default function FlowchartViewerPage() {
 
         // Check if current and next steps should be parallel (consecutive T1 & T2)
         const isParallel = nextStep &&
+          !is4YOnly &&
           ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
            (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
         if (is4YOnly) {
-          // Standalone 4Y step - place at baseline of current column
-          arrangedSteps.push({
+          // 4Y bolts - add to separate array, will be placed at bottom later
+          standalone4YSteps.push({
             ...currentStep,
-            position: { x: currentCol, y: BASELINE_Y },
-            colorCode: "4Y Only" // Mark as 4Y only
+            colorCode: "4Y Only"
           });
-          console.log(`Col ${currentCol}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
-          currentCol += COL_SPACING;
+          console.log(`4Y Only step found - will place at bottom: ${currentStep.title.substring(0, 30)}`);
           i++;
         } else if (isParallel) {
           // Place parallel steps stacked VERTICALLY at same x position
@@ -161,6 +161,15 @@ export default function FlowchartViewerPage() {
           i++;
         }
       }
+
+      // Place 4Y bolts steps at bottom, separate from main flow
+      standalone4YSteps.forEach((step, index) => {
+        arrangedSteps.push({
+          ...step,
+          position: { x: index * COL_SPACING, y: BASELINE_Y + (ROW_SPACING * 3) } // 3 rows below baseline
+        });
+        console.log(`4Y Only at bottom: x=${index * COL_SPACING}, y=${BASELINE_Y + (ROW_SPACING * 3)}`);
+      });
 
       console.log('First load - auto-arranged steps sequentially');
       setSteps(arrangedSteps);
@@ -341,6 +350,7 @@ export default function FlowchartViewerPage() {
     // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
     // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
     const arrangedSteps: FlowchartStep[] = [];
+    const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
     let currentCol = 0; // Horizontal position (steps go left to right)
     const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
     const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
@@ -357,18 +367,17 @@ export default function FlowchartViewerPage() {
 
       // Check if current and next steps should be parallel (consecutive T1 & T2)
       const isParallel = nextStep &&
+        !is4YOnly &&
         ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
          (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
       if (is4YOnly) {
-        // Standalone 4Y step - place at baseline of current column
-        arrangedSteps.push({
+        // 4Y bolts - add to separate array, will be placed at bottom later
+        standalone4YSteps.push({
           ...currentStep,
-          position: { x: currentCol, y: BASELINE_Y },
-          colorCode: "4Y Only" // Mark as 4Y only
+          colorCode: "4Y Only"
         });
-        console.log(`Col ${currentCol}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
-        currentCol += COL_SPACING;
+        console.log(`4Y Only step found - will place at bottom: ${currentStep.title.substring(0, 30)}`);
         i++;
       } else if (isParallel) {
         // Place parallel steps stacked VERTICALLY at same x position
@@ -404,6 +413,15 @@ export default function FlowchartViewerPage() {
         i++;
       }
     }
+
+    // Place 4Y bolts steps at bottom, separate from main flow
+    standalone4YSteps.forEach((step, index) => {
+      arrangedSteps.push({
+        ...step,
+        position: { x: index * COL_SPACING, y: BASELINE_Y + (ROW_SPACING * 3) } // 3 rows below baseline
+      });
+      console.log(`4Y Only at bottom: x=${index * COL_SPACING}, y=${BASELINE_Y + (ROW_SPACING * 3)}`);
+    });
 
     console.log("Auto-layout complete. New positions:", arrangedSteps.map(s => ({ title: s.title.substring(0, 20), pos: s.position })));
 
