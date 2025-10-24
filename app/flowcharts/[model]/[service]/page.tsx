@@ -95,8 +95,10 @@ export default function FlowchartViewerPage() {
       console.log('No saved data found - will auto-arrange on first load');
 
       // SEQUENTIAL LAYOUT: Follow the exact order in data, pair CONSECUTIVE T1/T2 steps
+      // Box height is ~140px, so we need y spacing of ~5-6 grid units (at 30px grid) for proper separation
       const arrangedSteps: FlowchartStep[] = [];
       let currentRow = 0;
+      const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
       let i = 0;
 
       while (i < flowchartData.steps.length) {
@@ -117,14 +119,14 @@ export default function FlowchartViewerPage() {
           arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
           console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
 
-          currentRow++;
+          currentRow += ROW_SPACING;
           i += 2; // Skip both steps
         } else {
           // Single step - place alone on its row
           arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
           console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
 
-          currentRow++;
+          currentRow += ROW_SPACING;
           i++;
         }
       }
@@ -307,8 +309,10 @@ export default function FlowchartViewerPage() {
     // SEQUENTIAL LAYOUT: Follow the exact order in data, pair CONSECUTIVE T1/T2 steps
     // This respects the flowchart logic where some steps must be done sequentially,
     // and only consecutive T1/T2 pairs should be placed in parallel
+    // Box height is ~140px, so we need y spacing of ~5-6 grid units (at 30px grid) for proper separation
     const arrangedSteps: FlowchartStep[] = [];
     let currentRow = 0;
+    const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
     let i = 0;
 
     while (i < steps.length) {
@@ -329,14 +333,14 @@ export default function FlowchartViewerPage() {
         arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
         console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
 
-        currentRow++;
+        currentRow += ROW_SPACING;
         i += 2; // Skip both steps
       } else {
         // Single step - place alone on its row
         arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
         console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
 
-        currentRow++;
+        currentRow += ROW_SPACING;
         i++;
       }
     }
