@@ -113,17 +113,17 @@ export default function FlowchartViewerPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        // ALWAYS use original positions from flowchartData
-        // Only merge task completion status from localStorage
+        // Merge task completion AND positions from localStorage
         const mergedSteps = flowchartData.steps.map((originalStep) => {
           const savedStep = parsed.steps?.find((s: FlowchartStep) => s.id === originalStep.id);
-          if (savedStep && savedStep.tasks) {
-            // Keep ALL original step data (including position)
-            // Only update task completion status
+          if (savedStep) {
             return {
               ...originalStep,
+              // Use saved position if it exists, otherwise use original
+              position: savedStep.position || originalStep.position,
+              // Merge task completion status
               tasks: originalStep.tasks.map((originalTask) => {
-                const savedTask = savedStep.tasks.find((t) => t.id === originalTask.id);
+                const savedTask = savedStep.tasks?.find((t: any) => t.id === originalTask.id);
                 if (savedTask) {
                   // Only copy completion-related fields
                   return {
@@ -140,6 +140,8 @@ export default function FlowchartViewerPage() {
           }
           return originalStep;
         });
+
+        console.log("Loaded from localStorage with merged positions");
         setSteps(mergedSteps);
       } catch (e) {
         console.error("Failed to load progress:", e);
