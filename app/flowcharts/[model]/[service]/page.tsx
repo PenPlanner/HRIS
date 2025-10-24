@@ -110,8 +110,8 @@ export default function FlowchartViewerPage() {
         const currentStep = flowchartData.steps[i];
         const nextStep = flowchartData.steps[i + 1];
 
-        // Check if this is the "4Y bolts" standalone step
-        const is4YOnly = currentStep.colorCode === "4Y" || currentStep.title.includes("4Y bolts");
+        // Check if this is the "4Y bolts" standalone step (ONLY the one with "4Y bolts" in title)
+        const is4YOnly = currentStep.title.includes("4Y bolts");
 
         // Check if current and next steps should be parallel (consecutive T1 & T2)
         const isParallel = nextStep &&
@@ -362,8 +362,8 @@ export default function FlowchartViewerPage() {
       const currentStep = steps[i];
       const nextStep = steps[i + 1];
 
-      // Check if this is the "4Y bolts" standalone step
-      const is4YOnly = currentStep.colorCode === "4Y" || currentStep.title.includes("4Y bolts") || currentStep.colorCode === "4Y Only";
+      // Check if this is the "4Y bolts" standalone step (ONLY the one with "4Y bolts" in title)
+      const is4YOnly = currentStep.title.includes("4Y bolts") || currentStep.colorCode === "4Y Only";
 
       // Check if current and next steps should be parallel (consecutive T1 & T2)
       const isParallel = nextStep &&
