@@ -111,15 +111,16 @@ export default function FlowchartViewerPage() {
       }
 
       // Pair T1 and T2 steps side by side
+      // Box width is 200px, so we need x spacing of ~8-9 grid units (at 30px grid) for proper separation
       const maxPairs = Math.max(t1Steps.length, t2Steps.length);
       for (let i = 0; i < maxPairs; i++) {
         const t1 = t1Steps[i];
         const t2 = t2Steps[i];
 
         if (t1 && t2) {
-          // Both exist - place side by side
+          // Both exist - place side by side with proper spacing
           arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
-          arrangedSteps.push({ ...t2, position: { x: 1, y: currentRow } });
+          arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
           currentRow++;
         } else if (t1) {
           // Only T1 exists
@@ -127,7 +128,7 @@ export default function FlowchartViewerPage() {
           currentRow++;
         } else if (t2) {
           // Only T2 exists
-          arrangedSteps.push({ ...t2, position: { x: 1, y: currentRow } });
+          arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
           currentRow++;
         }
       }
@@ -331,15 +332,16 @@ export default function FlowchartViewerPage() {
     }
 
     // Pair T1 and T2 steps side by side
+    // Box width is 200px, so we need x spacing of ~8-9 grid units (at 30px grid) for proper separation
     const maxPairs = Math.max(t1Steps.length, t2Steps.length);
     for (let i = 0; i < maxPairs; i++) {
       const t1 = t1Steps[i];
       const t2 = t2Steps[i];
 
       if (t1 && t2) {
-        // Both exist - place side by side
+        // Both exist - place side by side with proper spacing
         arrangedSteps.push({ ...t1, position: { x: 0, y: currentRow } });
-        arrangedSteps.push({ ...t2, position: { x: 1, y: currentRow } });
+        arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
         console.log(`Row ${currentRow}: T1 (${t1.title.substring(0, 20)}) | T2 (${t2.title.substring(0, 20)})`);
         currentRow++;
       } else if (t1) {
@@ -349,7 +351,7 @@ export default function FlowchartViewerPage() {
         currentRow++;
       } else if (t2) {
         // Only T2 exists
-        arrangedSteps.push({ ...t2, position: { x: 1, y: currentRow } });
+        arrangedSteps.push({ ...t2, position: { x: 9, y: currentRow } });
         console.log(`Row ${currentRow}: T2 only - ${t2.title.substring(0, 30)}`);
         currentRow++;
       }
