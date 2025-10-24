@@ -28,21 +28,8 @@ export default function FlowchartViewerPage() {
   const modelId = params.model as string;
   const serviceId = params.service as string;
 
-  // Find the flowchart data (including custom flowcharts)
+  // All state declarations first
   const [flowchartData, setFlowchartData] = useState<FlowchartData | null>(null);
-
-  useEffect(() => {
-    const allModels = getAllFlowcharts();
-    const model = allModels.find(m => m.id === modelId);
-    if (!model) {
-      setFlowchartData(null);
-      return;
-    }
-    const flowchart = model.flowcharts.find(f => f.id === serviceId);
-    setFlowchartData(flowchart || null);
-  }, [modelId, serviceId]);
-
-  // State for UI
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
@@ -60,6 +47,18 @@ export default function FlowchartViewerPage() {
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Load flowchart data
+  useEffect(() => {
+    const allModels = getAllFlowcharts();
+    const model = allModels.find(m => m.id === modelId);
+    if (!model) {
+      setFlowchartData(null);
+      return;
+    }
+    const flowchart = model.flowcharts.find(f => f.id === serviceId);
+    setFlowchartData(flowchart || null);
+  }, [modelId, serviceId]);
 
   // Calculate grid dimensions and connections
   const gridInfo = useMemo(() => {
@@ -323,7 +322,13 @@ export default function FlowchartViewerPage() {
     } else {
       // Entering edit mode - always start fresh from flowchartData
       if (flowchartData) {
-        setEditSteps([...flowchartData.steps]);
+        const freshSteps = [...flowchartData.steps];
+        console.log("Entering edit mode with steps:", freshSteps.map(s => ({
+          id: s.id,
+          title: s.title.substring(0, 20),
+          position: s.position
+        })));
+        setEditSteps(freshSteps);
       }
       setHasUnsavedChanges(false);
       setIsEditMode(true);
