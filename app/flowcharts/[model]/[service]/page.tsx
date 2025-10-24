@@ -94,7 +94,22 @@ export default function FlowchartViewerPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        setSteps(parsed.steps || flowchartData.steps);
+        // Merge saved task completion with original positions
+        const mergedSteps = flowchartData.steps.map((originalStep) => {
+          const savedStep = parsed.steps?.find((s: FlowchartStep) => s.id === originalStep.id);
+          if (savedStep) {
+            // Keep original position, merge task completion status
+            return {
+              ...originalStep,
+              tasks: originalStep.tasks.map((originalTask) => {
+                const savedTask = savedStep.tasks?.find((t) => t.id === originalTask.id);
+                return savedTask ? { ...originalTask, ...savedTask } : originalTask;
+              })
+            };
+          }
+          return originalStep;
+        });
+        setSteps(mergedSteps);
       } catch (e) {
         console.error("Failed to load progress:", e);
         setSteps(flowchartData.steps);

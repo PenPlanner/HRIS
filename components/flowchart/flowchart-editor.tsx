@@ -68,12 +68,12 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
           borderLeft: `4px solid ${step.color}`
         }}
       >
-        {/* Action Buttons - Show on hover */}
-        <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+        {/* Action Buttons - Always visible with opacity, full opacity on hover */}
+        <div className="absolute -top-2 -right-2 opacity-60 group-hover:opacity-100 transition-opacity flex gap-1">
           <Button
             size="sm"
             variant="secondary"
-            className="h-7 w-7 p-0 bg-white shadow"
+            className="h-7 w-7 p-0 bg-primary text-primary-foreground shadow-lg"
             onClick={() => onEdit(step)}
           >
             <Edit className="h-3 w-3" />
@@ -81,7 +81,7 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
           <Button
             size="sm"
             variant="secondary"
-            className="h-7 w-7 p-0 bg-white shadow"
+            className="h-7 w-7 p-0 bg-blue-600 text-white shadow-lg"
             onClick={() => onDuplicate(step)}
           >
             <Copy className="h-3 w-3" />
@@ -89,7 +89,7 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
           <Button
             size="sm"
             variant="secondary"
-            className="h-7 w-7 p-0 bg-white shadow text-red-600"
+            className="h-7 w-7 p-0 bg-red-600 text-white shadow-lg"
             onClick={() => onDelete(step.id)}
           >
             <Trash2 className="h-3 w-3" />
