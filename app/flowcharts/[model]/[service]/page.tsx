@@ -94,16 +94,28 @@ export default function FlowchartViewerPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        // Merge saved task completion with original positions
+        // ALWAYS use original positions from flowchartData
+        // Only merge task completion status from localStorage
         const mergedSteps = flowchartData.steps.map((originalStep) => {
           const savedStep = parsed.steps?.find((s: FlowchartStep) => s.id === originalStep.id);
-          if (savedStep) {
-            // Keep original position, merge task completion status
+          if (savedStep && savedStep.tasks) {
+            // Keep ALL original step data (including position)
+            // Only update task completion status
             return {
               ...originalStep,
               tasks: originalStep.tasks.map((originalTask) => {
-                const savedTask = savedStep.tasks?.find((t) => t.id === originalTask.id);
-                return savedTask ? { ...originalTask, ...savedTask } : originalTask;
+                const savedTask = savedStep.tasks.find((t) => t.id === originalTask.id);
+                if (savedTask) {
+                  // Only copy completion-related fields
+                  return {
+                    ...originalTask,
+                    completed: savedTask.completed,
+                    completedAt: savedTask.completedAt,
+                    startTime: savedTask.startTime,
+                    endTime: savedTask.endTime
+                  };
+                }
+                return originalTask;
               })
             };
           }
