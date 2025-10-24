@@ -322,10 +322,10 @@ export function FlowchartEditor({
     </div>
   );
 
-  // Wrap with DndProvider only in edit mode
-  return isEditMode ? (
+  // Always wrap with DndProvider since useDrop hook requires context
+  return (
     <DndProvider backend={HTML5Backend}>
       {content}
     </DndProvider>
-  ) : content;
+  );
 }
