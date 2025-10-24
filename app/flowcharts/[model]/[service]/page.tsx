@@ -90,6 +90,61 @@ export default function FlowchartViewerPage() {
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const savedData = localStorage.getItem(storageKey);
 
+    // If no saved data exists, auto-arrange on first load
+    if (!savedData) {
+      console.log('No saved data found - will auto-arrange on first load');
+
+      // Auto-arrange the steps
+      const orderedSteps = [...flowchartData.steps];
+      const arrangedSteps: FlowchartStep[] = [];
+      let currentRow = 0;
+      let currentCol = 0;
+      let i = 0;
+
+      while (i < orderedSteps.length) {
+        const currentStep = orderedSteps[i];
+        const nextStep = orderedSteps[i + 1];
+
+        const isParallel = nextStep &&
+          ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
+           (currentStep.technician === "T2" && nextStep.technician === "T1"));
+
+        if (isParallel) {
+          const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
+          const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
+
+          arrangedSteps.push({ ...leftStep, position: { x: 0, y: currentRow } });
+          arrangedSteps.push({ ...rightStep, position: { x: 1, y: currentRow } });
+          currentRow++;
+          currentCol = 0;
+          i += 2;
+        } else if (currentStep.technician === "both") {
+          arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
+          currentRow++;
+          currentCol = 0;
+          i++;
+        } else {
+          arrangedSteps.push({ ...currentStep, position: { x: currentCol, y: currentRow } });
+          currentCol++;
+          if (currentCol >= 2) {
+            currentRow++;
+            currentCol = 0;
+          }
+          i++;
+        }
+      }
+
+      console.log('First load - auto-arranged steps');
+      setSteps(arrangedSteps);
+
+      // Save the arranged positions
+      localStorage.setItem(storageKey, JSON.stringify({
+        steps: arrangedSteps,
+        lastUpdated: new Date().toISOString()
+      }));
+      return;
+    }
+
     // Clear old corrupted data (temporary fix)
     if (savedData) {
       try {
