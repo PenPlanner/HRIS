@@ -502,17 +502,23 @@ export default function FlowchartViewerPage() {
 
         {/* Flowchart Area */}
         {isEditMode ? (
-          // Edit Mode - Show Editor
-          <DndProvider backend={HTML5Backend}>
-            <FlowchartEditor
-              steps={editSteps}
-              onStepsChange={handleStepsChange}
-              onEditStep={handleEditStep}
-              onAddStep={handleAddStep}
-              zoom={zoom}
-              gridSize={gridSize}
-            />
-          </DndProvider>
+          // Edit Mode - Show Editor (only when editSteps is ready)
+          editSteps.length > 0 ? (
+            <DndProvider backend={HTML5Backend} key="edit-mode">
+              <FlowchartEditor
+                steps={editSteps}
+                onStepsChange={handleStepsChange}
+                onEditStep={handleEditStep}
+                onAddStep={handleAddStep}
+                zoom={zoom}
+                gridSize={gridSize}
+              />
+            </DndProvider>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">Loading editor...</p>
+            </div>
+          )
         ) : (
           // View Mode - Show Normal Flowchart
           <div

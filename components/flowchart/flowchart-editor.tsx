@@ -46,6 +46,16 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
   const pixelX = step.position.x * gridSize;
   const pixelY = step.position.y * gridSize;
 
+  // Debug first 3 steps only
+  if (step.id === 'step-1' || step.id === 'step-2' || step.id === 'step-3') {
+    console.log(`DraggableStep ${step.id}:`, {
+      gridPos: step.position,
+      pixelX,
+      pixelY,
+      gridSize
+    });
+  }
+
   return (
     <div
       ref={drag}
@@ -250,6 +260,14 @@ export function FlowchartEditor({
   // Adjust for negative Y positions
   const minY = Math.min(...steps.map(s => s.position.y), 0);
   const offsetY = Math.abs(minY) * gridSize;
+
+  console.log("FlowchartEditor rendering:", {
+    stepsCount: steps.length,
+    minY,
+    offsetY,
+    gridSize,
+    zoom
+  });
 
   return (
     <div
