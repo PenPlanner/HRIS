@@ -101,70 +101,8 @@ export function StepDetailDrawer({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="checklist" className="space-y-4">
-            {/* Progress Card */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Progress</span>
-                    <span className="text-sm text-muted-foreground">
-                      {completedTasks}/{totalTasks} tasks
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${(completedTasks / totalTasks) * 100}%`,
-                        backgroundColor: step.color
-                      }}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
-            {/* Tasks List */}
-            <div className="space-y-2">
-              {step.tasks.map((task) => (
-                <Card
-                  key={task.id}
-                  className={task.completed ? "bg-green-50 border-green-200" : ""}
-                >
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={task.completed}
-                        onCheckedChange={() => onTaskToggle(task.id)}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <p className={`text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>
-                          {task.description}
-                        </p>
-                      </div>
-                      {task.completed && (
-                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {step.notes && (
-              <Card className="bg-yellow-50 border-yellow-200">
-                <CardContent className="pt-4">
-                  <p className="text-sm font-medium mb-2">Notes:</p>
-                  <p className="text-sm text-muted-foreground">{step.notes}</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="documents" className="space-y-3">
+          {/* CHECKLIST TAB - SII References with Checkboxes */}
+          <TabsContent value="checklist" className="space-y-3">
             {siiReferences.length > 0 ? (
               <>
                 <div className="mb-4">
@@ -279,27 +217,10 @@ export function StepDetailDrawer({
                   </Card>
                   );
                 })}
-
-                {/* Show additional manual documents if any */}
-                {step.documents && step.documents.length > 0 && (
-                  <>
-                    <div className="mt-6 mb-2">
-                      <p className="text-sm font-medium">Additional Documents</p>
-                    </div>
-                    {step.documents.map((doc, idx) => (
-                      <Card key={idx} className="hover:bg-accent cursor-pointer">
-                        <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-gray-600" />
-                          <span className="text-sm">{doc}</span>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </>
-                )}
               </>
             ) : (
               <div className="text-center py-12">
-                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground">No SII references found in this step</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Task descriptions should start with references like "11.5.1 Description"
@@ -308,6 +229,91 @@ export function StepDetailDrawer({
             )}
           </TabsContent>
 
+          {/* DOCUMENTS TAB - PDF Links and Resources */}
+          <TabsContent value="documents" className="space-y-3">
+            {siiReferences.length > 0 || (step.documents && step.documents.length > 0) ? (
+              <>
+                {/* SII Documents Section */}
+                {siiReferences.length > 0 && (
+                  <>
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-blue-600" />
+                        <p className="text-sm font-medium">Service Instruction Instructions (SII)</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {groupedReferences.size} SII document{groupedReferences.size > 1 ? 's' : ''} referenced in this step
+                      </p>
+                    </div>
+
+                    {/* List SII documents */}
+                    <div className="space-y-2">
+                      {Array.from(groupedReferences.entries()).map(([docNum, refs]) => (
+                        <Card key={docNum} className="hover:bg-accent cursor-pointer transition-colors">
+                          <CardContent
+                            className="pt-4 pb-4"
+                            onClick={() => openSIIDocument(refs[0])}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Doc {docNum}: {refs[0].documentTitle}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {refs.length} section{refs.length > 1 ? 's' : ''} referenced
+                                  </p>
+                                </div>
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Additional Documents Section */}
+                {step.documents && step.documents.length > 0 && (
+                  <>
+                    <div className={siiReferences.length > 0 ? "mt-6 mb-4" : "mb-4"}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-gray-600" />
+                        <p className="text-sm font-medium">Additional Documents</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Other reference documents for this step
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {step.documents.map((doc, idx) => (
+                        <Card key={idx} className="hover:bg-accent cursor-pointer transition-colors">
+                          <CardContent className="pt-4 pb-4 flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-gray-600" />
+                            <span className="text-sm">{doc}</span>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground ml-auto" />
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-sm text-muted-foreground">No documents available for this step</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Documents will be linked as they become available
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* MEDIA TAB */}
           <TabsContent value="media" className="space-y-3">
             {step.media && step.media.length > 0 ? (
               step.media.map((mediaItem, idx) => (
