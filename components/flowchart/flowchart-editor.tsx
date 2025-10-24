@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useDrag, useDrop } from "react-dnd";
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
@@ -168,6 +168,21 @@ export function FlowchartEditor({
 }: FlowchartEditorProps) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Debug: Log when steps change
+  useEffect(() => {
+    console.log("FlowchartEditor received steps:", steps.length);
+    if (steps.length > 0) {
+      console.table(steps.slice(0, 5).map(s => ({
+        id: s.id,
+        title: s.title.substring(0, 20),
+        x: s.position.x,
+        y: s.position.y,
+        pixelX: s.position.x * gridSize,
+        pixelY: s.position.y * gridSize
+      })));
+    }
+  }, [steps, gridSize]);
 
   // Snap to grid helper
   const snapToGrid = (pixels: number): number => {

@@ -323,10 +323,13 @@ export default function FlowchartViewerPage() {
       // Entering edit mode - always start fresh from flowchartData
       if (flowchartData) {
         const freshSteps = [...flowchartData.steps];
-        console.log("Entering edit mode with steps:", freshSteps.map(s => ({
+        console.log("=== ENTERING EDIT MODE ===");
+        console.log("Number of steps:", freshSteps.length);
+        console.table(freshSteps.map(s => ({
           id: s.id,
-          title: s.title.substring(0, 20),
-          position: s.position
+          title: s.title.substring(0, 30),
+          x: s.position.x,
+          y: s.position.y
         })));
         setEditSteps(freshSteps);
       }
