@@ -99,33 +99,61 @@ export default function FlowchartViewerPage() {
       const arrangedSteps: FlowchartStep[] = [];
       let currentRow = 0;
       const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
+      let stepNumber = 1; // For automatic step numbering
       let i = 0;
 
       while (i < flowchartData.steps.length) {
         const currentStep = flowchartData.steps[i];
         const nextStep = flowchartData.steps[i + 1];
 
+        // Check if this is the "4Y bolts" standalone step
+        const is4YOnly = currentStep.colorCode === "4Y" || currentStep.title.includes("4Y bolts");
+
         // Check if current and next steps should be parallel (consecutive T1 & T2)
         const isParallel = nextStep &&
           ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
            (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
-        if (isParallel) {
+        if (is4YOnly) {
+          // Standalone 4Y step - mark specially, don't increment step number
+          arrangedSteps.push({
+            ...currentStep,
+            position: { x: 0, y: currentRow },
+            colorCode: "4Y Only" // Mark as 4Y only
+          });
+          console.log(`Row ${currentRow}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
+          currentRow += ROW_SPACING;
+          i++;
+        } else if (isParallel) {
           // Place parallel steps side by side (T1 left, T2 right)
           const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
           const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
 
-          arrangedSteps.push({ ...leftStep, position: { x: 0, y: currentRow } });
-          arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
-          console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
+          arrangedSteps.push({
+            ...leftStep,
+            position: { x: 0, y: currentRow },
+            colorCode: `${stepNumber}.1` // e.g., "2.1"
+          });
+          arrangedSteps.push({
+            ...rightStep,
+            position: { x: 9, y: currentRow },
+            colorCode: `${stepNumber}.2` // e.g., "2.2"
+          });
+          console.log(`Row ${currentRow}: Step ${stepNumber}.1 | ${stepNumber}.2`);
 
+          stepNumber++;
           currentRow += ROW_SPACING;
           i += 2; // Skip both steps
         } else {
           // Single step - place alone on its row
-          arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
-          console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
+          arrangedSteps.push({
+            ...currentStep,
+            position: { x: 0, y: currentRow },
+            colorCode: `${stepNumber}` // e.g., "1", "3"
+          });
+          console.log(`Row ${currentRow}: Step ${stepNumber} - ${currentStep.title.substring(0, 30)}`);
 
+          stepNumber++;
           currentRow += ROW_SPACING;
           i++;
         }
@@ -313,33 +341,61 @@ export default function FlowchartViewerPage() {
     const arrangedSteps: FlowchartStep[] = [];
     let currentRow = 0;
     const ROW_SPACING = 6; // 6 * 30px = 180px vertical spacing
+    let stepNumber = 1; // For automatic step numbering
     let i = 0;
 
     while (i < steps.length) {
       const currentStep = steps[i];
       const nextStep = steps[i + 1];
 
+      // Check if this is the "4Y bolts" standalone step
+      const is4YOnly = currentStep.colorCode === "4Y" || currentStep.title.includes("4Y bolts");
+
       // Check if current and next steps should be parallel (consecutive T1 & T2)
       const isParallel = nextStep &&
         ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
          (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
-      if (isParallel) {
+      if (is4YOnly) {
+        // Standalone 4Y step - mark specially, don't increment step number
+        arrangedSteps.push({
+          ...currentStep,
+          position: { x: 0, y: currentRow },
+          colorCode: "4Y Only" // Mark as 4Y only
+        });
+        console.log(`Row ${currentRow}: 4Y Only - ${currentStep.title.substring(0, 30)}`);
+        currentRow += ROW_SPACING;
+        i++;
+      } else if (isParallel) {
         // Place parallel steps side by side (T1 left, T2 right)
         const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
         const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
 
-        arrangedSteps.push({ ...leftStep, position: { x: 0, y: currentRow } });
-        arrangedSteps.push({ ...rightStep, position: { x: 9, y: currentRow } });
-        console.log(`Row ${currentRow}: Parallel - ${leftStep.title.substring(0, 20)} | ${rightStep.title.substring(0, 20)}`);
+        arrangedSteps.push({
+          ...leftStep,
+          position: { x: 0, y: currentRow },
+          colorCode: `${stepNumber}.1` // e.g., "2.1"
+        });
+        arrangedSteps.push({
+          ...rightStep,
+          position: { x: 9, y: currentRow },
+          colorCode: `${stepNumber}.2` // e.g., "2.2"
+        });
+        console.log(`Row ${currentRow}: Step ${stepNumber}.1 | ${stepNumber}.2`);
 
+        stepNumber++;
         currentRow += ROW_SPACING;
         i += 2; // Skip both steps
       } else {
         // Single step - place alone on its row
-        arrangedSteps.push({ ...currentStep, position: { x: 0, y: currentRow } });
-        console.log(`Row ${currentRow}: Single - ${currentStep.title.substring(0, 30)} (${currentStep.technician})`);
+        arrangedSteps.push({
+          ...currentStep,
+          position: { x: 0, y: currentRow },
+          colorCode: `${stepNumber}` // e.g., "1", "3"
+        });
+        console.log(`Row ${currentRow}: Step ${stepNumber} - ${currentStep.title.substring(0, 30)}`);
 
+        stepNumber++;
         currentRow += ROW_SPACING;
         i++;
       }
