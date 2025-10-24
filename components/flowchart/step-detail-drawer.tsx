@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;
@@ -43,6 +44,11 @@ export function StepDetailDrawer({
   // Extract SII references from task descriptions
   const siiReferences = useMemo(() => extractSIIReferences(step.tasks), [step.tasks]);
   const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
+
+  // Helper to find the task that matches a SII reference
+  const findTaskForReference = (reference: SIIReference): FlowchartTask | undefined => {
+    return step.tasks.find(task => task.description.trim().startsWith(reference.fullReference));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,44 +178,107 @@ export function StepDetailDrawer({
                 </div>
 
                 {/* Group references by document */}
-                {Array.from(groupedReferences.entries()).map(([docNum, refs]) => (
-                  <Card key={docNum} className="border-l-4 border-l-blue-500">
-                    <CardContent className="pt-4 pb-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-sm flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-blue-600" />
-                              Doc {docNum}: {refs[0].documentTitle}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {refs.length} section{refs.length > 1 ? 's' : ''} referenced
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openSIIDocument(refs[0])}
-                            className="gap-2"
-                          >
-                            Open PDF
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
+                {Array.from(groupedReferences.entries()).map(([docNum, refs]) => {
+                  // Calculate progress for this document's tasks
+                  const tasks = refs.map(ref => findTaskForReference(ref)).filter(Boolean) as FlowchartTask[];
+                  const completedCount = tasks.filter(t => t.completed).length;
+                  const totalCount = tasks.length;
+                  const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+                  const isDocComplete = completedCount === totalCount && totalCount > 0;
 
-                        {/* List all sections from this document */}
-                        <div className="space-y-1 pl-6 border-l-2 border-gray-200">
-                          {refs.map((ref, idx) => (
-                            <div key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
-                              <span className="font-mono text-blue-600 font-medium">§ {ref.section}</span>
-                              <span>{ref.description || '—'}</span>
+                  return (
+                    <Card key={docNum} className={cn(
+                      "border-l-4 transition-colors",
+                      isDocComplete ? "border-l-green-500 bg-green-50/50" : "border-l-blue-500"
+                    )}>
+                      <CardContent className="pt-4 pb-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <FileText className={cn(
+                                  "h-4 w-4",
+                                  isDocComplete ? "text-green-600" : "text-blue-600"
+                                )} />
+                                <p className="font-medium text-sm">
+                                  Doc {docNum}: {refs[0].documentTitle}
+                                </p>
+                                {isDocComplete && (
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                )}
+                              </div>
+                              <div className="mt-1 space-y-1">
+                                <p className="text-xs text-muted-foreground">
+                                  {refs.length} section{refs.length > 1 ? 's' : ''} referenced · {completedCount}/{totalCount} completed
+                                </p>
+                                {/* Progress bar */}
+                                <div className="w-48 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                  <div
+                                    className={cn(
+                                      "h-full rounded-full transition-all",
+                                      isDocComplete ? "bg-green-500" : "bg-blue-500"
+                                    )}
+                                    style={{ width: `${progressPercent}%` }}
+                                  />
+                                </div>
+                              </div>
                             </div>
-                          ))}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openSIIDocument(refs[0])}
+                              className="gap-2 ml-4"
+                            >
+                              Open PDF
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                          </div>
+
+                        {/* List all sections from this document with checkboxes */}
+                        <div className="space-y-2 mt-3">
+                          {refs.map((ref, idx) => {
+                            const task = findTaskForReference(ref);
+                            const isCompleted = task?.completed || false;
+
+                            return (
+                              <div
+                                key={idx}
+                                className={cn(
+                                  "flex items-start gap-3 p-2 rounded-md transition-colors",
+                                  isCompleted && "bg-green-50 border border-green-200"
+                                )}
+                              >
+                                <Checkbox
+                                  checked={isCompleted}
+                                  onCheckedChange={() => task && onTaskToggle(task.id)}
+                                  disabled={!task}
+                                  className="mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-xs text-blue-600 font-medium">
+                                      § {ref.section}
+                                    </span>
+                                    {isCompleted && (
+                                      <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className={cn(
+                                    "text-xs mt-0.5",
+                                    isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+                                  )}>
+                                    {ref.description || '—'}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
 
                 {/* Show additional manual documents if any */}
                 {step.documents && step.documents.length > 0 && (
