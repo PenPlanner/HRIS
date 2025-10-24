@@ -250,27 +250,30 @@ export default function FlowchartViewerPage() {
       return;
     }
 
-    // Sort steps by colorCode (1Y, 2Y, 3Y, etc.)
-    const sortedSteps = [...steps].sort((a, b) => {
-      const aNum = parseInt(a.colorCode.replace(/\D/g, '')) || 0;
-      const bNum = parseInt(b.colorCode.replace(/\D/g, '')) || 0;
-      return aNum - bNum;
-    });
+    console.log("Starting auto-layout with steps:", steps.length);
+
+    // IMPORTANT: Steps are already in correct order from data file!
+    // Don't sort - just use the existing order
+    const orderedSteps = [...steps];
 
     // Smart layout algorithm:
     // - Detect parallel steps (consecutive steps where one is T1 and next is T2)
     // - Place parallel steps side-by-side
     // - After parallel group, move to next row and start from left
-    // - Continue in snake/zig-zag pattern
+    // - "both" steps take full width
 
     const updatedSteps: FlowchartStep[] = [];
     let currentRow = 0;
     let currentCol = 0;
     let i = 0;
 
-    while (i < sortedSteps.length) {
-      const currentStep = sortedSteps[i];
-      const nextStep = sortedSteps[i + 1];
+    console.log("Processing steps for layout...");
+
+    while (i < orderedSteps.length) {
+      const currentStep = orderedSteps[i];
+      const nextStep = orderedSteps[i + 1];
+
+      console.log(`Step ${i}: ${currentStep.title.substring(0, 30)}... Tech: ${currentStep.technician}`);
 
       // Check if current and next steps are parallel (T1 and T2)
       const isParallel = nextStep &&
@@ -278,37 +281,46 @@ export default function FlowchartViewerPage() {
          (currentStep.technician === "T2" && nextStep.technician === "T1"));
 
       if (isParallel) {
-        // Place parallel steps side by side
+        // Place parallel steps side by side (T1 left, T2 right)
+        const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
+        const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
+
         updatedSteps.push({
-          ...currentStep,
-          position: { x: currentCol, y: currentRow }
+          ...leftStep,
+          position: { x: 0, y: currentRow }
         });
         updatedSteps.push({
-          ...nextStep,
-          position: { x: currentCol + 1, y: currentRow }
+          ...rightStep,
+          position: { x: 1, y: currentRow }
         });
+
+        console.log(`  -> Parallel at row ${currentRow}: T1 (0,${currentRow}) | T2 (1,${currentRow})`);
 
         // Move to next row, start from left
         currentRow++;
         currentCol = 0;
         i += 2;
       } else if (currentStep.technician === "both") {
-        // "Both" steps take full width, centered
+        // "Both" steps take full width, centered at column 0
         updatedSteps.push({
           ...currentStep,
           position: { x: 0, y: currentRow }
         });
+
+        console.log(`  -> Both at row ${currentRow}: (0,${currentRow})`);
 
         // Move to next row
         currentRow++;
         currentCol = 0;
         i++;
       } else {
-        // Single step in snake pattern
+        // Single step - place at current column
         updatedSteps.push({
           ...currentStep,
           position: { x: currentCol, y: currentRow }
         });
+
+        console.log(`  -> Single at (${currentCol},${currentRow})`);
 
         currentCol++;
 
@@ -322,8 +334,33 @@ export default function FlowchartViewerPage() {
       }
     }
 
+    console.log("Auto-layout complete. New positions:", updatedSteps.map(s => ({ title: s.title.substring(0, 20), pos: s.position })));
+
+    // Update state with new positions
     setSteps(updatedSteps);
     setHasUnsavedChanges(true);
+
+    // Force clear BOTH localStorage keys to prevent old positions from being reloaded
+    // 1. Clear progress data
+    const storageKey = `flowchart_${modelId}_${serviceId}`;
+    localStorage.removeItem(storageKey);
+
+    // 2. Remove this flowchart from custom_flowcharts if it exists
+    try {
+      const customFlowcharts = localStorage.getItem('custom_flowcharts');
+      if (customFlowcharts) {
+        const parsed = JSON.parse(customFlowcharts);
+        if (parsed[serviceId]) {
+          delete parsed[serviceId];
+          localStorage.setItem('custom_flowcharts', JSON.stringify(parsed));
+          console.log("Removed from custom_flowcharts to use original positions");
+        }
+      }
+    } catch (e) {
+      console.error("Failed to clean custom_flowcharts:", e);
+    }
+
+    alert("Layout updated! Click 'Save' to keep these positions, or refresh the page to reset.");
   };
 
   // Edit mode handlers
