@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useDrag, useDrop } from "react-dnd";
+import { useState, useCallback, useRef } from "react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,8 +15,11 @@ interface FlowchartEditorProps {
   onStepsChange: (steps: FlowchartStep[]) => void;
   onEditStep: (step: FlowchartStep) => void;
   onAddStep: () => void;
+  onStepClick?: (step: FlowchartStep) => void;
   zoom: number;
   gridSize?: number;
+  isEditMode: boolean;
+  setHasUnsavedChanges: (value: boolean) => void;
 }
 
 const GRID_SIZE = 30; // pixels (default)
@@ -27,10 +31,12 @@ interface DraggableStepProps {
   onEdit: (step: FlowchartStep) => void;
   onDelete: (stepId: string) => void;
   onDuplicate: (step: FlowchartStep) => void;
+  onClick?: (step: FlowchartStep) => void;
   gridSize: number;
+  isEditMode: boolean;
 }
 
-function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }: DraggableStepProps) {
+function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, gridSize, isEditMode }: DraggableStepProps) {
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
@@ -41,20 +47,17 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }), [step.id, step.position]);
+    canDrag: isEditMode, // Only draggable in edit mode
+  }), [step.id, step.position, isEditMode]);
 
   const pixelX = step.position.x * gridSize;
   const pixelY = step.position.y * gridSize;
 
-  // Debug first 3 steps only
-  if (step.id === 'step-1' || step.id === 'step-2' || step.id === 'step-3') {
-    console.log(`DraggableStep ${step.id}:`, {
-      gridPos: step.position,
-      pixelX,
-      pixelY,
-      gridSize
-    });
-  }
+  const handleClick = () => {
+    if (!isEditMode && onClick) {
+      onClick(step);
+    }
+  };
 
   return (
     <div
@@ -63,10 +66,11 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
         position: "absolute",
         left: `${pixelX}px`,
         top: `${pixelY}px`,
-        cursor: "move",
+        cursor: isEditMode ? "move" : "pointer",
         opacity: isDragging ? 0.5 : 1,
       }}
       className="group"
+      onClick={handleClick}
     >
       <Card
         className={cn(
@@ -78,8 +82,9 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
           borderLeft: `4px solid ${step.color}`
         }}
       >
-        {/* Action Buttons - Always visible with opacity, full opacity on hover */}
-        <div className="absolute -top-2 -right-2 opacity-60 group-hover:opacity-100 transition-opacity flex gap-1">
+        {/* Action Buttons - Only visible in edit mode */}
+        {isEditMode && (
+          <div className="absolute -top-2 -right-2 opacity-60 group-hover:opacity-100 transition-opacity flex gap-1">
           <Button
             size="sm"
             variant="secondary"
@@ -105,6 +110,7 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, gridSize }
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
+        )}
 
         {/* Technician Badge */}
         <div className="absolute top-2 right-2 flex gap-1">
@@ -173,26 +179,14 @@ export function FlowchartEditor({
   onStepsChange,
   onEditStep,
   onAddStep,
+  onStepClick,
   zoom,
-  gridSize = GRID_SIZE
+  gridSize = GRID_SIZE,
+  isEditMode,
+  setHasUnsavedChanges
 }: FlowchartEditorProps) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
-
-  // Debug: Log when steps change
-  useEffect(() => {
-    console.log("FlowchartEditor received steps:", steps.length);
-    if (steps.length > 0) {
-      console.table(steps.slice(0, 5).map(s => ({
-        id: s.id,
-        title: s.title.substring(0, 20),
-        x: s.position.x,
-        y: s.position.y,
-        pixelX: s.position.x * gridSize,
-        pixelY: s.position.y * gridSize
-      })));
-    }
-  }, [steps, gridSize]);
 
   // Snap to grid helper
   const snapToGrid = (pixels: number): number => {
@@ -200,6 +194,8 @@ export function FlowchartEditor({
   };
 
   const handleDrop = useCallback((item: { id: string; currentX: number; currentY: number }, monitor: any) => {
+    if (!isEditMode) return; // Only allow drops in edit mode
+
     const delta = monitor.getDifferenceFromInitialOffset();
     if (!delta) return;
 
@@ -219,16 +215,18 @@ export function FlowchartEditor({
     );
 
     onStepsChange(updatedSteps);
-  }, [steps, onStepsChange, gridSize]);
+    setHasUnsavedChanges(true);
+  }, [steps, onStepsChange, gridSize, isEditMode, setHasUnsavedChanges]);
 
   const [, drop] = useDrop(() => ({
     accept: ItemType,
-    drop: handleDrop,
-  }), [handleDrop]);
+    drop: isEditMode ? handleDrop : undefined,
+  }), [handleDrop, isEditMode]);
 
   const handleDelete = (stepId: string) => {
     if (confirm("Are you sure you want to delete this step?")) {
       onStepsChange(steps.filter(s => s.id !== stepId));
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -243,6 +241,7 @@ export function FlowchartEditor({
       tasks: step.tasks.map(t => ({ ...t, completed: false, startTime: undefined, endTime: undefined }))
     };
     onStepsChange([...steps, newStep]);
+    setHasUnsavedChanges(true);
   };
 
   // Calculate canvas size
@@ -261,24 +260,16 @@ export function FlowchartEditor({
   const minY = Math.min(...steps.map(s => s.position.y), 0);
   const offsetY = Math.abs(minY) * gridSize;
 
-  console.log("FlowchartEditor rendering:", {
-    stepsCount: steps.length,
-    minY,
-    offsetY,
-    gridSize,
-    zoom
-  });
-
-  return (
+  const content = (
     <div
-      ref={drop}
+      ref={isEditMode ? drop : null}
       className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
       style={{
-        backgroundImage: `
+        backgroundImage: isEditMode ? `
           linear-gradient(to right, rgba(100,100,255,0.15) 1px, transparent 1px),
           linear-gradient(to bottom, rgba(100,100,255,0.15) 1px, transparent 1px)
-        `,
-        backgroundSize: `${gridSize}px ${gridSize}px`,
+        ` : undefined,
+        backgroundSize: isEditMode ? `${gridSize}px ${gridSize}px` : undefined,
       }}
     >
         <div
@@ -314,7 +305,9 @@ export function FlowchartEditor({
               onEdit={onEditStep}
               onDelete={handleDelete}
               onDuplicate={handleDuplicate}
+              onClick={onStepClick}
               gridSize={gridSize}
+              isEditMode={isEditMode}
             />
           ))}
 
@@ -328,4 +321,11 @@ export function FlowchartEditor({
         </div>
     </div>
   );
+
+  // Wrap with DndProvider only in edit mode
+  return isEditMode ? (
+    <DndProvider backend={HTML5Backend}>
+      {content}
+    </DndProvider>
+  ) : content;
 }

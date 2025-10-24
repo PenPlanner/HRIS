@@ -3,8 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,13 +34,12 @@ export default function FlowchartViewerPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [gridSize, setGridSize] = useState(30);
 
-  // State for progress tracking (view mode only)
+  // State for steps (used for both view and edit mode)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
   const [selectedStep, setSelectedStep] = useState<FlowchartStep | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // State for edit mode (separate from view mode progress)
-  const [editSteps, setEditSteps] = useState<FlowchartStep[]>([]);
+  // State for edit mode
   const [editingStep, setEditingStep] = useState<FlowchartStep | null>(null);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
@@ -231,7 +228,7 @@ export default function FlowchartViewerPage() {
 
     const updatedFlowchart: FlowchartData = {
       ...flowchartData,
-      steps: editSteps
+      steps
     };
 
     saveFlowchart(updatedFlowchart);
@@ -244,7 +241,6 @@ export default function FlowchartViewerPage() {
       const flowchart = model.flowcharts.find(f => f.id === serviceId);
       if (flowchart) {
         setFlowchartData(flowchart);
-        setEditSteps([...flowchart.steps]);
       }
     }
 
@@ -270,7 +266,7 @@ export default function FlowchartViewerPage() {
       ]
     };
 
-    setEditSteps([...editSteps, newStep]);
+    setSteps([...steps, newStep]);
     setHasUnsavedChanges(true);
   };
 
@@ -280,12 +276,7 @@ export default function FlowchartViewerPage() {
   };
 
   const handleSaveStep = (updatedStep: FlowchartStep) => {
-    setEditSteps(editSteps.map(s => s.id === updatedStep.id ? updatedStep : s));
-    setHasUnsavedChanges(true);
-  };
-
-  const handleStepsChange = (newSteps: FlowchartStep[]) => {
-    setEditSteps(newSteps);
+    setSteps(steps.map(s => s.id === updatedStep.id ? updatedStep : s));
     setHasUnsavedChanges(true);
   };
 
@@ -303,39 +294,24 @@ export default function FlowchartViewerPage() {
 
     const exportData: FlowchartData = {
       ...flowchartData,
-      steps: isEditMode ? editSteps : steps
+      steps
     };
 
     exportFlowchartJSON(exportData);
   };
 
   const toggleEditMode = () => {
-    if (isEditMode) {
-      // Exiting edit mode
-      if (hasUnsavedChanges) {
-        if (!confirm("You have unsaved changes. Do you want to discard them?")) {
-          return;
-        }
-        setHasUnsavedChanges(false);
+    if (isEditMode && hasUnsavedChanges) {
+      if (!confirm("You have unsaved changes. Do you want to discard them?")) {
+        return;
       }
-      setIsEditMode(false);
-    } else {
-      // Entering edit mode - always start fresh from flowchartData
+      // Reload steps from flowchartData
       if (flowchartData) {
-        const freshSteps = [...flowchartData.steps];
-        console.log("=== ENTERING EDIT MODE ===");
-        console.log("Number of steps:", freshSteps.length);
-        console.table(freshSteps.map(s => ({
-          id: s.id,
-          title: s.title.substring(0, 30),
-          x: s.position.x,
-          y: s.position.y
-        })));
-        setEditSteps(freshSteps);
+        setSteps([...flowchartData.steps]);
       }
       setHasUnsavedChanges(false);
-      setIsEditMode(true);
     }
+    setIsEditMode(!isEditMode);
   };
 
   if (!flowchartData) {
@@ -500,80 +476,18 @@ export default function FlowchartViewerPage() {
           </div>
         </div>
 
-        {/* Flowchart Area */}
-        {isEditMode ? (
-          // Edit Mode - Show Editor (only when editSteps is ready)
-          editSteps.length > 0 ? (
-            <DndProvider backend={HTML5Backend} key="edit-mode">
-              <FlowchartEditor
-                steps={editSteps}
-                onStepsChange={handleStepsChange}
-                onEditStep={handleEditStep}
-                onAddStep={handleAddStep}
-                zoom={zoom}
-                gridSize={gridSize}
-              />
-            </DndProvider>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Loading editor...</p>
-            </div>
-          )
-        ) : (
-          // View Mode - Show Normal Flowchart
-          <div
-          className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 p-4"
-          onWheel={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-              const delta = e.deltaY;
-              if (delta < 0) {
-                setZoom(Math.min(150, zoom + 5));
-              } else {
-                setZoom(Math.max(50, zoom - 5));
-              }
-            }
-          }}
-        >
-          <div
-            className="relative flex gap-6 items-center"
-            style={{
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top left',
-              padding: '20px',
-              minWidth: 'max-content'
-            }}
-          >
-            {/* Group steps by x position (column) */}
-            {Array.from({ length: gridInfo.cols }, (_, colIndex) => {
-              const stepsInColumn = steps.filter(s => s.position.x === colIndex);
-              if (stepsInColumn.length === 0) return null;
-
-              // Sort by y position
-              stepsInColumn.sort((a, b) => a.position.y - b.position.y);
-
-              return (
-                <div key={`col-${colIndex}`} className="flex flex-col gap-4">
-                  {stepsInColumn.map((step) => {
-                    const stepTasks = step.tasks;
-                    const completedTaskCount = stepTasks.filter(t => t.completed).length;
-
-                    return (
-                      <FlowchartStepComponent
-                        key={step.id}
-                        step={step}
-                        onClick={() => handleStepClick(step)}
-                        completedTasks={completedTaskCount}
-                        totalTasks={stepTasks.length}
-                      />
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        )}
+        {/* Flowchart Area - Unified View with Optional Edit Mode */}
+        <FlowchartEditor
+          steps={steps}
+          onStepsChange={setSteps}
+          onEditStep={handleEditStep}
+          onAddStep={handleAddStep}
+          onStepClick={handleStepClick}
+          zoom={zoom}
+          gridSize={gridSize}
+          isEditMode={isEditMode}
+          setHasUnsavedChanges={setHasUnsavedChanges}
+        />
       </div>
 
       {/* Progress Tracker Sidebar */}
