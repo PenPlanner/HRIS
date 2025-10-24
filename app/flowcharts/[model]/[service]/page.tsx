@@ -338,16 +338,22 @@ export default function FlowchartViewerPage() {
 
     console.log("Auto-layout complete. New positions:", updatedSteps.map(s => ({ title: s.title.substring(0, 20), pos: s.position })));
 
+    // IMPORTANT: Save positions to localStorage BEFORE updating state
+    // This prevents the load effect from overwriting with original positions
+    const storageKey = `flowchart_${modelId}_${serviceId}`;
+    const dataToSave = {
+      steps: updatedSteps,
+      lastUpdated: new Date().toISOString()
+    };
+    localStorage.setItem(storageKey, JSON.stringify(dataToSave));
+    console.log("Saved new positions to localStorage");
+
     // Update state with new positions
     setSteps(updatedSteps);
     setHasUnsavedChanges(true);
 
-    // Force clear BOTH localStorage keys to prevent old positions from being reloaded
-    // 1. Clear progress data
-    const storageKey = `flowchart_${modelId}_${serviceId}`;
-    localStorage.removeItem(storageKey);
-
-    // 2. Remove this flowchart from custom_flowcharts if it exists
+    // Remove this flowchart from custom_flowcharts if it exists
+    // (so it doesn't override with old saved positions)
     try {
       const customFlowcharts = localStorage.getItem('custom_flowcharts');
       if (customFlowcharts) {
@@ -355,14 +361,14 @@ export default function FlowchartViewerPage() {
         if (parsed[serviceId]) {
           delete parsed[serviceId];
           localStorage.setItem('custom_flowcharts', JSON.stringify(parsed));
-          console.log("Removed from custom_flowcharts to use original positions");
+          console.log("Removed from custom_flowcharts to use new auto-layout positions");
         }
       }
     } catch (e) {
       console.error("Failed to clean custom_flowcharts:", e);
     }
 
-    alert("Layout updated! Click 'Save' to keep these positions, or refresh the page to reset.");
+    alert("Layout updated! Click 'Save' to keep these positions permanently.");
   };
 
   // Edit mode handlers
