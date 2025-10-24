@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { useDrag, useDrop } from "react-dnd";
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -238,18 +237,17 @@ export function FlowchartEditor({
   const offsetY = Math.abs(minY) * gridSize;
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div
-        ref={drop}
-        className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
-          `,
-          backgroundSize: `${gridSize}px ${gridSize}px`,
-        }}
-      >
+    <div
+      ref={drop}
+      className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
+      style={{
+        backgroundImage: `
+          linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+        `,
+        backgroundSize: `${gridSize}px ${gridSize}px`,
+      }}
+    >
         <div
           className="relative"
           style={{
@@ -295,7 +293,6 @@ export function FlowchartEditor({
             </div>
           )}
         </div>
-      </div>
-    </DndProvider>
+    </div>
   );
 }

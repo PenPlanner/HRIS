@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp } from "lucide-react";
@@ -430,13 +432,15 @@ export default function FlowchartViewerPage() {
         {/* Flowchart Area */}
         {isEditMode ? (
           // Edit Mode - Show Editor
-          <FlowchartEditor
-            steps={steps}
-            onStepsChange={handleStepsChange}
-            onEditStep={handleEditStep}
-            onAddStep={handleAddStep}
-            zoom={zoom}
-          />
+          <DndProvider backend={HTML5Backend}>
+            <FlowchartEditor
+              steps={steps}
+              onStepsChange={handleStepsChange}
+              onEditStep={handleEditStep}
+              onAddStep={handleAddStep}
+              zoom={zoom}
+            />
+          </DndProvider>
         ) : (
           // View Mode - Show Normal Flowchart
           <div
