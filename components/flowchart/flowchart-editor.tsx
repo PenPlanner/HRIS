@@ -18,7 +18,7 @@ interface FlowchartEditorProps {
   gridSize?: number;
 }
 
-const GRID_SIZE = 60; // pixels
+const GRID_SIZE = 30; // pixels (default)
 const ItemType = "STEP";
 
 interface DraggableStepProps {
@@ -242,8 +242,8 @@ export function FlowchartEditor({
       className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
       style={{
         backgroundImage: `
-          linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+          linear-gradient(to right, rgba(100,100,255,0.15) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(100,100,255,0.15) 1px, transparent 1px)
         `,
         backgroundSize: `${gridSize}px ${gridSize}px`,
       }}

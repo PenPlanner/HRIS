@@ -7,7 +7,8 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
 import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
@@ -46,6 +47,7 @@ export default function FlowchartViewerPage() {
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [gridSize, setGridSize] = useState(30);
 
   // State for progress tracking
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
@@ -273,17 +275,14 @@ export default function FlowchartViewerPage() {
       if (!confirm("You have unsaved changes. Do you want to discard them?")) {
         return;
       }
-    }
-
-    setIsEditMode(!isEditMode);
-
-    if (!isEditMode) {
-      // Entering edit mode - ensure we have the latest data
+      // If discarding changes, reload from flowchartData
       if (flowchartData) {
         setSteps([...flowchartData.steps]);
       }
       setHasUnsavedChanges(false);
     }
+
+    setIsEditMode(!isEditMode);
   };
 
   if (!flowchartData) {
@@ -343,6 +342,25 @@ export default function FlowchartViewerPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Step
                 </Button>
+
+                {/* Grid Size Selector */}
+                <div className="flex items-center gap-2 border rounded-md px-3 py-1">
+                  <Grid3x3 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Grid:</span>
+                  <Select value={gridSize.toString()} onValueChange={(v) => setGridSize(Number(v))}>
+                    <SelectTrigger className="h-7 w-[70px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="20">20px</SelectItem>
+                      <SelectItem value="30">30px</SelectItem>
+                      <SelectItem value="40">40px</SelectItem>
+                      <SelectItem value="50">50px</SelectItem>
+                      <SelectItem value="60">60px</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -439,6 +457,7 @@ export default function FlowchartViewerPage() {
               onEditStep={handleEditStep}
               onAddStep={handleAddStep}
               zoom={zoom}
+              gridSize={gridSize}
             />
           </DndProvider>
         ) : (
