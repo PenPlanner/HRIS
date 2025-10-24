@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
+import { useDrag, useDrop } from "react-dnd";
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -322,10 +321,5 @@ export function FlowchartEditor({
     </div>
   );
 
-  // Always wrap with DndProvider since useDrop hook requires context
-  return (
-    <DndProvider backend={HTML5Backend}>
-      {content}
-    </DndProvider>
-  );
+  return content;
 }

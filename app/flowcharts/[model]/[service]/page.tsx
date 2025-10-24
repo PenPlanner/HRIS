@@ -3,6 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -477,17 +479,19 @@ export default function FlowchartViewerPage() {
         </div>
 
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
-        <FlowchartEditor
-          steps={steps}
-          onStepsChange={setSteps}
-          onEditStep={handleEditStep}
-          onAddStep={handleAddStep}
-          onStepClick={handleStepClick}
-          zoom={zoom}
-          gridSize={gridSize}
-          isEditMode={isEditMode}
-          setHasUnsavedChanges={setHasUnsavedChanges}
-        />
+        <DndProvider backend={HTML5Backend}>
+          <FlowchartEditor
+            steps={steps}
+            onStepsChange={setSteps}
+            onEditStep={handleEditStep}
+            onAddStep={handleAddStep}
+            onStepClick={handleStepClick}
+            zoom={zoom}
+            gridSize={gridSize}
+            isEditMode={isEditMode}
+            setHasUnsavedChanges={setHasUnsavedChanges}
+          />
+        </DndProvider>
       </div>
 
       {/* Progress Tracker Sidebar */}
