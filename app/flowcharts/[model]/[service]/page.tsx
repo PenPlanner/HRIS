@@ -49,12 +49,13 @@ export default function FlowchartViewerPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [gridSize, setGridSize] = useState(30);
 
-  // State for progress tracking
+  // State for progress tracking (view mode only)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
   const [selectedStep, setSelectedStep] = useState<FlowchartStep | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // State for edit mode
+  // State for edit mode (separate from view mode progress)
+  const [editSteps, setEditSteps] = useState<FlowchartStep[]>([]);
   const [editingStep, setEditingStep] = useState<FlowchartStep | null>(null);
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
@@ -231,11 +232,23 @@ export default function FlowchartViewerPage() {
 
     const updatedFlowchart: FlowchartData = {
       ...flowchartData,
-      steps
+      steps: editSteps
     };
 
     saveFlowchart(updatedFlowchart);
     setHasUnsavedChanges(false);
+
+    // Reload flowchartData after save
+    const allModels = getAllFlowcharts();
+    const model = allModels.find(m => m.id === modelId);
+    if (model) {
+      const flowchart = model.flowcharts.find(f => f.id === serviceId);
+      if (flowchart) {
+        setFlowchartData(flowchart);
+        setEditSteps([...flowchart.steps]);
+      }
+    }
+
     alert("Flowchart saved successfully!");
   };
 
@@ -258,7 +271,7 @@ export default function FlowchartViewerPage() {
       ]
     };
 
-    setSteps([...steps, newStep]);
+    setEditSteps([...editSteps, newStep]);
     setHasUnsavedChanges(true);
   };
 
@@ -268,12 +281,12 @@ export default function FlowchartViewerPage() {
   };
 
   const handleSaveStep = (updatedStep: FlowchartStep) => {
-    setSteps(steps.map(s => s.id === updatedStep.id ? updatedStep : s));
+    setEditSteps(editSteps.map(s => s.id === updatedStep.id ? updatedStep : s));
     setHasUnsavedChanges(true);
   };
 
   const handleStepsChange = (newSteps: FlowchartStep[]) => {
-    setSteps(newSteps);
+    setEditSteps(newSteps);
     setHasUnsavedChanges(true);
   };
 
@@ -291,25 +304,30 @@ export default function FlowchartViewerPage() {
 
     const exportData: FlowchartData = {
       ...flowchartData,
-      steps
+      steps: isEditMode ? editSteps : steps
     };
 
     exportFlowchartJSON(exportData);
   };
 
   const toggleEditMode = () => {
-    if (isEditMode && hasUnsavedChanges) {
-      if (!confirm("You have unsaved changes. Do you want to discard them?")) {
-        return;
+    if (isEditMode) {
+      // Exiting edit mode
+      if (hasUnsavedChanges) {
+        if (!confirm("You have unsaved changes. Do you want to discard them?")) {
+          return;
+        }
+        setHasUnsavedChanges(false);
       }
-      // If discarding changes, reload from flowchartData
+      setIsEditMode(false);
+    } else {
+      // Entering edit mode - always start fresh from flowchartData
       if (flowchartData) {
-        setSteps([...flowchartData.steps]);
+        setEditSteps([...flowchartData.steps]);
       }
       setHasUnsavedChanges(false);
+      setIsEditMode(true);
     }
-
-    setIsEditMode(!isEditMode);
   };
 
   if (!flowchartData) {
@@ -479,7 +497,7 @@ export default function FlowchartViewerPage() {
           // Edit Mode - Show Editor
           <DndProvider backend={HTML5Backend}>
             <FlowchartEditor
-              steps={steps}
+              steps={editSteps}
               onStepsChange={handleStepsChange}
               onEditStep={handleEditStep}
               onAddStep={handleAddStep}
