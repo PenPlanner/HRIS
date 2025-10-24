@@ -38,16 +38,28 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
   const [serviceType, setServiceType] = useState("");
   const [pdfjsLib, setPdfjsLib] = useState<any>(null);
 
-  // Load PDF.js library when component mounts
+  // Load PDF.js library from CDN when component mounts
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("pdfjs-dist").then((pdfjs) => {
-        pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-        setPdfjsLib(pdfjs);
-      }).catch((err) => {
-        console.error("Failed to load PDF.js:", err);
+    if (typeof window !== "undefined" && !(window as any).pdfjsLib) {
+      // Load PDF.js from CDN to avoid webpack issues
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.async = true;
+      script.onload = () => {
+        const pdfjs = (window as any).pdfjsLib;
+        if (pdfjs) {
+          pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          setPdfjsLib(pdfjs);
+        }
+      };
+      script.onerror = () => {
+        console.error("Failed to load PDF.js from CDN");
         setError("Failed to load PDF processing library. PDF import will not work.");
-      });
+      };
+      document.head.appendChild(script);
+    } else if ((window as any).pdfjsLib) {
+      // Already loaded
+      setPdfjsLib((window as any).pdfjsLib);
     }
   }, []);
 
