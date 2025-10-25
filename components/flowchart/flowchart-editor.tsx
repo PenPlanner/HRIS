@@ -561,7 +561,7 @@ export function FlowchartEditor({
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.5}
         maxZoom={1.5}
-        defaultViewport={{ x: 60, y: 0, zoom: zoom / 100 }}
+        defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
         nodesDraggable={isEditMode}
         nodesConnectable={isEditMode}
         edgesUpdatable={isEditMode}
