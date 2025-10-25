@@ -123,7 +123,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
   };
 
   return (
-    <div className="group">
+    <div className="group relative">
       {/* Connection handles - always rendered but only visible in edit mode */}
       <>
         {/* Top handles - both target and source */}
@@ -215,11 +215,6 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
         />
       </>
 
-      {/* Step Label */}
-      <div className="text-xs font-semibold text-muted-foreground pl-1 mb-1.5">
-        Step {getStepNumber(step.id)}
-      </div>
-
       <Card
         className={cn(
           "relative p-4 w-[300px] hover:shadow-lg transition-all border-2 flex flex-col overflow-hidden",
@@ -233,9 +228,14 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           height: `${cardHeight}px`
         }}
       >
-        {/* Action Buttons - Only visible in edit mode */}
+        {/* Step Label - Inside card, top left */}
+        <div className="absolute top-2 left-3 text-xs font-semibold text-muted-foreground">
+          Step {getStepNumber(step.id)}
+        </div>
+
+        {/* Action Buttons - Inside card, top right - Only visible in edit mode */}
         {isEditMode && (
-          <div className="absolute -top-2 -right-2 opacity-60 group-hover:opacity-100 transition-opacity flex gap-1">
+          <div className="absolute top-2 right-2 opacity-60 group-hover:opacity-100 transition-opacity flex gap-1">
           <Button
             size="sm"
             variant="secondary"
@@ -272,8 +272,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
         </div>
         )}
 
-        {/* Technician Badge - Centered at top */}
-        <div className="flex justify-center mb-2 -mt-1 flex-shrink-0">
+        {/* Technician Badge - Centered below Step label */}
+        <div className="flex justify-center mb-2 mt-5 flex-shrink-0">
           <div className="flex gap-1">
             {step.technician === "both" ? (
               <>
