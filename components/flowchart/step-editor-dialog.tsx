@@ -7,10 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FlowchartStep, FlowchartTask, generateTaskId } from "@/lib/flowchart-data";
-import { Plus, Trash2, Save, X } from "lucide-react";
+import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
+import { Plus, Trash2, Pencil, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StepEditorDialogProps {
   step: FlowchartStep | null;
@@ -18,19 +21,6 @@ interface StepEditorDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (step: FlowchartStep) => void;
 }
-
-const PRESET_COLORS = [
-  { name: "Orange", value: "#FF9800", code: "2Y" },
-  { name: "Blue", value: "#2196F3", code: "4Y" },
-  { name: "Green", value: "#4CAF50", code: "T1" },
-  { name: "Yellow", value: "#FFC107", code: "3Y" },
-  { name: "Purple", value: "#9C27B0", code: "5Y" },
-  { name: "Red", value: "#FF5722", code: "6Y" },
-  { name: "Pink", value: "#E91E63", code: "T2" },
-  { name: "Brown", value: "#795548", code: "Both" },
-  { name: "Cyan", value: "#00BCD4", code: "7Y" },
-  { name: "Lime", value: "#CDDC39", code: "8Y" }
-];
 
 export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEditorDialogProps) {
   const [editedStep, setEditedStep] = useState<FlowchartStep | null>(null);
@@ -41,12 +31,15 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
     }
   }, [step]);
 
-  if (!editedStep) return null;
-
-  const handleSave = () => {
-    onSave(editedStep);
-    onOpenChange(false);
+  // Auto-save when dialog closes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && editedStep) {
+      onSave(editedStep);
+    }
+    onOpenChange(newOpen);
   };
+
+  if (!editedStep) return null;
 
   const handleAddTask = () => {
     const newTask: FlowchartTask = {
@@ -76,6 +69,15 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
     });
   };
 
+  const handleTaskServiceTypeChange = (taskId: string, serviceType: string) => {
+    setEditedStep({
+      ...editedStep,
+      tasks: editedStep.tasks.map(t =>
+        t.id === taskId ? { ...t, serviceType } : t
+      )
+    });
+  };
+
   const handleDurationChange = (duration: string) => {
     // Extract minutes from duration string (e.g., "60m" -> 60)
     const minutes = parseInt(duration.replace(/\D/g, "")) || 0;
@@ -87,7 +89,7 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Step</DialogTitle>
@@ -96,17 +98,6 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
         <div className="space-y-6 py-4">
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Textarea
-                id="title"
-                value={editedStep.title}
-                onChange={(e) => setEditedStep({ ...editedStep, title: e.target.value })}
-                placeholder="Step title..."
-                rows={3}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="duration">Duration</Label>
               <Input
@@ -119,52 +110,9 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
                 Duration in minutes (e.g., 60m, 120m, 90m+)
               </p>
             </div>
-          </div>
-
-          {/* Color and Code */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <div className="grid grid-cols-5 gap-2">
-                {PRESET_COLORS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => setEditedStep({
-                      ...editedStep,
-                      color: preset.value,
-                      colorCode: preset.code
-                    })}
-                    className={`h-10 rounded border-2 transition-all ${
-                      editedStep.color === preset.value
-                        ? "border-black scale-110"
-                        : "border-transparent hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: preset.value }}
-                    title={preset.name}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Label htmlFor="custom-color" className="text-xs">Custom:</Label>
-                <Input
-                  id="custom-color"
-                  type="color"
-                  value={editedStep.color}
-                  onChange={(e) => setEditedStep({ ...editedStep, color: e.target.value })}
-                  className="w-20 h-8"
-                />
-              </div>
-            </div>
 
             <div className="space-y-2">
-              <Label htmlFor="colorCode">Color Code</Label>
-              <Input
-                id="colorCode"
-                value={editedStep.colorCode}
-                onChange={(e) => setEditedStep({ ...editedStep, colorCode: e.target.value })}
-                placeholder="e.g., 2Y, 3Y, T1, T2"
-              />
-              <Label htmlFor="technician" className="mt-4 block">Technician</Label>
+              <Label htmlFor="technician">Technician</Label>
               <Select
                 value={editedStep.technician}
                 onValueChange={(value: "T1" | "T2" | "both") =>
@@ -194,29 +142,76 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
             </div>
 
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {editedStep.tasks.map((task, index) => (
-                <Card key={task.id}>
-                  <CardContent className="pt-3 pb-3">
-                    <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="mt-1">{index + 1}</Badge>
-                      <Input
-                        value={task.description}
-                        onChange={(e) => handleTaskChange(task.id, e.target.value)}
-                        placeholder="Task description..."
-                        className="flex-1"
-                      />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveTask(task.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {editedStep.tasks.map((task, index) => {
+                // Check if task starts with reference number (e.g., "13.5.1", "2.7.2.3", "11.5.1.")
+                // Match 2 or more parts, allow optional trailing dot
+                const hasReferenceNumber = /^\d+(\.\d+)+\.?\s/.test(task.description);
+
+                return (
+                  <Card
+                    key={task.id}
+                    className={cn(
+                      !hasReferenceNumber && "ml-8 border-l-4 border-l-blue-200"
+                    )}
+                  >
+                    <CardContent className="pt-3 pb-3">
+                      <div className="flex items-start gap-2">
+                        <Badge
+                          variant={hasReferenceNumber ? "default" : "outline"}
+                          className={cn("mt-1", hasReferenceNumber && "bg-blue-600")}
+                        >
+                          {index + 1}
+                        </Badge>
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            value={task.description}
+                            onChange={(e) => handleTaskChange(task.id, e.target.value)}
+                            placeholder={hasReferenceNumber ? "Main task (e.g., 13.5.1 Description...)" : "Sub-task description..."}
+                            className={cn(!hasReferenceNumber && "text-sm text-muted-foreground")}
+                          />
+                          {/* Service Type Selector - Only show for tasks with reference numbers */}
+                          {hasReferenceNumber && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground">Service Type:</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-[10px] font-mono"
+                                    style={{
+                                      backgroundColor: task.serviceType ? (SERVICE_TYPE_COLORS[task.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default) : 'white',
+                                      color: task.serviceType ? 'white' : 'black',
+                                      borderColor: task.serviceType ? 'transparent' : '#ccc'
+                                    }}
+                                  >
+                                    {task.serviceType || 'Set Type'}
+                                    <Pencil className="h-2.5 w-2.5 ml-1" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                  <ServiceTypeSelector
+                                    currentType={task.serviceType}
+                                    onSelect={(type) => handleTaskServiceTypeChange(task.id, type)}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveTask(task.id)}
+                          className="text-red-600 hover:text-red-700 mt-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
 
@@ -231,49 +226,59 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
               rows={3}
             />
           </div>
-
-          {/* Preview */}
-          <div className="space-y-2">
-            <Label>Preview</Label>
-            <Card
-              className="p-3 w-[200px]"
-              style={{
-                backgroundColor: `${editedStep.color}15`,
-                borderLeft: `4px solid ${editedStep.color}`
-              }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <Badge
-                  style={{ backgroundColor: editedStep.color, color: 'white' }}
-                  className="text-[10px] font-mono px-1 py-0"
-                >
-                  {editedStep.colorCode}
-                </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  {editedStep.technician === "both" ? "T1+T2" : editedStep.technician}
-                </Badge>
-              </div>
-              <h3 className="font-bold text-xs leading-tight mb-1 line-clamp-3">
-                {editedStep.title || "Step title..."}
-              </h3>
-              <p className="text-[10px] text-muted-foreground">
-                {editedStep.duration} • {editedStep.tasks.length} tasks
-              </p>
-            </Card>
-          </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button onClick={() => handleOpenChange(false)}>
             <X className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save Changes
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Service Type Selector Component (Grid of colored buttons)
+interface ServiceTypeSelectorProps {
+  currentType?: string;
+  onSelect: (type: string) => void;
+}
+
+function ServiceTypeSelector({ currentType, onSelect }: ServiceTypeSelectorProps) {
+  const serviceTypes = [
+    { name: "1Y", color: SERVICE_TYPE_COLORS["1Y"] },
+    { name: "2Y", color: SERVICE_TYPE_COLORS["2Y"] },
+    { name: "3Y", color: SERVICE_TYPE_COLORS["3Y"] },
+    { name: "4Y", color: SERVICE_TYPE_COLORS["4Y"] },
+    { name: "5Y", color: SERVICE_TYPE_COLORS["5Y"] },
+    { name: "6Y", color: SERVICE_TYPE_COLORS["6Y"] },
+    { name: "7Y", color: SERVICE_TYPE_COLORS["7Y"] },
+    { name: "10Y", color: SERVICE_TYPE_COLORS["10Y"] },
+    { name: "12Y", color: SERVICE_TYPE_COLORS["12Y"] },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-semibold">Select Service Type</Label>
+
+      {/* Grid of colored buttons */}
+      <div className="grid grid-cols-3 gap-2">
+        {serviceTypes.map((st) => (
+          <button
+            key={st.name}
+            onClick={() => onSelect(st.name)}
+            className={cn(
+              "h-12 rounded-lg border-2 text-xs font-bold text-white transition-all flex items-center justify-center hover:scale-105",
+              currentType === st.name ? "border-blue-500 scale-105 ring-2 ring-blue-300" : "border-transparent"
+            )}
+            style={{ backgroundColor: st.color }}
+            title={st.name}
+          >
+            {st.name}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

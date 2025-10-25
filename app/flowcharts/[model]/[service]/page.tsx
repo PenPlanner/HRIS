@@ -8,13 +8,17 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2, Clock } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
+import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
 import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
 import { ProgressTracker } from "@/components/flowchart/progress-tracker";
 import { FlowchartEditor } from "@/components/flowchart/flowchart-editor";
 import { StepEditorDialog } from "@/components/flowchart/step-editor-dialog";
+import { extractSIIReferences } from "@/lib/sii-documents";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 // Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
 const PDFImportDialog = dynamic(
@@ -46,6 +50,14 @@ export default function FlowchartViewerPage() {
   const [stepEditorOpen, setStepEditorOpen] = useState(false);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // State for time reminder dialog
+  const [timeReminderOpen, setTimeReminderOpen] = useState(false);
+  const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
+  const [pendingTimeMinutes, setPendingTimeMinutes] = useState<number | undefined>(undefined);
+
+  // State for service type filtering
+  const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
 
   // Load flowchart data
   useEffect(() => {
@@ -100,8 +112,8 @@ export default function FlowchartViewerPage() {
       const arrangedSteps: FlowchartStep[] = [];
       const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
       let currentCol = 0; // Horizontal position (steps go left to right)
-      const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
-      const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
+      const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing (for 300px wide cards)
+      const ROW_SPACING = 10; // 10 * 30px = 300px vertical spacing (for 168px tall cards)
       const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
       let stepNumber = 1; // For automatic step numbering
       let i = 0;
@@ -257,6 +269,7 @@ export default function FlowchartViewerPage() {
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
   }, [steps, modelId, serviceId, flowchartData]);
 
+
   // Calculate progress metrics
   const progressMetrics = useMemo(() => {
     const completedSteps = steps.filter(step =>
@@ -268,11 +281,22 @@ export default function FlowchartViewerPage() {
       sum + step.tasks.filter(task => task.completed).length, 0
     );
 
+    // Calculate total actual time from all tasks (in seconds for compatibility with ProgressTracker)
+    const totalActualTimeMinutes = steps.reduce((stepSum, step) => {
+      const stepTasksTime = step.tasks.reduce((taskSum, task) => {
+        return taskSum + (task.actualTimeMinutes || 0);
+      }, 0);
+      return stepSum + stepTasksTime;
+    }, 0);
+
+    const totalActualTimeSeconds = totalActualTimeMinutes * 60;
+
     return {
       completedSteps,
       totalSteps: steps.length,
       completedTasks,
-      totalTasks
+      totalTasks,
+      totalActualTimeSeconds
     };
   }, [steps]);
 
@@ -280,21 +304,54 @@ export default function FlowchartViewerPage() {
   const handleTaskToggle = (taskId: string) => {
     if (!selectedStep) return;
 
+    // Find the task being toggled
+    const task = selectedStep.tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // If checking off a task (completing it) and no time is logged, show reminder
+    if (!task.completed && !task.actualTimeMinutes) {
+      setPendingTaskId(taskId);
+      setTimeReminderOpen(true);
+      return;
+    }
+
+    // Proceed with toggle
+    performTaskToggle(taskId);
+  };
+
+  // Perform the actual task toggle
+  const performTaskToggle = (taskId: string) => {
+    if (!selectedStep) return;
+
     setSteps(prevSteps =>
       prevSteps.map(step => {
         if (step.id !== selectedStep.id) return step;
 
+        const updatedTasks = step.tasks.map(task => {
+          if (task.id !== taskId) return task;
+
+          return {
+            ...task,
+            completed: !task.completed,
+            completedAt: !task.completed ? new Date().toISOString() : undefined
+          };
+        });
+
+        // Check only SII tasks
+        const siiReferences = extractSIIReferences(updatedTasks);
+        const siiTaskIds = siiReferences.map(ref =>
+          updatedTasks.find(t => t.description.trim().startsWith(ref.fullReference))?.id
+        ).filter(Boolean);
+
+        // Check if all SII tasks are completed
+        const allSIITasksCompleted = updatedTasks
+          .filter(task => siiTaskIds.includes(task.id))
+          .every(task => task.completed);
+
         return {
           ...step,
-          tasks: step.tasks.map(task => {
-            if (task.id !== taskId) return task;
-
-            return {
-              ...task,
-              completed: !task.completed,
-              completedAt: !task.completed ? new Date().toISOString() : undefined
-            };
-          })
+          tasks: updatedTasks,
+          completedAt: allSIITasksCompleted && siiTaskIds.length > 0 ? new Date().toISOString() : undefined
         };
       })
     );
@@ -302,16 +359,210 @@ export default function FlowchartViewerPage() {
     // Update selected step
     setSelectedStep(prev => {
       if (!prev) return null;
+
+      const updatedTasks = prev.tasks.map(task => {
+        if (task.id !== taskId) return task;
+        return {
+          ...task,
+          completed: !task.completed,
+          completedAt: !task.completed ? new Date().toISOString() : undefined
+        };
+      });
+
+      // Check only SII tasks
+      const siiReferences = extractSIIReferences(updatedTasks);
+      const siiTaskIds = siiReferences.map(ref =>
+        updatedTasks.find(t => t.description.trim().startsWith(ref.fullReference))?.id
+      ).filter(Boolean);
+
+      // Check if all SII tasks are completed
+      const allSIITasksCompleted = updatedTasks
+        .filter(task => siiTaskIds.includes(task.id))
+        .every(task => task.completed);
+
+      return {
+        ...prev,
+        tasks: updatedTasks,
+        completedAt: allSIITasksCompleted && siiTaskIds.length > 0 ? new Date().toISOString() : undefined
+      };
+    });
+  };
+
+  // Handle task time change
+  const handleTaskTimeChange = (taskId: string, minutes: number | undefined) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, actualTimeMinutes: minutes }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, actualTimeMinutes: minutes }
+            : task
+        )
+      };
+    });
+  };
+
+  // Handle task service type change
+  const handleTaskServiceTypeChange = (taskId: string, serviceType: string) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, serviceType }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, serviceType }
+            : task
+        )
+      };
+    });
+
+    setHasUnsavedChanges(true);
+  };
+
+  const handleTaskNotesChange = (taskId: string, note: string) => {
+    const newNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date().toISOString(),
+      note
+    };
+
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, notes: [...(task.notes || []), newNote] }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, notes: [...(task.notes || []), newNote] }
+            : task
+        )
+      };
+    });
+  };
+
+  const handleTaskNoteEdit = (taskId: string, noteId: string, newText: string) => {
+    const editTimestamp = new Date().toISOString();
+
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task => {
+          if (task.id !== taskId) return task;
+
+          const updatedNotes = task.notes?.map(note => {
+            if (note.id !== noteId) return note;
+
+            const currentVersion = note.edits ? note.edits.length + 1 : 1;
+            const newEdit = {
+              timestamp: editTimestamp,
+              version: currentVersion + 1
+            };
+
+            return {
+              ...note,
+              note: newText,
+              edits: [...(note.edits || []), newEdit]
+            };
+          });
+
+          return { ...task, notes: updatedNotes };
+        })
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
       return {
         ...prev,
         tasks: prev.tasks.map(task => {
           if (task.id !== taskId) return task;
-          return {
-            ...task,
-            completed: !task.completed,
-            completedAt: !task.completed ? new Date().toISOString() : undefined
-          };
+
+          const updatedNotes = task.notes?.map(note => {
+            if (note.id !== noteId) return note;
+
+            const currentVersion = note.edits ? note.edits.length + 1 : 1;
+            const newEdit = {
+              timestamp: editTimestamp,
+              version: currentVersion + 1
+            };
+
+            return {
+              ...note,
+              note: newText,
+              edits: [...(note.edits || []), newEdit]
+            };
+          });
+
+          return { ...task, notes: updatedNotes };
         })
+      };
+    });
+  };
+
+  const handleTaskNoteDelete = (taskId: string, noteId: string) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, notes: task.notes?.filter(note => note.id !== noteId) }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, notes: task.notes?.filter(note => note.id !== noteId) }
+            : task
+        )
       };
     });
   };
@@ -352,8 +603,8 @@ export default function FlowchartViewerPage() {
     const arrangedSteps: FlowchartStep[] = [];
     const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
     let currentCol = 0; // Horizontal position (steps go left to right)
-    const COL_SPACING = 9; // 9 * 30px = 270px horizontal spacing (close to 260px)
-    const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (more separation for stacked boxes)
+    const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing (for 300px wide cards)
+    const ROW_SPACING = 10; // 10 * 30px = 300px vertical spacing (for 168px tall cards)
     const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
     let stepNumber = 1; // For automatic step numbering
     let i = 0;
@@ -489,7 +740,7 @@ export default function FlowchartViewerPage() {
       title: "New Step",
       duration: "60m",
       durationMinutes: 60,
-      color: "#2196F3",
+      color: SERVICE_TYPE_COLORS.default,
       colorCode: "New",
       technician: "both",
       position: { x: 0, y: 0 },
@@ -670,14 +921,38 @@ export default function FlowchartViewerPage() {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleEditMode}
-              >
-                <Edit className="h-4 w-4 mr-2" />
+              <>
+                {/* Service Type Filter */}
+                <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">Service Filter:</span>
+                  <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
+                    <SelectTrigger className="h-7 w-[100px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Tasks</SelectItem>
+                      <SelectItem value="1Y">1Y Only</SelectItem>
+                      <SelectItem value="2Y">Up to 2Y</SelectItem>
+                      <SelectItem value="3Y">Up to 3Y</SelectItem>
+                      <SelectItem value="4Y">Up to 4Y</SelectItem>
+                      <SelectItem value="5Y">Up to 5Y</SelectItem>
+                      <SelectItem value="6Y">Up to 6Y</SelectItem>
+                      <SelectItem value="7Y">Up to 7Y</SelectItem>
+                      <SelectItem value="10Y">Up to 10Y</SelectItem>
+                      <SelectItem value="12Y">Up to 12Y</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleEditMode}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
                 Edit Mode
               </Button>
+              </>
             )}
 
             {/* Zoom Controls */}
@@ -743,11 +1018,13 @@ export default function FlowchartViewerPage() {
           <div className="p-4">
             <ProgressTracker
               flowchart={flowchartData}
+              steps={steps}
               completedSteps={progressMetrics.completedSteps}
               totalSteps={progressMetrics.totalSteps}
               completedTasks={progressMetrics.completedTasks}
               totalTasks={progressMetrics.totalTasks}
               elapsedTime="00:00:00"
+              totalActualTimeSeconds={progressMetrics.totalActualTimeSeconds}
               onResetProgress={handleResetProgress}
             />
           </div>
@@ -757,6 +1034,8 @@ export default function FlowchartViewerPage() {
       {/* Step Detail Drawer */}
       <StepDetailDrawer
         step={selectedStep}
+        flowchartId={flowchartData?.id || ''}
+        flowchartName={`${flowchartData?.model || ''} - ${flowchartData?.serviceType || ''}`}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onTaskToggle={handleTaskToggle}
@@ -764,7 +1043,14 @@ export default function FlowchartViewerPage() {
         onCompleteStep={() => setDrawerOpen(false)}
         isStepRunning={false}
         stepStartTime={null}
+        selectedServiceType={selectedServiceType}
         elapsedTime="00:00:00"
+        onTaskTimeChange={handleTaskTimeChange}
+        onTaskNotesChange={handleTaskNotesChange}
+        onTaskNoteEdit={handleTaskNoteEdit}
+        onTaskNoteDelete={handleTaskNoteDelete}
+        onTaskServiceTypeChange={handleTaskServiceTypeChange}
+        isEditMode={isEditMode}
       />
 
       {/* Step Editor Dialog */}
@@ -781,6 +1067,167 @@ export default function FlowchartViewerPage() {
         onOpenChange={setPdfImportOpen}
         onImport={handlePDFImport}
       />
+
+      {/* Time Reminder Dialog */}
+      <AlertDialog
+        open={timeReminderOpen}
+        onOpenChange={(open) => {
+          setTimeReminderOpen(open);
+          if (!open) {
+            setPendingTaskId(null);
+            setPendingTimeMinutes(undefined);
+          }
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-md p-4 gap-3">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <AlertDialogTitle className="text-lg">Logga tid för aktivitet</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-sm leading-relaxed mb-2">
+              Du har inte loggat tid för denna aktivitet. Vill du logga tid nu?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* Time Selection */}
+          <div className="space-y-3">
+            {/* Selected Time Display */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-3">
+              <div className="text-center">
+                <p className="text-xs text-blue-600 font-medium mb-1">Tid för aktivitet</p>
+                <div className="text-2xl font-bold font-mono text-blue-900">
+                  {pendingTimeMinutes ? (
+                    <>
+                      {Math.floor(pendingTimeMinutes / 60) > 0 && (
+                        <span>{Math.floor(pendingTimeMinutes / 60)}h </span>
+                      )}
+                      {pendingTimeMinutes % 60 > 0 && (
+                        <span>{pendingTimeMinutes % 60}m</span>
+                      )}
+                      {!pendingTimeMinutes && <span>–</span>}
+                    </>
+                  ) : (
+                    <span className="text-gray-400">–</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div>
+              <p className="text-[10px] font-medium text-muted-foreground mb-1.5 px-0.5">Vanliga tider:</p>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[5, 10, 15, 30, 45, 60, 90, 120].map((minutes) => {
+                  const hours = Math.floor(minutes / 60);
+                  const mins = minutes % 60;
+                  const label = hours > 0 ? (mins > 0 ? `${hours}h ${mins}m` : `${hours}h`) : `${mins}m`;
+
+                  return (
+                    <button
+                      key={minutes}
+                      onClick={() => setPendingTimeMinutes(minutes)}
+                      className={cn(
+                        "px-2 py-1.5 text-xs font-medium rounded-md border-2 transition-all",
+                        pendingTimeMinutes === minutes
+                          ? "bg-blue-100 border-blue-400 text-blue-900 shadow-sm"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Time Input */}
+            <div className="pt-2 border-t">
+              <p className="text-[10px] font-medium text-muted-foreground mb-1.5 px-0.5">Egen tid:</p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground block mb-1">Timmar</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="23"
+                    value={Math.floor((pendingTimeMinutes || 0) / 60)}
+                    onChange={(e) => {
+                      const hours = parseInt(e.target.value) || 0;
+                      const minutes = (pendingTimeMinutes || 0) % 60;
+                      setPendingTimeMinutes(hours * 60 + minutes);
+                    }}
+                    className="w-full px-2 py-1.5 text-center text-base font-mono border-2 border-gray-200 rounded-md focus:border-blue-400 focus:outline-none"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-[10px] text-muted-foreground block mb-1">Minuter</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="59"
+                    value={(pendingTimeMinutes || 0) % 60}
+                    onChange={(e) => {
+                      const hours = Math.floor((pendingTimeMinutes || 0) / 60);
+                      const minutes = parseInt(e.target.value) || 0;
+                      setPendingTimeMinutes(hours * 60 + minutes);
+                    }}
+                    className="w-full px-2 py-1.5 text-center text-base font-mono border-2 border-gray-200 rounded-md focus:border-blue-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="gap-1.5 sm:gap-1.5 flex-col sm:flex-row mt-2">
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingTaskId(null);
+                setPendingTimeMinutes(undefined);
+                setTimeReminderOpen(false);
+              }}
+              className="sm:flex-1 h-9 text-sm"
+            >
+              Avbryt
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingTaskId) {
+                  // Save time if provided, then toggle
+                  if (pendingTimeMinutes) {
+                    handleTaskTimeChange(pendingTaskId, pendingTimeMinutes);
+                  }
+                  performTaskToggle(pendingTaskId);
+                }
+                setPendingTaskId(null);
+                setPendingTimeMinutes(undefined);
+                setTimeReminderOpen(false);
+              }}
+              className="sm:flex-1 bg-gray-500 hover:bg-gray-600 h-9 text-sm"
+            >
+              Hoppa över
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingTaskId && pendingTimeMinutes) {
+                  // Save time and toggle
+                  handleTaskTimeChange(pendingTaskId, pendingTimeMinutes);
+                  performTaskToggle(pendingTaskId);
+                  setPendingTaskId(null);
+                  setPendingTimeMinutes(undefined);
+                  setTimeReminderOpen(false);
+                }
+              }}
+              className="sm:flex-1 bg-green-600 hover:bg-green-700 h-9 text-sm"
+              disabled={!pendingTimeMinutes}
+            >
+              Spara & klar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

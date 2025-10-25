@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FlowchartData, FlowchartStep, generateFlowchartId, generateStepId, generateTaskId } from "@/lib/flowchart-data";
+import { getServiceTypeColor, SERVICE_TYPE_COLORS, rgbToServiceType } from "@/lib/service-colors";
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
 interface PDFImportDialogProps {
@@ -24,7 +25,11 @@ interface ParsedData {
     duration: string;
     colorCode?: string;
     technician?: "T1" | "T2" | "both";
-    tasks: string[];
+    tasks: Array<{
+      description: string;
+      serviceType?: string;
+      rgb?: { r: number; g: number; b: number };
+    }>;
   }>;
 }
 
@@ -73,11 +78,12 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     }
   };
 
-  const extractTextFromPDF = async (pdfFile: File, pdfLib: any): Promise<string> => {
+  const extractTextFromPDF = async (pdfFile: File, pdfLib: any): Promise<{ text: string; items: any[] }> => {
     const arrayBuffer = await pdfFile.arrayBuffer();
     const pdf = await pdfLib.getDocument({ data: arrayBuffer }).promise;
 
     let fullText = "";
+    let allItems: any[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -86,14 +92,34 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
         .map((item: any) => item.str)
         .join(" ");
       fullText += pageText + "\n";
+
+      // Collect all text items with their color information
+      allItems = [...allItems, ...textContent.items];
     }
 
-    return fullText;
+    return { text: fullText, items: allItems };
   };
 
-  const parseFlowchartData = (text: string): ParsedData => {
+  const parseFlowchartData = (text: string, items: any[]): ParsedData => {
     // This is a basic parser - can be enhanced based on specific PDF format
     const lines = text.split("\n").filter(line => line.trim());
+
+    // Create a map of text to color information
+    const textColorMap = new Map<string, { r: number; g: number; b: number }>();
+    items.forEach((item: any) => {
+      if (item.str && item.str.trim()) {
+        // Extract RGB color from PDF.js color array
+        // PDF.js typically provides color in fillColor or strokeColor
+        const color = item.fillColor || item.strokeColor || [0, 0, 0]; // Default to black
+
+        // Convert to RGB (0-255 range)
+        const r = Math.round(color[0] * 255);
+        const g = Math.round(color[1] * 255);
+        const b = Math.round(color[2] * 255);
+
+        textColorMap.set(item.str.trim(), { r, g, b });
+      }
+    });
 
     // Try to find model and service type
     let detectedModel = model;
@@ -148,7 +174,22 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
       } else if (currentStep && line.trim()) {
         // Add as task if it's a sub-item
         if (line.length < 200 && (line.match(/^[\s-•\*]/) || line.match(/^\d+\.\d+/))) {
-          currentStep.tasks.push(line.trim());
+          const taskText = line.trim();
+          const rgb = textColorMap.get(taskText);
+          let serviceType = "1Y"; // Default to base service
+
+          if (rgb) {
+            const detectedType = rgbToServiceType(rgb.r, rgb.g, rgb.b);
+            if (detectedType) {
+              serviceType = detectedType;
+            }
+          }
+
+          currentStep.tasks.push({
+            description: taskText,
+            serviceType,
+            rgb
+          });
         }
       }
     }
@@ -177,10 +218,10 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     setError(null);
 
     try {
-      const text = await extractTextFromPDF(file, pdfjsLib);
+      const { text, items } = await extractTextFromPDF(file, pdfjsLib);
       setExtractedText(text);
 
-      const parsed = parseFlowchartData(text);
+      const parsed = parseFlowchartData(text, items);
       setParsedData(parsed);
 
       // Update form fields
@@ -203,9 +244,10 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
       const x = index % 3;
       const y = Math.floor(index / 3);
 
-      // Generate color if not provided
-      const colors = ["#FF9800", "#2196F3", "#4CAF50", "#FFC107", "#9C27B0", "#FF5722", "#E91E63", "#795548"];
-      const color = colors[index % colors.length];
+      // Use color from step.colorCode if available, otherwise cycle through service types
+      const serviceTypes = ["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "10Y"] as const;
+      const defaultColorCode = step.colorCode || serviceTypes[index % serviceTypes.length];
+      const color = getServiceTypeColor(defaultColorCode);
 
       const durationMinutes = parseInt(step.duration.replace(/\D/g, "")) || 60;
 
@@ -215,13 +257,15 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
         duration: step.duration,
         durationMinutes,
         color,
-        colorCode: step.colorCode || `${index + 1}Y`,
+        colorCode: defaultColorCode,
         technician: step.technician || "both",
         position: { x, y },
-        tasks: step.tasks.map(taskDesc => ({
+        tasks: step.tasks.map(task => ({
           id: generateTaskId(),
-          description: taskDesc,
-          completed: false
+          description: task.description,
+          completed: false,
+          serviceType: task.serviceType,
+          pdfRgb: task.rgb
         }))
       };
     });
@@ -349,6 +393,15 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
                           <p className="text-xs text-muted-foreground mt-1">
                             {step.duration} • {step.tasks.length} tasks • {step.technician}
                           </p>
+                          {step.tasks.length > 0 && (
+                            <div className="flex gap-1 mt-1 flex-wrap">
+                              {Array.from(new Set(step.tasks.map(t => t.serviceType).filter(Boolean))).map(st => (
+                                <span key={st} className="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary">
+                                  {st}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         {step.colorCode && (
                           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">

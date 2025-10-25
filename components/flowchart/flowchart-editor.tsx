@@ -6,8 +6,9 @@ import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 
 interface FlowchartEditorProps {
   steps: FlowchartStep[];
@@ -31,14 +32,18 @@ interface DraggableStepProps {
   onDelete: (stepId: string) => void;
   onDuplicate: (step: FlowchartStep) => void;
   onClick?: (step: FlowchartStep) => void;
+  onUpdateStep: (step: FlowchartStep) => void;
   gridSize: number;
   isEditMode: boolean;
 }
 
-function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, gridSize, isEditMode }: DraggableStepProps) {
+function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, gridSize, isEditMode }: DraggableStepProps) {
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+  // Calculate total notes count from all tasks
+  const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemType,
@@ -58,9 +63,21 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, g
     }
   };
 
+  // Extract step number from step.id (e.g., "step-2-1" -> "2.1", "step-1" -> "1")
+  const getStepNumber = (stepId: string): string => {
+    // Handle special cases like "step-4y-bolts"
+    if (stepId === "step-4y-bolts") return "4Y Bolts";
+
+    // Remove "step-" prefix
+    const idPart = stepId.replace('step-', '');
+
+    // Convert hyphens to dots (e.g., "2-1" -> "2.1")
+    return idPart.replace(/-/g, '.');
+  };
+
   return (
     <div
-      ref={drag}
+      ref={drag as any}
       style={{
         position: "absolute",
         left: `${pixelX}px`,
@@ -71,14 +88,18 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, g
       className="group"
       onClick={handleClick}
     >
+      {/* Step Label */}
+      <div className="text-xs font-semibold text-muted-foreground pl-1 mb-1.5">
+        Step {getStepNumber(step.id)}
+      </div>
+
       <Card
         className={cn(
-          "relative p-3 w-[200px] min-h-[140px] hover:shadow-lg transition-all",
+          "relative p-4 w-[300px] min-h-[168px] hover:shadow-lg transition-all border-2 border-gray-700/50",
           isComplete && "ring-2 ring-green-500"
         )}
         style={{
-          backgroundColor: `${step.color}15`,
-          borderLeft: `4px solid ${step.color}`
+          backgroundColor: `${step.color}15`
         }}
       >
         {/* Action Buttons - Only visible in edit mode */}
@@ -111,55 +132,109 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, g
         </div>
         )}
 
-        {/* Technician Badge */}
-        <div className="absolute top-2 right-2 flex gap-1">
-          {step.technician === "both" ? (
-            <>
+        {/* Technician Badge - Centered at top */}
+        <div className="flex justify-center mb-2 -mt-1">
+          <div className="flex gap-1">
+            {step.technician === "both" ? (
+              <>
+                <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0">T1</Badge>
+                <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0">T2</Badge>
+              </>
+            ) : step.technician === "T1" ? (
               <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0">T1</Badge>
+            ) : (
               <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0">T2</Badge>
-            </>
-          ) : step.technician === "T1" ? (
-            <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0">T1</Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0">T2</Badge>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Step Content */}
-        <div className="mt-4">
-          <div className="mb-1">
-            <Badge
-              style={{ backgroundColor: step.color, color: 'white' }}
-              className="text-[10px] font-mono px-1 py-0"
-            >
-              {step.colorCode}
-            </Badge>
-          </div>
-          <h3 className="font-bold text-xs leading-tight mb-2 pr-10 whitespace-pre-line line-clamp-4">
-            {step.title}
-          </h3>
+        {/* Step Content - Compact task list */}
+        <div className="mt-2">
+          {/* Task list - compact format - only main tasks with ref numbers */}
+          <div className="space-y-0.5 mb-3 pr-10">
+            {step.tasks.map((task) => {
+              // Only show tasks with reference numbers (e.g., "13.5.1 Description")
+              const hasRefNumber = /^\d+\.\d+(\.\d+)*\.?\s/.test(task.description);
 
-          {/* Duration */}
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-2">
-            <Clock className="h-2.5 w-2.5" />
-            <span>{step.duration}</span>
+              // Skip tasks without reference numbers
+              if (!hasRefNumber) return null;
+
+              // Get service type color, using gray for 1Y/12Y for visibility
+              const serviceType = task.serviceType || "1Y";
+              const badgeColor = (serviceType === '1Y' || serviceType === '12Y')
+                ? '#6B7280'
+                : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
+
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden"
+                  style={{
+                    backgroundColor: `${badgeColor}10`
+                  }}
+                >
+                  <div
+                    style={{ backgroundColor: badgeColor }}
+                    className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
+                  >
+                    <span className="text-[9px] font-mono font-bold text-white">
+                      {serviceType}
+                    </span>
+                  </div>
+                  <span className={cn(
+                    "font-semibold line-clamp-1 flex-1",
+                    task.completed ? "line-through text-gray-400" : "text-white"
+                  )}>
+                    {task.description}
+                  </span>
+                  {task.completed && (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Progress */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="text-muted-foreground">
-                {completedTasks}/{totalTasks} tasks
-              </span>
+          {/* Bottom Section - Duration & Progress */}
+          <div className="pt-2 border-t border-gray-700/30 space-y-2">
+            {/* Duration and Status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-3 w-3 text-gray-400" />
+                <span className="text-xs text-gray-300 font-medium">{step.duration}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {totalNotesCount > 0 && (
+                  <div className="flex items-center gap-1 bg-amber-500/20 border border-amber-500/40 rounded-md px-2 py-0.5">
+                    <StickyNote className="h-3 w-3 text-amber-400" />
+                    <span className="text-xs font-semibold text-amber-300">{totalNotesCount}</span>
+                  </div>
+                )}
+                {isComplete && (
+                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                )}
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%`,
-                  backgroundColor: step.color
-                }}
-              />
+
+            {/* Progress Bar */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">
+                  {completedTasks}/{totalTasks} completed
+                </span>
+                <span className="text-xs font-semibold text-gray-300">
+                  {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%`,
+                    backgroundColor: isComplete ? '#4ade80' : step.color
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -243,6 +318,14 @@ export function FlowchartEditor({
     setHasUnsavedChanges(true);
   };
 
+  const handleUpdateStep = (updatedStep: FlowchartStep) => {
+    const updatedSteps = steps.map(s =>
+      s.id === updatedStep.id ? updatedStep : s
+    );
+    onStepsChange(updatedSteps);
+    setHasUnsavedChanges(true);
+  };
+
   // Calculate canvas size
   const canvasWidth = Math.max(
     ...steps.map(s => s.position.x),
@@ -261,7 +344,7 @@ export function FlowchartEditor({
 
   const content = (
     <div
-      ref={isEditMode ? drop : null}
+      ref={isEditMode ? (drop as any) : null}
       className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
       style={{
         backgroundImage: isEditMode ? `
@@ -305,6 +388,7 @@ export function FlowchartEditor({
               onDelete={handleDelete}
               onDuplicate={handleDuplicate}
               onClick={onStepClick}
+              onUpdateStep={handleUpdateStep}
               gridSize={gridSize}
               isEditMode={isEditMode}
             />

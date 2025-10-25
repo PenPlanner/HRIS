@@ -51,28 +51,28 @@ export function PDFViewerDialog({
       >
         <DialogHeader className={`${isFullscreen ? 'px-4 pt-4 pb-3' : 'px-6 pt-6 pb-4'} flex-shrink-0 border-b`}>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg truncate pr-4">{title}</DialogTitle>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <DialogTitle className="text-lg truncate pr-6">{title}</DialogTitle>
+            <div className="flex items-center gap-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={openInNewTab}
-                className="h-8 px-3"
+                className="h-10 px-4"
                 title="Open in new tab"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={toggleFullscreen}
-                className="h-8 w-8 p-0"
+                className="h-10 w-10 p-0"
                 title={isFullscreen ? "Exit fullscreen" : "Maximize"}
               >
                 {isFullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
+                  <Minimize2 className="h-5 w-5" />
                 ) : (
-                  <Maximize2 className="h-4 w-4" />
+                  <Maximize2 className="h-5 w-5" />
                 )}
               </Button>
             </div>

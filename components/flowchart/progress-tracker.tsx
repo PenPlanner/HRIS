@@ -4,29 +4,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock, RotateCcw, Users } from "lucide-react";
-import { FlowchartData } from "@/lib/flowchart-data";
+import { FlowchartData, FlowchartStep } from "@/lib/flowchart-data";
+import { AllNotesDialog } from "./all-notes-dialog";
 
 interface ProgressTrackerProps {
   flowchart: FlowchartData;
+  steps: FlowchartStep[];
   completedSteps: number;
   totalSteps: number;
   completedTasks: number;
   totalTasks: number;
   elapsedTime: string;
+  totalActualTimeSeconds?: number; // Total actual time from all step timers
   onResetProgress: () => void;
 }
 
 export function ProgressTracker({
   flowchart,
+  steps,
   completedSteps,
   totalSteps,
   completedTasks,
   totalTasks,
   elapsedTime,
+  totalActualTimeSeconds = 0,
   onResetProgress
 }: ProgressTrackerProps) {
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
   const taskProgressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+  // Format minutes to human readable format (e.g., "1h 30m" or "45m")
+  const formatTime = (totalMinutes: number): string => {
+    if (totalMinutes === 0) return "0m";
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours === 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Format duration string like "2280m" to "38h" or "38h 0m"
+  const formatDuration = (duration: string): string => {
+    const match = duration.match(/(\d+)m/);
+    if (!match) return duration;
+
+    const totalMinutes = parseInt(match[1]);
+    return formatTime(totalMinutes);
+  };
+
+  // Convert actual time from seconds to minutes
+  const totalActualTimeMinutes = Math.floor(totalActualTimeSeconds / 60);
+
+  // Calculate target duration in minutes
+  const targetDurationMinutes = flowchart.totalMinutes;
+  const isUnderTarget = totalActualTimeMinutes <= targetDurationMinutes;
+  const timeDifferenceMinutes = Math.abs(totalActualTimeMinutes - targetDurationMinutes);
 
   return (
     <Card>
@@ -87,18 +120,63 @@ export function ProgressTracker({
           </div>
         </div>
 
+        {/* Total Time Counter */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-4 w-4 text-blue-600" />
+            <span className="text-xs font-semibold text-blue-900">Total Actual Time</span>
+          </div>
+
+          <div className="space-y-2">
+            {/* Actual Time Display */}
+            <div className="bg-white rounded-md p-2 border border-blue-100">
+              <p className="text-[10px] text-blue-600 mb-0.5">Actual Time</p>
+              <p className="text-lg font-bold font-mono text-blue-900">{formatTime(totalActualTimeMinutes)}</p>
+            </div>
+
+            {/* Target vs Actual Comparison */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-muted-foreground">Target:</span>
+                <span className="font-mono font-medium">{formatDuration(flowchart.totalTime)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="text-muted-foreground">Difference:</span>
+                <span className={`font-mono font-medium ${isUnderTarget ? 'text-green-600' : 'text-red-600'}`}>
+                  {isUnderTarget ? '✓ ' : '⚠ '}
+                  {isUnderTarget ? '-' : '+'}{formatTime(timeDifferenceMinutes)}
+                </span>
+              </div>
+
+              {/* Progress bar showing time used vs target */}
+              <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden mt-2">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    isUnderTarget ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                  style={{
+                    width: `${Math.min(100, (totalActualTimeMinutes / targetDurationMinutes) * 100)}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
             <p className="text-[10px] text-blue-600 mb-0.5">Estimated</p>
-            <p className="text-sm font-bold text-blue-700">{flowchart.totalTime}</p>
+            <p className="text-sm font-bold text-blue-700">{formatDuration(flowchart.totalTime)}</p>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-2">
             <p className="text-[10px] text-green-600 mb-0.5">Complete</p>
-            <p className="text-sm font-bold text-green-700">{Math.round(progressPercent)}%</p>
+            <p className="text-sm font-bold text-green-700">{Math.round(taskProgressPercent)}%</p>
           </div>
         </div>
+
+        {/* All Notes Collection */}
+        <AllNotesDialog steps={steps} />
 
         {/* Status */}
         {progressPercent === 100 && (
