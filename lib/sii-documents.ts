@@ -114,13 +114,8 @@ export function extractSIIReferences(tasks: { description: string }[]): SIIRefer
     }
   }
 
-  // Sort by document number, then by section
-  return references.sort((a, b) => {
-    if (a.documentNumber !== b.documentNumber) {
-      return a.documentNumber - b.documentNumber;
-    }
-    return a.section.localeCompare(b.section, undefined, { numeric: true });
-  });
+  // Keep original order from tasks - matches flowchart step order
+  return references;
 }
 
 /**
