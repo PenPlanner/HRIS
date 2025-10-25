@@ -16,7 +16,6 @@ import ReactFlow, {
   Position,
   MarkerType,
 } from 'reactflow';
-import 'reactflow/dist/style.css';
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";

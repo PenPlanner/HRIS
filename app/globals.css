@@ -57,3 +57,17 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Flow specific fixes to prevent Tailwind CSS conflicts */
+.react-flow__edges {
+  overflow: visible !important;
+}
+
+.react-flow__edge-path {
+  stroke: inherit;
+  stroke-width: inherit;
+}
+
+.react-flow__handle {
+  pointer-events: all !important;
+}
