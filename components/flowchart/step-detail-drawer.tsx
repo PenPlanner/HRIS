@@ -2,16 +2,18 @@
 
 import { FlowchartStep, FlowchartTask } from "@/lib/flowchart-data";
 import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, SIIReference } from "@/lib/sii-documents";
+import { getSectionPage } from "@/lib/sii-page-mapping";
 import type { PDFMetadata } from "@/lib/pdf-metadata";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;
@@ -49,6 +51,12 @@ export function StepDetailDrawer({
   // State for PDF metadata
   const [pdfMetadata, setPdfMetadata] = useState<Map<number, PDFMetadata>>(new Map());
   const [loadingMetadata, setLoadingMetadata] = useState(false);
+
+  // State for PDF viewer
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState("");
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState("");
+  const [selectedPdfPage, setSelectedPdfPage] = useState(1);
 
   // Load PDF metadata when modal opens
   useEffect(() => {
@@ -95,6 +103,15 @@ export function StepDetailDrawer({
   // Helper to find the task that matches a SII reference
   const findTaskForReference = (reference: SIIReference): FlowchartTask | undefined => {
     return step.tasks.find(task => task.description.trim().startsWith(reference.fullReference));
+  };
+
+  // Open PDF viewer with specific section
+  const openPdfViewer = (reference: SIIReference) => {
+    const page = getSectionPage(reference.documentNumber, reference.section);
+    setSelectedPdfUrl(reference.documentPath);
+    setSelectedPdfTitle(`Doc ${reference.documentNumber}: ${reference.documentTitle} - § ${reference.section}`);
+    setSelectedPdfPage(page);
+    setPdfViewerOpen(true);
   };
 
   return (
@@ -255,6 +272,18 @@ export function StepDetailDrawer({
                                     {ref.description || '—'}
                                   </p>
                                 </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openPdfViewer(ref);
+                                  }}
+                                  className="h-7 w-7 p-0 flex-shrink-0"
+                                  title={`View PDF at section ${ref.section}`}
+                                >
+                                  <Eye className="h-3.5 w-3.5 text-blue-600" />
+                                </Button>
                               </div>
                             );
                           })}
@@ -404,6 +433,15 @@ export function StepDetailDrawer({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* PDF Viewer Dialog */}
+      <PDFViewerDialog
+        open={pdfViewerOpen}
+        onOpenChange={setPdfViewerOpen}
+        pdfUrl={selectedPdfUrl}
+        title={selectedPdfTitle}
+        initialPage={selectedPdfPage}
+      />
     </Dialog>
   );
 }
