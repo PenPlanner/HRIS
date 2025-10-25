@@ -108,7 +108,7 @@ export function CircularTimeSlider({
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleEnd);
     };
-  }, [isDragging]);
+  }, [isDragging, handleMove]);
 
   const currentAngle = getAngleFromMinutes(value);
   const knobX = center.x + radius * Math.sin(currentAngle * Math.PI / 180);

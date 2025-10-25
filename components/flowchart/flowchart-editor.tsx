@@ -290,7 +290,7 @@ export function FlowchartEditor({
 
     onStepsChange(updatedSteps);
     setHasUnsavedChanges(true);
-  }, [steps, onStepsChange, gridSize, isEditMode, setHasUnsavedChanges]);
+  }, [steps, onStepsChange, gridSize, isEditMode, setHasUnsavedChanges, snapToGrid]);
 
   const [, drop] = useDrop(() => ({
     accept: ItemType,
@@ -397,7 +397,7 @@ export function FlowchartEditor({
           {/* Helper text when empty */}
           {steps.length === 0 && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <p className="text-muted-foreground mb-4">No steps yet. Click "Add Step" to begin.</p>
+              <p className="text-muted-foreground mb-4">No steps yet. Click &quot;Add Step&quot; to begin.</p>
               <Button onClick={onAddStep}>Add First Step</Button>
             </div>
           )}

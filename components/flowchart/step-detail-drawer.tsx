@@ -84,10 +84,10 @@ export function StepDetailDrawer({
       // Check if task's serviceType is in the included types
       return includedTypes.includes(task.serviceType);
     });
-  }, [step?.tasks, selectedServiceType, showAllTasks]);
+  }, [step, selectedServiceType, showAllTasks]);
 
   // Extract SII references from filtered task descriptions
-  const siiReferences = useMemo(() => step ? extractSIIReferences(filteredTasks) : [], [filteredTasks]);
+  const siiReferences = useMemo(() => step ? extractSIIReferences(filteredTasks) : [], [filteredTasks, step]);
   const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
 
   // Count only tasks that have SII references (the ones that are actually displayed/checkable)
@@ -96,7 +96,7 @@ export function StepDetailDrawer({
     return siiReferences.map(ref =>
       filteredTasks.find(task => task.description.trim().startsWith(ref.fullReference))
     ).filter(Boolean) as FlowchartTask[];
-  }, [siiReferences, filteredTasks]);
+  }, [siiReferences, filteredTasks, step]);
 
   const completedTasks = siiTasks.filter(t => t.completed).length;
   const totalTasks = siiTasks.length;
@@ -116,7 +116,7 @@ export function StepDetailDrawer({
   const totalStepTimeMinutes = useMemo(() => {
     if (!step) return 0;
     return filteredTasks.reduce((sum, task) => sum + (task.actualTimeMinutes || 0), 0);
-  }, [filteredTasks]);
+  }, [filteredTasks, step]);
 
   // Format minutes to human readable format (e.g., "1h 30m" or "45m")
   const formatTime = (totalMinutes: number): string => {
@@ -864,7 +864,7 @@ export function StepDetailDrawer({
                 <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-sm text-muted-foreground">No SII references found in this step</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Task descriptions should start with references like "11.5.1 Description"
+                  Task descriptions should start with references like &quot;11.5.1 Description&quot;
                 </p>
               </div>
             )}

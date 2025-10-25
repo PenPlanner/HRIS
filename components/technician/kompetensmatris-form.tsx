@@ -224,6 +224,7 @@ export function KompetensmatrisForm({ technicianId, initialData }: Kompetensmatr
   const finalLevel = getFinalLevel(totalPoints);
 
   // Load existing assessment on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     // Prioritize initialData over localStorage
     if (initialData) {
