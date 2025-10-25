@@ -138,12 +138,26 @@ export function StepDetailDrawer({
                   <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white">T2</Badge>
                 )}
               </div>
-              <DialogTitle className="text-lg font-semibold whitespace-pre-line">{step.title}</DialogTitle>
+              <DialogTitle className="text-base font-semibold whitespace-pre-line leading-snug">{step.title}</DialogTitle>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   <span>Duration: {step.duration}</span>
                 </div>
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{completedTasks}/{totalTasks} completed</span>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-3 overflow-hidden">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    isComplete ? "bg-green-500" : "bg-blue-500"
+                  )}
+                  style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                />
               </div>
             </div>
           </div>
