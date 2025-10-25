@@ -263,9 +263,9 @@ export function FlowchartEditor({
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Snap to grid helper
-  const snapToGrid = (pixels: number): number => {
+  const snapToGrid = useCallback((pixels: number): number => {
     return Math.round(pixels / gridSize);
-  };
+  }, [gridSize]);
 
   const handleDrop = useCallback((item: { id: string; currentX: number; currentY: number }, monitor: any) => {
     if (!isEditMode) return; // Only allow drops in edit mode

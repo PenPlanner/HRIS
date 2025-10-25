@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface CircularTimeSliderProps {
@@ -71,11 +71,11 @@ export function CircularTimeSlider({
     handleMove(touch.clientX, touch.clientY);
   };
 
-  const handleMove = (clientX: number, clientY: number) => {
+  const handleMove = useCallback((clientX: number, clientY: number) => {
     const angle = getAngleFromPoint(clientX, clientY);
     const newMinutes = getMinutesFromAngle(angle);
     onChange(newMinutes);
-  };
+  }, [getAngleFromPoint, getMinutesFromAngle, onChange]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
