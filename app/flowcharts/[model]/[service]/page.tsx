@@ -58,6 +58,13 @@ export default function FlowchartViewerPage() {
   // State for service type filtering
   const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
 
+  // Auto-hide Progress Tracker when entering Edit Mode
+  useEffect(() => {
+    if (isEditMode) {
+      setShowProgressTracker(false);
+    }
+  }, [isEditMode]);
+
   // Load flowchart data
   useEffect(() => {
     const allModels = getAllFlowcharts();
