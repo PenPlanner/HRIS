@@ -819,6 +819,74 @@ export default function FlowchartViewerPage() {
     exportFlowchartJSON(exportData);
   };
 
+  // Export positions only (for sharing layouts)
+  const handleExportPositions = () => {
+    const positions = steps.map(step => ({
+      id: step.id,
+      title: step.title,
+      position: step.position
+    }));
+
+    // Log to console
+    console.log('=== FLOWCHART POSITIONS ===');
+    console.table(positions);
+    console.log('JSON:', JSON.stringify(positions, null, 2));
+
+    // Download as JSON file
+    const dataStr = JSON.stringify(positions, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${flowchartData?.id || 'flowchart'}-positions.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert('Positions exported! Check console for details.');
+  };
+
+  // Import positions from JSON file
+  const handleImportPositions = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedPositions = JSON.parse(event.target?.result as string);
+
+          // Apply positions to matching steps
+          const updatedSteps = steps.map(step => {
+            const importedPos = importedPositions.find((p: any) => p.id === step.id);
+            if (importedPos) {
+              return { ...step, position: importedPos.position };
+            }
+            return step;
+          });
+
+          setSteps(updatedSteps);
+          setHasUnsavedChanges(true);
+
+          console.log('=== IMPORTED POSITIONS ===');
+          console.table(importedPositions);
+
+          alert(`Positions imported successfully for ${importedPositions.length} steps!`);
+        } catch (err) {
+          alert('Failed to import positions. Please check the file format.');
+          console.error('Import error:', err);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
   const toggleEditMode = () => {
     if (isEditMode && hasUnsavedChanges) {
       if (!confirm("You have unsaved changes. Do you want to discard them?")) {
@@ -898,6 +966,26 @@ export default function FlowchartViewerPage() {
                 >
                   <Wand2 className="h-4 w-4 mr-2" />
                   Auto-Layout
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPositions}
+                  title="Export step positions to JSON file"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export Positions
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportPositions}
+                  title="Import step positions from JSON file"
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Import Positions
                 </Button>
 
                 <Button
