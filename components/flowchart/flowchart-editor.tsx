@@ -81,10 +81,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
       {/* Connection handles - only visible in edit mode */}
       {isEditMode && (
         <>
-          <Handle type="target" position={Position.Top} className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="source" position={Position.Bottom} className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="target" position={Position.Left} className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="source" position={Position.Right} className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="target" position={Position.Top} id="top" className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="target" position={Position.Left} id="left" className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="source" position={Position.Right} id="right" className="!bg-blue-500 !w-3 !h-3" />
         </>
       )}
 
@@ -410,7 +410,14 @@ export function FlowchartEditor({
   useEffect(() => {
     if (initialEdges.length > 0) {
       console.log('FlowchartEditor: syncing initialEdges to state:', initialEdges);
-      setEdges(initialEdges);
+      // Filter out invalid edges (those with null source/target/handles)
+      const validEdges = initialEdges.filter(edge =>
+        edge.source && edge.target && edge.sourceHandle && edge.targetHandle
+      );
+      if (validEdges.length !== initialEdges.length) {
+        console.warn('FlowchartEditor: filtered out invalid edges:', initialEdges.length - validEdges.length);
+      }
+      setEdges(validEdges);
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
