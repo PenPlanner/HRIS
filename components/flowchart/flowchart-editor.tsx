@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -330,7 +330,8 @@ export function FlowchartEditor({
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const hasLoadedInitialEdges = useRef(false);
 
   // Update nodes when steps change
   useMemo(() => {
@@ -406,10 +407,10 @@ export function FlowchartEditor({
     }
   }, [onEdgesChange, isEditMode, setHasUnsavedChanges]);
 
-  // Sync initialEdges to edges state when they change (e.g., loaded from localStorage)
+  // Load initialEdges only once when data is loaded from localStorage
   useEffect(() => {
-    if (initialEdges.length > 0) {
-      console.log('FlowchartEditor: syncing initialEdges to state:', initialEdges);
+    if (initialEdges.length > 0 && !hasLoadedInitialEdges.current) {
+      console.log('FlowchartEditor: loading initialEdges:', initialEdges.length);
       // Filter out invalid edges (those with null source/target/handles)
       const validEdges = initialEdges.filter(edge =>
         edge.source && edge.target && edge.sourceHandle && edge.targetHandle
@@ -418,12 +419,13 @@ export function FlowchartEditor({
         console.warn('FlowchartEditor: filtered out invalid edges:', initialEdges.length - validEdges.length);
       }
       setEdges(validEdges);
+      hasLoadedInitialEdges.current = true;
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync edges to parent component whenever they change
   useEffect(() => {
-    console.log('FlowchartEditor: edges changed:', edges);
+    console.log('FlowchartEditor: edges changed:', edges.length);
     onEdgesChangeProp?.(edges);
   }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
 
