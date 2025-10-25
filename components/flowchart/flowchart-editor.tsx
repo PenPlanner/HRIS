@@ -20,7 +20,7 @@ import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2 } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 
@@ -388,6 +388,7 @@ export function FlowchartEditor({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const hasLoadedInitialEdges = useRef(false);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
 
   // Update nodes when steps change
   useMemo(() => {
@@ -496,6 +497,28 @@ export function FlowchartEditor({
     }
   }, [isEditMode, onStepClick]);
 
+  // Handle edge click to show style menu
+  const handleEdgeClick = useCallback((_event: any, edge: Edge) => {
+    if (isEditMode) {
+      setSelectedEdge(edge);
+    }
+  }, [isEditMode]);
+
+  // Update edge style
+  const updateEdgeStyle = useCallback((edgeId: string, type: 'straight' | 'smoothstep' | 'step' | 'default') => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          type,
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+    setSelectedEdge(null);
+  }, [setEdges, setHasUnsavedChanges]);
+
   // Define custom node types
   const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
 
@@ -508,6 +531,7 @@ export function FlowchartEditor({
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.5}
@@ -518,6 +542,7 @@ export function FlowchartEditor({
         edgesUpdatable={isEditMode}
         edgesFocusable={isEditMode}
         elementsSelectable={isEditMode}
+        onPaneClick={() => setSelectedEdge(null)}
       >
         {isEditMode && (
           <>
@@ -531,6 +556,81 @@ export function FlowchartEditor({
       {isEditMode && (
         <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-50">
           Edges: {edges.length} | Nodes: {nodes.length}
+        </div>
+      )}
+
+      {/* Edge style selector */}
+      {isEditMode && selectedEdge && (
+        <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-blue-500 p-4 z-50 min-w-[280px]">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Line Style</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedEdge(null)}
+              className="h-6 w-6 p-0"
+            >
+              ✕
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              variant={selectedEdge.type === 'smoothstep' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => updateEdgeStyle(selectedEdge.id, 'smoothstep')}
+              className="w-full justify-start gap-2"
+            >
+              <Workflow className="h-4 w-4" />
+              Smooth Bends (90°)
+            </Button>
+
+            <Button
+              variant={selectedEdge.type === 'step' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => updateEdgeStyle(selectedEdge.id, 'step')}
+              className="w-full justify-start gap-2"
+            >
+              <TrendingUp className="h-4 w-4" />
+              Sharp Bends (90°)
+            </Button>
+
+            <Button
+              variant={selectedEdge.type === 'straight' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => updateEdgeStyle(selectedEdge.id, 'straight')}
+              className="w-full justify-start gap-2"
+            >
+              <ArrowRight className="h-4 w-4" />
+              Straight Line
+            </Button>
+
+            <Button
+              variant={selectedEdge.type === 'default' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => updateEdgeStyle(selectedEdge.id, 'default')}
+              className="w-full justify-start gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              Curved Line
+            </Button>
+          </div>
+
+          <div className="mt-3 pt-3 border-t">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setEdges((eds) => eds.filter(e => e.id !== selectedEdge.id));
+                setHasUnsavedChanges(true);
+                setSelectedEdge(null);
+              }}
+              className="w-full gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Connection
+            </Button>
+          </div>
         </div>
       )}
 
