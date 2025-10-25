@@ -116,11 +116,12 @@ export function StepDetailDrawer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-start justify-between gap-4">
+            {/* Left side - Main info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-3">
                 <Badge
                   style={{ backgroundColor: step.color, color: 'white' }}
                   className="text-xs font-mono"
@@ -138,26 +139,71 @@ export function StepDetailDrawer({
                   <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white">T2</Badge>
                 )}
               </div>
-              <DialogTitle className="text-base font-semibold whitespace-pre-line leading-snug">{step.title}</DialogTitle>
-              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>Duration: {step.duration}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{completedTasks}/{totalTasks} completed</span>
-                </div>
+
+              {/* Tasks as compact chips */}
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {step.title.split('\n').map((task, idx) => {
+                  const taskMatch = task.match(/^([\d.]+)\s+(.+)$/);
+                  if (!taskMatch) return null;
+                  const [, ref, desc] = taskMatch;
+                  const taskObj = step.tasks.find(t => t.description.startsWith(ref));
+                  const isCompleted = taskObj?.completed || false;
+
+                  return (
+                    <Badge
+                      key={idx}
+                      variant={isCompleted ? "default" : "outline"}
+                      className={cn(
+                        "text-xs py-0.5 px-2 font-normal",
+                        isCompleted && "bg-green-100 text-green-700 border-green-300"
+                      )}
+                    >
+                      {ref} {desc.length > 25 ? desc.substring(0, 25) + '...' : desc}
+                    </Badge>
+                  );
+                }).filter(Boolean)}
               </div>
-              {/* Progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2 mt-3 overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-300",
-                    isComplete ? "bg-green-500" : "bg-blue-500"
-                  )}
-                  style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
-                />
+            </div>
+
+            {/* Right side - Stats cards */}
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              {/* Duration card */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 min-w-[140px]">
+                <div className="flex items-center gap-1.5 text-blue-700">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Duration</span>
+                </div>
+                <p className="text-lg font-semibold text-blue-900 mt-0.5">{step.duration}</p>
+              </div>
+
+              {/* Progress card */}
+              <div className={cn(
+                "border rounded-lg px-3 py-2",
+                isComplete ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
+              )}>
+                <div className={cn(
+                  "flex items-center gap-1.5",
+                  isComplete ? "text-green-700" : "text-gray-700"
+                )}>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Progress</span>
+                </div>
+                <p className={cn(
+                  "text-lg font-semibold mt-0.5",
+                  isComplete ? "text-green-900" : "text-gray-900"
+                )}>
+                  {completedTasks}/{totalTasks}
+                </p>
+                {/* Mini progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-all duration-300",
+                      isComplete ? "bg-green-500" : "bg-blue-500"
+                    )}
+                    style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
