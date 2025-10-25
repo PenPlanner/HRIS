@@ -87,8 +87,8 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     // Step 1: PPE equipment on (Both technicians)
     {
       id: "step-1",
-      title: "PPE equipment on\n1. Prepare for Service",
-      duration: "60m",
+      title: "PPE equipment on\n1.1 Prepare for Service",
+      duration: "1h",
       durationMinutes: 60,
       color: getServiceTypeColor("1Y"),
       colorCode: "1Y",
@@ -96,7 +96,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       position: { x: 0, y: 0 },
       tasks: [
         { id: "1-1", description: "PPE equipment on", serviceType: "1Y" },
-        { id: "1-2", description: "1. Prepare for Service", serviceType: "1Y" }
+        { id: "1-2", description: "1.1 Prepare for Service", serviceType: "1Y" }
       ]
     },
 
@@ -104,10 +104,10 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-2-1",
       title: "13.5.1 Lift check\nLift up\nVisual insp. Nacelle\nCrane down\n11.5.1. Examine crane\nCrane up\n2.7.2.3 Warning sounder & lamp Nacelle\n10.5.2.1 Yaw unusual noise",
-      duration: "150m",
+      duration: "2h 30m",
       durationMinutes: 150,
-      color: getServiceTypeColor("2Y"),
-      colorCode: "2Y",
+      color: getServiceTypeColor("1Y"),
+      colorCode: "1Y",
       technician: "T1",
       position: { x: 1, y: 0 },
       tasks: [
@@ -126,7 +126,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-2-2",
       title: "Prep bags and tools\n14.5.11 Earthing system\n14.5.9 Dehumidifier\n14.5.8 Door filter\n14.5.10 Tower surface\n14.5.12 Ground control panel ++01\n2.7.1.2 Warning sounder & lamp Tower",
-      duration: "150m",
+      duration: "2h 30m",
       durationMinutes: 150,
       color: getServiceTypeColor("1Y"),
       colorCode: "1Y",
@@ -147,7 +147,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-3",
       title: "Prep in turbine\n2.7.2 Safety test Nacelle\n3.5.1-5.3 ResQ equip., extinguishers & first-aid kits\n3.5.5 Anchor points (Nacelle)\nSpinner outside\n6.5.6 Rotor lock system\n6.5.4.8-5.4.9 Expansion disc main shaft\n6.5.5 Bulkheads main shaft",
-      duration: "90m",
+      duration: "1h 30m",
       durationMinutes: 90,
       color: getServiceTypeColor("1Y"),
       colorCode: "1Y",
@@ -169,7 +169,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-4",
       title: "7. Generator\n6.5.2.11 Visual inspection for leakages in hoses\n6.5.2.2 Replace 50 um filter\n6.5.2.3 Replace inline filter\n6.5.2.4 Replace offline filter\n6.6.2.6 Replace the Value actuators\n6.6.2.7 Replace the oil pumpmotor and clutch\n6.5.2.8 Replace the VFD\n6.5.2.9 Validate pressure transmitters\n6.5.2.12 Visual inspec. leakages in lubrication hoses\n6.5.3 Visual inspection and replace filter mat AVC system\n9.5.3.1 Inspect brushes for wear\n6.5.2.13 Repair and replace oil debris monitor system",
-      duration: "120m + (2Y)120m + (4Y)5m + (5Y)195m + (6Y)6h + (10Y)3h",
+      duration: "2h + (2Y)2h + (4Y)5m + (5Y)3h 15m + (6Y)6h + (10Y)3h",
       durationMinutes: 120,
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
@@ -196,7 +196,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-5-1",
       title: "8.5.2 Replace CubePower air filters\n10.5.1 Yaw control panel ++68\n10.5.2.1-5.2.4 Yaw system\n10.5.2.5 Spring packs\n10.5.2.6-5.2.7 Lubrication pumps\n6.5.1.1 Battery Inspection\n4. 5.2.7.12 M6 bolts rotation transfer\n6.5.1.2 Replace backup batteries\n6.5.1.3 Check heater\n10.5.2.1.1 Clean yaw grease",
-      duration: "180m + (2Y)105m + (4y)45m + (+)4h",
+      duration: "3h + (2Y)1h 45m + (4y)45m + (+)4h",
       durationMinutes: 180,
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
@@ -220,7 +220,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-5-2",
       title: "4.5.1.2 Hub Cover\n4.5.1.3 Hub Structure\n4.5.2.7.1 Hub leakage visual inspection\n4.5.1.1 Hub Control Panel ++05\n4.5.1.1.1 Replace back-up batteries\n4.5.1.1.2 Check of the heater\n3.5.5 Anchor points (Hub)\n2.7.3.2 Hub Service LED\n2.7.3.3 Emergency buttons Hub\n2.7.3.4 Warning sounder & lamp Hub\n4.5.2.7.8-5.2.7.9 Visual/Audio axial\n4.5.2.7.10 Lubricate the pitch encoder\n4.5.2.2-5.2.5 Blades External\n4.5.2.7.5 Pre-tension pitch suspension\n4.5.1.5 Examine grease hoses & connecting parts\n4.5.2.7.11 Bolts automatic blade lock\n4.5.2.7.2 Accumulator pressure\n5.2.7.3-4 Check all bolts pitch manifold and accumulator support\n4.5.1.2.4 Check every 10 bolt hub cover",
-      duration: "90m + (6Y)120m",
+      duration: "1h 30m + (6Y)2h",
       durationMinutes: 90,
       color: getServiceTypeColor("6Y"),
       colorCode: "6Y",
@@ -270,7 +270,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-7",
       title: "5.5.1.1 Check hydraulic oil leakage\n5.5.1.5 695-HQ1 air filter replacement\n5.5.3 Hydraulic control panel ++102 (Check filters and heater)\n5.5.2 Brake system (brake test and pre-charge pressure)\n5.5.1.3 Replace filter element return filter\n5.5.1.6 Accumulator pressure Nac\n5.5.1.4 Replace high-presure filter",
-      duration: "90m + (2Y)75m + (4y)15m",
+      duration: "1h 30m + (2Y)1h 15m + (4y)15m",
       durationMinutes: 90,
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
@@ -291,7 +291,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-8-1",
       title: "4.5.1.7 Lubricate Blade Bearings\n4.5.1.8 Retighten the blade lock\n4.5.1.6 Grease collecting cans\n4.5.2.5 LCTU\n4.5.2.1 Blades Internal\n6.5.2.5 Replace air filters",
-      duration: "180m",
+      duration: "3h",
       durationMinutes: 180,
       color: getServiceTypeColor("3Y"),
       colorCode: "3Y",
@@ -311,7 +311,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-8-2",
       title: "9.5.1 Nacelle control panel ++03\n9.5.1.4 Replace UPS batteries\n9.5.2 AMC panel\n9.5.2.3 Check and replace the fan\n9.5.4 Nacelle Cover\n9.5.5.1 Replace control side fan\nCleaning and hoisting preparation",
-      duration: "180m + (3Y)20m + (5Y)90m + (7Y)30m",
+      duration: "3h + (3Y)20m + (5Y)1h 30m + (7Y)30m",
       durationMinutes: 180,
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
@@ -332,7 +332,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-9-1",
       title: "Climb down\n14.5.1-5.2 Inspection tower foundation & flange bolts\n3.5.4 Fall arrest equip.\n3.5.5 Anchor points (Tower)",
-      duration: "150m",
+      duration: "2h 30m",
       durationMinutes: 150,
       color: getServiceTypeColor("1Y"),
       colorCode: "1Y",
@@ -350,7 +350,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-9-2",
       title: "Crane down the material\n14.5.4 LDST\n14.5.5 Check ladders and platforms\n3.5.4.3-5.4.4 Hatch/swin assembly\n14.5.6 Visual check of the platform hanger assembly\n14.5.7 Check Tower top senction",
-      duration: "150m + (4Y)15m",
+      duration: "2h 30m + (4Y)15m",
       durationMinutes: 150,
       color: getServiceTypeColor("4Y"),
       colorCode: "4Y",
@@ -370,7 +370,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-10",
       title: "2.7.1.1 Emergency buttons\n14.5.13 LB and UPS control panel ++112\n14.5.13.3-4 Replace UPS batteries\nFinal cleaning\n15. Finish work\nReport",
-      duration: "90m + (6Y)120m",
+      duration: "1h 30m + (6Y)2h",
       durationMinutes: 90,
       color: getServiceTypeColor("6Y"),
       colorCode: "6Y",
@@ -386,7 +386,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       ]
     },
 
-    // 4Y bolts 17h - STANDALONE (placed separately at bottom)
+    // 4Y bolts 17h - STANDALONE (placed separately, not part of main flow)
     {
       id: "step-4y-bolts",
       title: "4Y bolts 17h",
@@ -395,7 +395,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("4Y"),
       colorCode: "4Y",
       technician: "T1",
-      position: { x: 0, y: 3 },
+      position: { x: 0, y: 15 },
       tasks: [
         { id: "4y-1", description: "5.1.4.1-2 Check every 10 bolt blade bearing (7h)", serviceType: "4Y" },
         { id: "4y-2", description: "5.2.7.6 Pre-tension every 3. torque arm bolt (3h)", serviceType: "6Y" },

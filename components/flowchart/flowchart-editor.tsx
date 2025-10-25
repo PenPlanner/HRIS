@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
+import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 
 interface FlowchartEditorProps {
   steps: FlowchartStep[];
@@ -20,6 +20,7 @@ interface FlowchartEditorProps {
   gridSize?: number;
   isEditMode: boolean;
   setHasUnsavedChanges: (value: boolean) => void;
+  selectedServiceType?: string;
 }
 
 const GRID_SIZE = 30; // pixels (default)
@@ -35,9 +36,10 @@ interface DraggableStepProps {
   onUpdateStep: (step: FlowchartStep) => void;
   gridSize: number;
   isEditMode: boolean;
+  selectedServiceType?: string;
 }
 
-function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, gridSize, isEditMode }: DraggableStepProps) {
+function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, gridSize, isEditMode, selectedServiceType }: DraggableStepProps) {
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
@@ -95,7 +97,10 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] min-h-[168px] hover:shadow-lg transition-all border-2 border-gray-700/50",
+          "relative p-4 w-[300px] min-h-[168px] hover:shadow-lg transition-all border-2",
+          step.id === "step-4y-bolts"
+            ? "border-yellow-500 border-[3px]"
+            : "border-gray-700/50",
           isComplete && "ring-2 ring-green-500"
         )}
         style={{
@@ -153,11 +158,22 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
           {/* Task list - compact format - only main tasks with ref numbers */}
           <div className="space-y-0.5 mb-3 pr-10">
             {step.tasks.map((task) => {
-              // Only show tasks with reference numbers (e.g., "13.5.1 Description")
-              const hasRefNumber = /^\d+\.\d+(\.\d+)*\.?\s/.test(task.description);
+              // Only show tasks with reference numbers (e.g., "1. Description" or "13.5.1 Description")
+              const hasRefNumber = /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description);
 
               // Skip tasks without reference numbers
               if (!hasRefNumber) return null;
+
+              // Filter by service type if a filter is selected (not in edit mode)
+              if (!isEditMode && selectedServiceType && selectedServiceType !== "all") {
+                const taskServiceType = task.serviceType || "1Y";
+                const includedTypes = getIncludedServiceTypes(selectedServiceType);
+
+                // Skip this task if its service type is not in the included types
+                if (!includedTypes.includes(taskServiceType)) {
+                  return null;
+                }
+              }
 
               // Get service type color, using gray for 1Y/12Y for visibility
               const serviceType = task.serviceType || "1Y";
@@ -257,7 +273,8 @@ export function FlowchartEditor({
   zoom,
   gridSize = GRID_SIZE,
   isEditMode,
-  setHasUnsavedChanges
+  setHasUnsavedChanges,
+  selectedServiceType
 }: FlowchartEditorProps) {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -363,9 +380,50 @@ export function FlowchartEditor({
             minHeight: "100%",
             transform: `scale(${zoom / 100})`,
             transformOrigin: 'top left',
-            paddingTop: `${offsetY}px`
+            paddingTop: `${offsetY}px`,
+            paddingLeft: '50px'
           }}
         >
+          {/* Connection lines for parallel steps */}
+          <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+            {(() => {
+              const lines: JSX.Element[] = [];
+              // Find parallel steps (same x position, consecutive IDs like 2-1 and 2-2)
+              const parallelPairs = [
+                ['step-2-1', 'step-2-2'],
+                ['step-5-1', 'step-5-2'],
+                ['step-8-1', 'step-8-2'],
+                ['step-9-1', 'step-9-2']
+              ];
+
+              parallelPairs.forEach(([id1, id2], index) => {
+                const step1 = steps.find(s => s.id === id1);
+                const step2 = steps.find(s => s.id === id2);
+
+                if (step1 && step2) {
+                  const x = (step1.position.x * gridSize) + 150; // Center of box (300px wide / 2)
+                  const y1 = ((step1.position.y + Math.abs(minY)) * gridSize) + 168; // Bottom of first box
+                  const y2 = ((step2.position.y + Math.abs(minY)) * gridSize); // Top of second box
+
+                  lines.push(
+                    <line
+                      key={`line-${index}`}
+                      x1={x}
+                      y1={y1}
+                      x2={x}
+                      y2={y2}
+                      stroke="#6366f1"
+                      strokeWidth="3"
+                      strokeDasharray="8,4"
+                    />
+                  );
+                }
+              });
+
+              return lines;
+            })()}
+          </svg>
+
           {steps.map((step) => (
             <DraggableStep
               key={step.id}
@@ -391,6 +449,7 @@ export function FlowchartEditor({
               onUpdateStep={handleUpdateStep}
               gridSize={gridSize}
               isEditMode={isEditMode}
+              selectedServiceType={selectedServiceType}
             />
           ))}
 

@@ -1039,6 +1039,7 @@ export default function FlowchartViewerPage() {
             gridSize={gridSize}
             isEditMode={isEditMode}
             setHasUnsavedChanges={setHasUnsavedChanges}
+            selectedServiceType={selectedServiceType}
           />
         </DndProvider>
       </div>
