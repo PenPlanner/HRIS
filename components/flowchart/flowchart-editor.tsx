@@ -135,7 +135,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ top: '-16px' }}
+          style={{ top: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -146,7 +146,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ top: '-16px' }}
+          style={{ top: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -159,7 +159,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ bottom: '-16px' }}
+          style={{ bottom: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -170,7 +170,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ bottom: '-16px' }}
+          style={{ bottom: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -183,7 +183,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ left: '-16px' }}
+          style={{ left: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -194,7 +194,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ left: '-16px' }}
+          style={{ left: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -207,7 +207,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ right: '-16px' }}
+          style={{ right: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -218,7 +218,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             "!w-4 !h-4 !cursor-crosshair transition-all",
             isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ right: '-16px' }}
+          style={{ right: '-21px' }}
           isConnectable={isEditMode}
         />
       </>
