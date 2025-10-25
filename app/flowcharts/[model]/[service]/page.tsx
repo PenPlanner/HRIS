@@ -8,7 +8,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2, Clock } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2, Clock, Trash2 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -589,6 +589,26 @@ export default function FlowchartViewerPage() {
     localStorage.removeItem(storageKey);
   };
 
+  // Clear cache and reload page
+  const handleClearCache = () => {
+    const confirmed = window.confirm(
+      "Clear all cached data for this flowchart?\n\n" +
+      "This will:\n" +
+      "- Remove all progress and time logs\n" +
+      "- Reset all step positions\n" +
+      "- Reload the page to fresh state\n\n" +
+      "This cannot be undone."
+    );
+    if (!confirmed) return;
+
+    // Clear localStorage for this flowchart
+    const storageKey = `flowchart_${modelId}_${serviceId}`;
+    localStorage.removeItem(storageKey);
+
+    // Reload the page to fresh state
+    window.location.reload();
+  };
+
   // Auto-layout handler - intelligently arrange steps based on flowchart pattern
   const handleAutoLayout = () => {
     if (!confirm("Auto-arrange all steps based on their sequence? This will reset all positions.")) {
@@ -954,6 +974,17 @@ export default function FlowchartViewerPage() {
               </Button>
               </>
             )}
+
+            {/* Clear Cache Button - Available in both modes */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearCache}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear Cache
+            </Button>
 
             {/* Zoom Controls */}
             {!isEditMode && (
