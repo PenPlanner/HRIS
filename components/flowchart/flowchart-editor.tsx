@@ -688,6 +688,12 @@ export function FlowchartEditor({
         snapGrid={[gridSize, gridSize]}
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
+        // Touch device support
+        panOnDrag={!isEditMode ? [1, 2] : false}
+        panOnScroll={true}
+        zoomOnPinch={true}
+        preventScrolling={true}
+        connectOnClick={isEditMode}
       >
         {isEditMode && (
           <>

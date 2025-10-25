@@ -70,6 +70,24 @@
 
 .react-flow__handle {
   pointer-events: all !important;
+  touch-action: none !important;
+}
+
+/* Enable touch events for React Flow container */
+.react-flow {
+  touch-action: none;
+}
+
+.react-flow__pane {
+  touch-action: none;
+}
+
+/* Larger handles on touch devices for better accessibility */
+@media (pointer: coarse) {
+  .react-flow__handle {
+    width: 24px !important;
+    height: 24px !important;
+  }
 }
 
 /* Thin scrollbar styling for task lists in flowchart cards */
