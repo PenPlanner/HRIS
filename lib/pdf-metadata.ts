@@ -3,24 +3,6 @@
  * Extracts document information from SII PDF first pages
  */
 
-// This file runs client-side only
-let pdfjsLib: typeof import('pdfjs-dist') | null = null;
-
-// Dynamically import PDF.js only on client-side
-async function getPdfJs() {
-  if (typeof window === 'undefined') {
-    throw new Error('PDF.js can only be used in browser');
-  }
-
-  if (!pdfjsLib) {
-    pdfjsLib = await import('pdfjs-dist');
-    // Configure worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  }
-
-  return pdfjsLib;
-}
-
 export interface PDFMetadata {
   documentNumber: string;
   version: string;
@@ -40,8 +22,18 @@ export interface PDFMetadata {
  */
 export async function extractPDFMetadata(pdfUrl: string): Promise<PDFMetadata | null> {
   try {
-    // Get PDF.js library (client-side only)
-    const pdfjs = await getPdfJs();
+    // Ensure we're running in browser
+    if (typeof window === 'undefined') {
+      throw new Error('PDF metadata extraction can only run in browser');
+    }
+
+    // Dynamically import pdfjs from react-pdf (client-side only)
+    const { pdfjs } = await import('react-pdf');
+
+    // Configure worker if not already configured
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+    }
 
     // Load the PDF
     const loadingTask = pdfjs.getDocument(pdfUrl);
