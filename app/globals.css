@@ -72,23 +72,6 @@
   pointer-events: all !important;
 }
 
-/* Move handles 5px outside the card for better click area */
-.react-flow__handle-top {
-  transform: translateY(-5px);
-}
-
-.react-flow__handle-bottom {
-  transform: translateY(5px);
-}
-
-.react-flow__handle-left {
-  transform: translateX(-5px);
-}
-
-.react-flow__handle-right {
-  transform: translateX(5px);
-}
-
 /* Thin scrollbar styling for task lists in flowchart cards */
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
