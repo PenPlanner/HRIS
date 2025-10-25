@@ -27,9 +27,10 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
   2: {
     "5": 6,
     "6": 10,
-    "7": 15,
-    "7.2": 16,
-    "7.2.2": 17,
+    "7": 11,
+    "7.2": 12,
+    "7.2.2": 12,
+    "7.2.3": 13,
   },
 
   // Doc 3: Safety equipment
