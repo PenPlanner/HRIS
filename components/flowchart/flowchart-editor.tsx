@@ -39,17 +39,28 @@ interface FlowchartEditorProps {
   onEdgesChange?: (edges: Edge[]) => void;
 }
 
-// GRID ALIGNMENT SYSTEM
-// All dimensions are designed to align perfectly with the 30px grid:
-// - Card width: 300px = 10 grid units (FIXED)
-// - Card height: min 180px (6 units), grows in 60px increments (2 units)
-//   Examples: 180px (6u), 240px (8u), 300px (10u), 360px (12u)
-// - Horizontal spacing: 14 grid units = 420px (between columns)
-// - Vertical spacing: 8 grid units = 240px (between rows)
+// GRID ALIGNMENT SYSTEM - ENFORCED
+// All card dimensions are LOCKED to the 30px grid for perfect handle alignment:
 //
-// This ensures handles align to grid points for straight connections.
-// Cards grow based on content, but height is always a multiple of 60px.
-const GRID_SIZE = 30; // pixels (default)
+// CARD WIDTH: 300px (10 grid units) - ALWAYS FIXED
+//
+// CARD HEIGHT: Calculated based on task count, rounded UP to nearest 60px (2 grid units)
+// - Formula: ceil((100 + tasks * 24) / 60) * 60
+// - Examples:
+//   * 1-4 tasks  → 180px (6 units)
+//   * 5-7 tasks  → 240px (8 units)
+//   * 8-11 tasks → 300px (10 units)
+//   * 12-15 tasks → 360px (12 units)
+//   * 16-19 tasks → 420px (14 units)
+// - If content overflows, task list scrolls internally
+// - Maximum height: 600px (20 units)
+//
+// SPACING:
+// - Horizontal: 14 units (420px) between columns
+// - Vertical: 8 units (240px) between rows
+//
+// RESULT: All connection handles align PERFECTLY to grid dots → straight lines!
+const GRID_SIZE = 30; // pixels (LOCKED - do not make configurable)
 
 interface StepNodeData {
   step: FlowchartStep;
@@ -72,6 +83,28 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
   // Calculate total notes count from all tasks
   const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
+
+  // Calculate grid-aligned height based on task count
+  // Each task row is ~24px, plus header/footer ~100px
+  // Round UP to nearest 60px (2 grid units) for perfect alignment
+  const calculateGridHeight = () => {
+    // Filter tasks that will be displayed (with reference numbers)
+    const visibleTasks = step.tasks.filter(task =>
+      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+    );
+
+    // Base height: 100px for header + footer
+    // Each task: ~24px
+    const estimatedHeight = 100 + (visibleTasks.length * 24);
+
+    // Round UP to nearest 60px
+    const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
+
+    // Minimum 180px, maximum 600px
+    return Math.max(180, Math.min(600, gridAlignedHeight));
+  };
+
+  const cardHeight = calculateGridHeight();
 
   // Extract step number from step.id (e.g., "step-2-1" -> "2.1", "step-1" -> "1")
   const getStepNumber = (stepId: string): string => {
@@ -185,14 +218,15 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] min-h-[180px] hover:shadow-lg transition-all border-2 flex flex-col",
+          "relative p-4 w-[300px] hover:shadow-lg transition-all border-2 flex flex-col overflow-hidden",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : "border-gray-700/50",
           isComplete && "ring-2 ring-green-500"
         )}
         style={{
-          backgroundColor: `${step.color}15`
+          backgroundColor: `${step.color}15`,
+          height: `${cardHeight}px`
         }}
       >
         {/* Action Buttons - Only visible in edit mode */}
@@ -250,10 +284,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           </div>
         </div>
 
-        {/* Step Content - Task list grows naturally */}
-        <div className="mt-2">
-          {/* Task list - compact format - grows with content */}
-          <div className="space-y-0.5 mb-3 pr-10">
+        {/* Step Content - Task list with scroll if needed */}
+        <div className="flex-1 flex flex-col min-h-0 mt-2">
+          {/* Task list - compact format - scrollable if overflow */}
+          <div className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2 scrollbar-thin">
             {step.tasks.map((task) => {
               // Only show tasks with reference numbers (e.g., "1. Description" or "13.5.1 Description")
               const hasRefNumber = /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description);
@@ -308,8 +342,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             })}
           </div>
 
-          {/* Bottom Section - Duration & Progress */}
-          <div className="pt-2 border-t border-gray-700/30 space-y-2">
+          {/* Bottom Section - Duration & Progress - Fixed at bottom */}
+          <div className="pt-2 border-t border-gray-700/30 space-y-2 flex-shrink-0">
             {/* Duration and Status */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">

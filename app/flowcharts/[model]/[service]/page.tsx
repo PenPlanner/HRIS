@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Grid3x3, Wand2, Clock, Trash2 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -890,24 +890,6 @@ export default function FlowchartViewerPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Step
                 </Button>
-
-                {/* Grid Size Selector */}
-                <div className="flex items-center gap-2 border rounded-md px-3 py-1">
-                  <Grid3x3 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Grid:</span>
-                  <Select value={gridSize.toString()} onValueChange={(v) => setGridSize(Number(v))}>
-                    <SelectTrigger className="h-7 w-[70px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="20">20px</SelectItem>
-                      <SelectItem value="30">30px</SelectItem>
-                      <SelectItem value="40">40px</SelectItem>
-                      <SelectItem value="50">50px</SelectItem>
-                      <SelectItem value="60">60px</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
 
                 <Button
                   variant="outline"
