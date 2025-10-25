@@ -2,7 +2,7 @@
 
 import { FlowchartStep, FlowchartTask } from "@/lib/flowchart-data";
 import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, SIIReference } from "@/lib/sii-documents";
-import { extractPDFMetadata, PDFMetadata } from "@/lib/pdf-metadata";
+import type { PDFMetadata } from "@/lib/pdf-metadata";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,25 +58,32 @@ export function StepDetailDrawer({
       setLoadingMetadata(true);
       const metadata = new Map<number, PDFMetadata>();
 
-      // Get unique document numbers
-      const docNumbers = Array.from(new Set(siiReferences.map(ref => ref.documentNumber)));
+      try {
+        // Dynamically import PDF metadata extractor (client-side only)
+        const { extractPDFMetadata } = await import('@/lib/pdf-metadata');
 
-      // Load metadata for each document
-      await Promise.all(
-        docNumbers.map(async (docNum) => {
-          const ref = siiReferences.find(r => r.documentNumber === docNum);
-          if (ref) {
-            try {
-              const meta = await extractPDFMetadata(ref.documentPath);
-              if (meta) {
-                metadata.set(docNum, meta);
+        // Get unique document numbers
+        const docNumbers = Array.from(new Set(siiReferences.map(ref => ref.documentNumber)));
+
+        // Load metadata for each document
+        await Promise.all(
+          docNumbers.map(async (docNum) => {
+            const ref = siiReferences.find(r => r.documentNumber === docNum);
+            if (ref) {
+              try {
+                const meta = await extractPDFMetadata(ref.documentPath);
+                if (meta) {
+                  metadata.set(docNum, meta);
+                }
+              } catch (error) {
+                console.error(`Failed to load metadata for doc ${docNum}:`, error);
               }
-            } catch (error) {
-              console.error(`Failed to load metadata for doc ${docNum}:`, error);
             }
-          }
-        })
-      );
+          })
+        );
+      } catch (error) {
+        console.error('Failed to load PDF metadata module:', error);
+      }
 
       setPdfMetadata(metadata);
       setLoadingMetadata(false);

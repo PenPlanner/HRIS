@@ -3,11 +3,22 @@
  * Extracts document information from SII PDF first pages
  */
 
-import * as pdfjsLib from 'pdfjs-dist';
+// This file runs client-side only
+let pdfjsLib: typeof import('pdfjs-dist') | null = null;
 
-// Configure PDF.js worker
-if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Dynamically import PDF.js only on client-side
+async function getPdfJs() {
+  if (typeof window === 'undefined') {
+    throw new Error('PDF.js can only be used in browser');
+  }
+
+  if (!pdfjsLib) {
+    pdfjsLib = await import('pdfjs-dist');
+    // Configure worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }
+
+  return pdfjsLib;
 }
 
 export interface PDFMetadata {
@@ -29,8 +40,11 @@ export interface PDFMetadata {
  */
 export async function extractPDFMetadata(pdfUrl: string): Promise<PDFMetadata | null> {
   try {
+    // Get PDF.js library (client-side only)
+    const pdfjs = await getPdfJs();
+
     // Load the PDF
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    const loadingTask = pdfjs.getDocument(pdfUrl);
     const pdf = await loadingTask.promise;
 
     // Get first page
