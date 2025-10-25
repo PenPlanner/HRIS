@@ -81,10 +81,21 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
       {/* Connection handles - only visible in edit mode */}
       {isEditMode && (
         <>
-          <Handle type="target" position={Position.Top} id="top" className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="source" position={Position.Bottom} id="bottom" className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="target" position={Position.Left} id="left" className="!bg-blue-500 !w-3 !h-3" />
-          <Handle type="source" position={Position.Right} id="right" className="!bg-blue-500 !w-3 !h-3" />
+          {/* Top handles - both target and source */}
+          <Handle type="target" position={Position.Top} id="top-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+          <Handle type="source" position={Position.Top} id="top-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+
+          {/* Bottom handles - both target and source */}
+          <Handle type="target" position={Position.Bottom} id="bottom-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+          <Handle type="source" position={Position.Bottom} id="bottom-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+
+          {/* Left handles - both target and source */}
+          <Handle type="target" position={Position.Left} id="left-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+          <Handle type="source" position={Position.Left} id="left-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+
+          {/* Right handles - both target and source */}
+          <Handle type="target" position={Position.Right} id="right-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+          <Handle type="source" position={Position.Right} id="right-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
         </>
       )}
 
@@ -411,10 +422,14 @@ export function FlowchartEditor({
   useEffect(() => {
     if (initialEdges.length > 0 && !hasLoadedInitialEdges.current) {
       console.log('FlowchartEditor: loading initialEdges:', initialEdges.length);
-      // Filter out invalid edges (those with null source/target/handles)
-      const validEdges = initialEdges.filter(edge =>
-        edge.source && edge.target && edge.sourceHandle && edge.targetHandle
-      );
+      // Filter out invalid edges (those with null/undefined source/target/handles)
+      const validEdges = initialEdges.filter(edge => {
+        const isValid = edge.source && edge.target && edge.sourceHandle && edge.targetHandle;
+        if (!isValid) {
+          console.warn('FlowchartEditor: invalid edge:', edge);
+        }
+        return isValid;
+      });
       if (validEdges.length !== initialEdges.length) {
         console.warn('FlowchartEditor: filtered out invalid edges:', initialEdges.length - validEdges.length);
       }
