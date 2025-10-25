@@ -498,24 +498,27 @@ export function FlowchartEditor({
     // Update step positions when drag ends
     const dragEndChange = changes.find((c: any) => c.type === 'position' && c.dragging === false);
     if (dragEndChange && isEditMode) {
-      setNodes((nds) => {
-        const updatedSteps = nds.map(node => {
-          const step = steps.find(s => s.id === node.id);
-          if (step && node.position) {
-            return {
-              ...step,
-              position: {
-                x: Math.round(node.position.x / gridSize),
-                y: Math.round(node.position.y / gridSize)
-              }
-            };
-          }
-          return step!;
+      // Use setTimeout to defer the state update to avoid setState during render
+      setTimeout(() => {
+        setNodes((nds) => {
+          const updatedSteps = nds.map(node => {
+            const step = steps.find(s => s.id === node.id);
+            if (step && node.position) {
+              return {
+                ...step,
+                position: {
+                  x: Math.round(node.position.x / gridSize),
+                  y: Math.round(node.position.y / gridSize)
+                }
+              };
+            }
+            return step!;
+          });
+          onStepsChange(updatedSteps);
+          setHasUnsavedChanges(true);
+          return nds;
         });
-        onStepsChange(updatedSteps);
-        setHasUnsavedChanges(true);
-        return nds;
-      });
+      }, 0);
     }
   }, [onNodesChange, isEditMode, steps, onStepsChange, setHasUnsavedChanges, gridSize, setNodes]);
 
