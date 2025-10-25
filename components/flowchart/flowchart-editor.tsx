@@ -496,31 +496,37 @@ export function FlowchartEditor({
     onNodesChange(changes);
 
     // Update step positions when drag ends
-    const dragEndChange = changes.find((c: any) => c.type === 'position' && c.dragging === false);
-    if (dragEndChange && isEditMode) {
-      // Use setTimeout to defer the state update to avoid setState during render
-      setTimeout(() => {
-        setNodes((nds) => {
-          const updatedSteps = nds.map(node => {
-            const step = steps.find(s => s.id === node.id);
-            if (step && node.position) {
-              return {
-                ...step,
-                position: {
-                  x: Math.round(node.position.x / gridSize),
-                  y: Math.round(node.position.y / gridSize)
-                }
-              };
-            }
-            return step!;
+    const dragEndChanges = changes.filter((c: any) => c.type === 'position' && c.dragging === false);
+
+    if (dragEndChanges.length > 0 && isEditMode) {
+      // Extract position updates directly from the changes
+      const positionUpdates = new Map<string, { x: number; y: number }>();
+
+      dragEndChanges.forEach((change: any) => {
+        if (change.position) {
+          positionUpdates.set(change.id, {
+            x: Math.round(change.position.x / gridSize),
+            y: Math.round(change.position.y / gridSize)
           });
-          onStepsChange(updatedSteps);
-          setHasUnsavedChanges(true);
-          return nds;
-        });
-      }, 0);
+        }
+      });
+
+      // Update steps with new positions
+      const updatedSteps = steps.map(step => {
+        const newPosition = positionUpdates.get(step.id);
+        if (newPosition) {
+          return { ...step, position: newPosition };
+        }
+        return step;
+      });
+
+      // Update parent state after a delay to avoid render conflicts
+      requestAnimationFrame(() => {
+        onStepsChange(updatedSteps);
+        setHasUnsavedChanges(true);
+      });
     }
-  }, [onNodesChange, isEditMode, steps, onStepsChange, setHasUnsavedChanges, gridSize, setNodes]);
+  }, [onNodesChange, isEditMode, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
 
   // Handle connection creation
   const onConnect = useCallback((connection: Connection) => {
