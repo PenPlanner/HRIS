@@ -27,7 +27,8 @@ export function PDFViewerDialog({
   useEffect(() => {
     if (open && pdfUrl) {
       // Add #page= fragment to jump to specific page
-      setPdfSrc(`${pdfUrl}#page=${initialPage}`);
+      // Also add view=FitH for better initial view
+      setPdfSrc(`${pdfUrl}#page=${initialPage}&view=FitH`);
     }
   }, [open, pdfUrl, initialPage]);
 

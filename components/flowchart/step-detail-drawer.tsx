@@ -138,7 +138,7 @@ export function StepDetailDrawer({
                   <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white">T2</Badge>
                 )}
               </div>
-              <DialogTitle className="text-2xl whitespace-pre-line">{step.title}</DialogTitle>
+              <DialogTitle className="text-lg font-semibold whitespace-pre-line">{step.title}</DialogTitle>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />

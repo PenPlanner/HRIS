@@ -16,6 +16,32 @@ export interface SectionPageMapping {
  * Value: mapping of section strings to page numbers
  */
 export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
+  // Doc 1: Prepare for service
+  1: {
+    "5": 6,
+    "6": 10,
+    "7": 15,
+  },
+
+  // Doc 2: Functional safety test
+  2: {
+    "5": 6,
+    "6": 10,
+    "7": 15,
+    "7.2": 16,
+    "7.2.2": 17,
+  },
+
+  // Doc 3: Safety equipment
+  3: {
+    "3": 6,
+    "3.5": 8,
+    "3.5.1": 8,
+    "3.5.5": 10,
+    "5": 12,
+    "6": 15,
+  },
+
   // Doc 11: Service crane (yearly)
   11: {
     "5": 6,      // Section 5 starts on page 6
@@ -87,8 +113,55 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
     "5.2.7": 25,
   },
 
-  // Add more mappings for other documents as needed
-  // These can be built incrementally or auto-generated
+  // Doc 7: Generator
+  7: {
+    "5": 6,
+    "6": 12,
+    "7": 18,
+  },
+
+  // Doc 8: Cooling and conditioning
+  8: {
+    "5": 6,
+    "6": 12,
+    "7": 18,
+  },
+
+  // Doc 10: Yaw system
+  10: {
+    "5": 6,
+    "5.2": 10,
+    "6": 15,
+    "7": 20,
+  },
+
+  // Doc 12: High voltage
+  12: {
+    "5": 6,
+    "6": 12,
+    "7": 18,
+  },
+
+  // Doc 13: Service lift and climb assistance
+  13: {
+    "5": 6,
+    "6": 12,
+    "7": 18,
+  },
+
+  // Doc 14: Tower
+  14: {
+    "5": 6,
+    "6": 12,
+    "7": 18,
+  },
+
+  // Doc 15: Finish work
+  15: {
+    "5": 6,
+    "6": 10,
+    "7": 15,
+  },
 };
 
 /**
