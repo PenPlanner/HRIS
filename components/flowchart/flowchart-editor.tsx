@@ -78,26 +78,72 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
   return (
     <div className="group">
-      {/* Connection handles - only visible in edit mode */}
-      {isEditMode && (
-        <>
-          {/* Top handles - both target and source */}
-          <Handle type="target" position={Position.Top} id="top-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
-          <Handle type="source" position={Position.Top} id="top-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+      {/* Connection handles - always rendered but only visible in edit mode */}
+      <>
+        {/* Top handles - both target and source */}
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top-target"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top-source"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
 
-          {/* Bottom handles - both target and source */}
-          <Handle type="target" position={Position.Bottom} id="bottom-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
-          <Handle type="source" position={Position.Bottom} id="bottom-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+        {/* Bottom handles - both target and source */}
+        <Handle
+          type="target"
+          position={Position.Bottom}
+          id="bottom-target"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom-source"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
 
-          {/* Left handles - both target and source */}
-          <Handle type="target" position={Position.Left} id="left-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
-          <Handle type="source" position={Position.Left} id="left-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
+        {/* Left handles - both target and source */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="left-target"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="left-source"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
 
-          {/* Right handles - both target and source */}
-          <Handle type="target" position={Position.Right} id="right-target" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
-          <Handle type="source" position={Position.Right} id="right-source" className="!bg-blue-500 !w-3 !h-3" isConnectable={true} />
-        </>
-      )}
+        {/* Right handles - both target and source */}
+        <Handle
+          type="target"
+          position={Position.Right}
+          id="right-target"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="right-source"
+          className={cn("!w-3 !h-3", isEditMode ? "!bg-blue-500" : "!opacity-0")}
+          isConnectable={isEditMode}
+        />
+      </>
 
       {/* Step Label */}
       <div className="text-xs font-semibold text-muted-foreground pl-1 mb-1.5">
