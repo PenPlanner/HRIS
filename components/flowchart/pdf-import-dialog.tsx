@@ -238,17 +238,81 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
   const handleImport = () => {
     if (!parsedData) return;
 
-    // Convert parsed data to FlowchartData format
-    const steps: FlowchartStep[] = parsedData.steps.map((step, index) => {
-      // Arrange steps in a grid (3 columns)
-      const x = index % 3;
-      const y = Math.floor(index / 3);
+    // GRID-ALIGNED LAYOUT CONSTANTS
+    // Card dimensions: 300px wide (10 units) x 180px tall (6 units) at 30px grid
+    const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing
+    const ROW_SPACING = 8;  // 8 * 30px = 240px vertical spacing
+    const BASELINE_Y = 5;   // Start 5 units from top (150px)
 
-      // Use color from step.colorCode if available, otherwise cycle through service types
-      const serviceTypes = ["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "10Y"] as const;
-      const defaultColorCode = step.colorCode || serviceTypes[index % serviceTypes.length];
-      const color = getServiceTypeColor(defaultColorCode);
+    // Convert parsed data to FlowchartData format with smart positioning
+    const arrangedSteps: FlowchartStep[] = [];
+    const standalone4YSteps: any[] = [];
+    let currentCol = 0;
+    let stepNumber = 1;
+    let i = 0;
 
+    while (i < parsedData.steps.length) {
+      const currentStep = parsedData.steps[i];
+      const nextStep = parsedData.steps[i + 1];
+
+      // Check if this is a 4Y-only step
+      const is4YOnly = currentStep.title.includes("4Y bolts");
+
+      // Check if parallel steps (consecutive T1 & T2)
+      const isParallel = nextStep &&
+        !is4YOnly &&
+        ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
+         (currentStep.technician === "T2" && nextStep.technician === "T1"));
+
+      if (is4YOnly) {
+        standalone4YSteps.push({ step: currentStep, index: i });
+        i++;
+      } else if (isParallel) {
+        // Stack parallel steps vertically
+        const topStep = currentStep.technician === "T1" ? currentStep : nextStep;
+        const bottomStep = currentStep.technician === "T1" ? nextStep : currentStep;
+
+        arrangedSteps.push({
+          step: topStep,
+          position: { x: currentCol, y: BASELINE_Y },
+          colorCode: `${stepNumber}.1`
+        });
+        arrangedSteps.push({
+          step: bottomStep,
+          position: { x: currentCol, y: BASELINE_Y + ROW_SPACING },
+          colorCode: `${stepNumber}.2`
+        });
+
+        stepNumber++;
+        currentCol += COL_SPACING;
+        i += 2;
+      } else {
+        // Single step
+        arrangedSteps.push({
+          step: currentStep,
+          position: { x: currentCol, y: BASELINE_Y },
+          colorCode: `${stepNumber}`
+        });
+
+        stepNumber++;
+        currentCol += COL_SPACING;
+        i++;
+      }
+    }
+
+    // Place 4Y bolts at bottom
+    standalone4YSteps.forEach((item, index) => {
+      arrangedSteps.push({
+        step: item.step,
+        position: { x: index * COL_SPACING, y: BASELINE_Y + (ROW_SPACING * 3) },
+        colorCode: "4Y Only"
+      });
+    });
+
+    // Convert to FlowchartStep format
+    const steps: FlowchartStep[] = arrangedSteps.map((arranged) => {
+      const step = arranged.step;
+      const color = getServiceTypeColor(arranged.colorCode);
       const durationMinutes = parseInt(step.duration.replace(/\D/g, "")) || 60;
 
       return {
@@ -257,9 +321,9 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
         duration: step.duration,
         durationMinutes,
         color,
-        colorCode: defaultColorCode,
+        colorCode: arranged.colorCode,
         technician: step.technician || "both",
-        position: { x, y },
+        position: arranged.position,
         tasks: step.tasks.map(task => ({
           id: generateTaskId(),
           description: task.description,

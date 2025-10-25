@@ -39,7 +39,16 @@ interface FlowchartEditorProps {
   onEdgesChange?: (edges: Edge[]) => void;
 }
 
-const GRID_SIZE = 30; // pixels (default) - matches box width 300px / 10 = 30px
+// GRID ALIGNMENT SYSTEM
+// All dimensions are designed to align perfectly with the 30px grid:
+// - Card width: 300px = 10 grid units
+// - Card height: 180px = 6 grid units (FIXED, not min-height)
+// - Horizontal spacing: 14 grid units = 420px (between columns)
+// - Vertical spacing: 8 grid units = 240px (between rows)
+//
+// This ensures handles align to grid points for straight connections.
+// If content overflows, the task list scrolls internally.
+const GRID_SIZE = 30; // pixels (default)
 
 interface StepNodeData {
   step: FlowchartStep;
@@ -175,7 +184,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] min-h-[180px] hover:shadow-lg transition-all border-2",
+          "relative p-4 w-[300px] h-[180px] hover:shadow-lg transition-all border-2 flex flex-col",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : "border-gray-700/50",
@@ -225,7 +234,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
         )}
 
         {/* Technician Badge - Centered at top */}
-        <div className="flex justify-center mb-2 -mt-1">
+        <div className="flex justify-center mb-2 -mt-1 flex-shrink-0">
           <div className="flex gap-1">
             {step.technician === "both" ? (
               <>
@@ -240,10 +249,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           </div>
         </div>
 
-        {/* Step Content - Compact task list */}
-        <div className="mt-2">
-          {/* Task list - compact format - only main tasks with ref numbers */}
-          <div className="space-y-0.5 mb-3 pr-10">
+        {/* Step Content - Scrollable task list with fixed bottom section */}
+        <div className="flex-1 flex flex-col min-h-0 mt-2">
+          {/* Task list - compact format - scrollable if overflow */}
+          <div className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2">
             {step.tasks.map((task) => {
               // Only show tasks with reference numbers (e.g., "1. Description" or "13.5.1 Description")
               const hasRefNumber = /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description);
@@ -298,8 +307,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             })}
           </div>
 
-          {/* Bottom Section - Duration & Progress */}
-          <div className="pt-2 border-t border-gray-700/30 space-y-2">
+          {/* Bottom Section - Duration & Progress - Fixed at bottom */}
+          <div className="pt-2 border-t border-gray-700/30 space-y-2 flex-shrink-0">
             {/* Duration and Status */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
