@@ -179,13 +179,19 @@ export function getSectionPage(documentNumber: number, section: string): number 
     return 1; // Default to first page if no mapping
   }
 
-  // Try exact match first
+  // Clean section by removing special suffixes like "i2" from "5.2.7i2"
+  const cleanedSection = section.replace(/[a-z]\d+$/, '');
+
+  // Try exact match first (both original and cleaned)
   if (mapping[section]) {
     return mapping[section];
   }
+  if (cleanedSection !== section && mapping[cleanedSection]) {
+    return mapping[cleanedSection];
+  }
 
   // Try parent sections (e.g., "5.2.3" -> "5.2" -> "5")
-  const parts = section.split('.');
+  const parts = cleanedSection.split('.');
   for (let i = parts.length - 1; i > 0; i--) {
     const parentSection = parts.slice(0, i).join('.');
     if (mapping[parentSection]) {

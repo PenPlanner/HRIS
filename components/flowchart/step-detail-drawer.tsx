@@ -332,9 +332,13 @@ export function StepDetailDrawer({
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-mono text-xs text-blue-600 font-medium">
+                                    <button
+                                      onClick={() => openPdfViewer(ref)}
+                                      className="font-mono text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer"
+                                      title={`View PDF at section ${ref.section}`}
+                                    >
                                       § {ref.section}
-                                    </span>
+                                    </button>
                                     {isCompleted && (
                                       <CheckCircle2 className="h-3 w-3 text-green-600 flex-shrink-0" />
                                     )}

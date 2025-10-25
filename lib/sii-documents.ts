@@ -50,10 +50,11 @@ export const SII_DOCUMENTS: Record<number, { filename: string; title: string }> 
 
 /**
  * Regular expression to match SII references in task descriptions
- * Matches patterns like: "11.5.1", "4.5.1.7", "14.5.13.3-4", etc.
+ * Matches patterns like: "11.5.1", "4.5.1.7", "14.5.13.3-4", "4. 5.2.7i2", etc.
  * Captures the first number (document) and the rest (section)
+ * Now also handles optional space after doc number and special chars like "i2"
  */
-const SII_REFERENCE_REGEX = /^(\d{1,2})\.(\d+(?:\.\d+)*(?:\.\d+-\d+)?(?:-\d+(?:\.\d+)*)?)/;
+const SII_REFERENCE_REGEX = /^(\d{1,2})\.\s*(\d+(?:\.\d+)*(?:[a-z]\d+)?(?:\.\d+-\d+)?(?:-\d+(?:\.\d+)*)?)/;
 
 /**
  * Extracts SII references from a task description
