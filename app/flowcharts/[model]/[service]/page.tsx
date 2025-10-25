@@ -3,8 +3,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,6 +40,7 @@ export default function FlowchartViewerPage() {
 
   // State for steps (used for both view and edit mode)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
+  const [edges, setEdges] = useState<any[]>([]); // React Flow edges
   const [selectedStep, setSelectedStep] = useState<FlowchartStep | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -189,6 +188,7 @@ export default function FlowchartViewerPage() {
       // Save the arranged positions
       localStorage.setItem(storageKey, JSON.stringify({
         steps: arrangedSteps,
+        edges: [],
         lastUpdated: new Date().toISOString()
       }));
       return;
@@ -247,12 +247,15 @@ export default function FlowchartViewerPage() {
 
         console.log("Loaded from localStorage with merged positions");
         setSteps(mergedSteps);
+        setEdges(parsed.edges || []);
       } catch (e) {
         console.error("Failed to load progress:", e);
         setSteps(flowchartData.steps);
+        setEdges([]);
       }
     } else {
       setSteps(flowchartData.steps);
+      setEdges([]);
     }
   }, [flowchartData, modelId, serviceId]);
 
@@ -263,11 +266,12 @@ export default function FlowchartViewerPage() {
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const dataToSave = {
       steps,
+      edges,
       lastUpdated: new Date().toISOString()
     };
 
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
-  }, [steps, modelId, serviceId, flowchartData]);
+  }, [steps, edges, modelId, serviceId, flowchartData]);
 
 
   // Calculate progress metrics
@@ -701,6 +705,7 @@ export default function FlowchartViewerPage() {
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const dataToSave = {
       steps: arrangedSteps,
+      edges: edges, // Keep existing edges
       lastUpdated: new Date().toISOString()
     };
     localStorage.setItem(storageKey, JSON.stringify(dataToSave));
@@ -1028,7 +1033,7 @@ export default function FlowchartViewerPage() {
         </div>
 
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
-        <DndProvider backend={HTML5Backend}>
+        <div className="flex-1 overflow-hidden">
           <FlowchartEditor
             steps={steps}
             onStepsChange={setSteps}
@@ -1040,8 +1045,10 @@ export default function FlowchartViewerPage() {
             isEditMode={isEditMode}
             setHasUnsavedChanges={setHasUnsavedChanges}
             selectedServiceType={selectedServiceType}
+            initialEdges={edges}
+            onEdgesChange={setEdges}
           />
-        </DndProvider>
+        </div>
       </div>
 
       {/* Progress Tracker Sidebar */}

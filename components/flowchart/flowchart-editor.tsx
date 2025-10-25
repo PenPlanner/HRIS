@@ -1,7 +1,22 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react";
-import { useDrag, useDrop } from "react-dnd";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import ReactFlow, {
+  Node,
+  Edge,
+  Controls,
+  Background,
+  BackgroundVariant,
+  Connection,
+  addEdge,
+  useNodesState,
+  useEdgesState,
+  NodeProps,
+  Handle,
+  Position,
+  MarkerType,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -21,49 +36,33 @@ interface FlowchartEditorProps {
   isEditMode: boolean;
   setHasUnsavedChanges: (value: boolean) => void;
   selectedServiceType?: string;
+  initialEdges?: Edge[];
+  onEdgesChange?: (edges: Edge[]) => void;
 }
 
 const GRID_SIZE = 30; // pixels (default)
-const ItemType = "STEP";
 
-interface DraggableStepProps {
+interface StepNodeData {
   step: FlowchartStep;
-  onMove: (stepId: string, x: number, y: number) => void;
   onEdit: (step: FlowchartStep) => void;
   onDelete: (stepId: string) => void;
   onDuplicate: (step: FlowchartStep) => void;
   onClick?: (step: FlowchartStep) => void;
   onUpdateStep: (step: FlowchartStep) => void;
-  gridSize: number;
   isEditMode: boolean;
   selectedServiceType?: string;
 }
 
-function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, gridSize, isEditMode, selectedServiceType }: DraggableStepProps) {
+// Custom node component for flowchart steps
+function StepNode({ data }: NodeProps<StepNodeData>) {
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType } = data;
+
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
   // Calculate total notes count from all tasks
   const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
-
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: ItemType,
-    item: { id: step.id, currentX: step.position.x, currentY: step.position.y },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    canDrag: isEditMode, // Only draggable in edit mode
-  }), [step.id, step.position, isEditMode]);
-
-  const pixelX = step.position.x * gridSize;
-  const pixelY = step.position.y * gridSize;
-
-  const handleClick = () => {
-    if (!isEditMode && onClick) {
-      onClick(step);
-    }
-  };
 
   // Extract step number from step.id (e.g., "step-2-1" -> "2.1", "step-1" -> "1")
   const getStepNumber = (stepId: string): string => {
@@ -78,18 +77,17 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
   };
 
   return (
-    <div
-      ref={drag as any}
-      style={{
-        position: "absolute",
-        left: `${pixelX}px`,
-        top: `${pixelY}px`,
-        cursor: isEditMode ? "move" : "pointer",
-        opacity: isDragging ? 0.5 : 1,
-      }}
-      className="group"
-      onClick={handleClick}
-    >
+    <div className="group">
+      {/* Connection handles - only visible in edit mode */}
+      {isEditMode && (
+        <>
+          <Handle type="target" position={Position.Top} className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="source" position={Position.Bottom} className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="target" position={Position.Left} className="!bg-blue-500 !w-3 !h-3" />
+          <Handle type="source" position={Position.Right} className="!bg-blue-500 !w-3 !h-3" />
+        </>
+      )}
+
       {/* Step Label */}
       <div className="text-xs font-semibold text-muted-foreground pl-1 mb-1.5">
         Step {getStepNumber(step.id)}
@@ -114,7 +112,10 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
             size="sm"
             variant="secondary"
             className="h-7 w-7 p-0 bg-primary text-primary-foreground shadow-lg"
-            onClick={() => onEdit(step)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(step);
+            }}
           >
             <Edit className="h-3 w-3" />
           </Button>
@@ -122,7 +123,10 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
             size="sm"
             variant="secondary"
             className="h-7 w-7 p-0 bg-blue-600 text-white shadow-lg"
-            onClick={() => onDuplicate(step)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate(step);
+            }}
           >
             <Copy className="h-3 w-3" />
           </Button>
@@ -130,7 +134,10 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
             size="sm"
             variant="secondary"
             className="h-7 w-7 p-0 bg-red-600 text-white shadow-lg"
-            onClick={() => onDelete(step.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(step.id);
+            }}
           >
             <Trash2 className="h-3 w-3" />
           </Button>
@@ -254,11 +261,6 @@ function DraggableStep({ step, onMove, onEdit, onDelete, onDuplicate, onClick, o
             </div>
           </div>
         </div>
-
-        {/* Grid Position Indicator */}
-        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-          ({step.position.x}, {step.position.y})
-        </div>
       </Card>
     </div>
   );
@@ -274,54 +276,19 @@ export function FlowchartEditor({
   gridSize = GRID_SIZE,
   isEditMode,
   setHasUnsavedChanges,
-  selectedServiceType
+  selectedServiceType,
+  initialEdges = [],
+  onEdgesChange: onEdgesChangeProp
 }: FlowchartEditorProps) {
-  const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  // Snap to grid helper
-  const snapToGrid = useCallback((pixels: number): number => {
-    return Math.round(pixels / gridSize);
-  }, [gridSize]);
-
-  const handleDrop = useCallback((item: { id: string; currentX: number; currentY: number }, monitor: any) => {
-    if (!isEditMode) return; // Only allow drops in edit mode
-
-    const delta = monitor.getDifferenceFromInitialOffset();
-    if (!delta) return;
-
-    // Calculate new position in pixels
-    const newPixelX = (item.currentX * gridSize) + delta.x;
-    const newPixelY = (item.currentY * gridSize) + delta.y;
-
-    // Snap to grid
-    const newGridX = Math.max(0, snapToGrid(newPixelX));
-    const newGridY = Math.max(-10, snapToGrid(newPixelY)); // Allow negative Y for vertical spacing
-
-    // Update step position
-    const updatedSteps = steps.map(step =>
-      step.id === item.id
-        ? { ...step, position: { x: newGridX, y: newGridY } }
-        : step
-    );
-
-    onStepsChange(updatedSteps);
-    setHasUnsavedChanges(true);
-  }, [steps, onStepsChange, gridSize, isEditMode, setHasUnsavedChanges, snapToGrid]);
-
-  const [, drop] = useDrop(() => ({
-    accept: ItemType,
-    drop: isEditMode ? handleDrop : undefined,
-  }), [handleDrop, isEditMode]);
-
-  const handleDelete = (stepId: string) => {
+  // Define handlers first before using them in useMemo
+  const handleDelete = useCallback((stepId: string) => {
     if (confirm("Are you sure you want to delete this step?")) {
       onStepsChange(steps.filter(s => s.id !== stepId));
       setHasUnsavedChanges(true);
     }
-  };
+  }, [steps, onStepsChange, setHasUnsavedChanges]);
 
-  const handleDuplicate = (step: FlowchartStep) => {
+  const handleDuplicate = useCallback((step: FlowchartStep) => {
     const newStep: FlowchartStep = {
       ...step,
       id: generateStepId(),
@@ -333,136 +300,178 @@ export function FlowchartEditor({
     };
     onStepsChange([...steps, newStep]);
     setHasUnsavedChanges(true);
-  };
+  }, [steps, onStepsChange, setHasUnsavedChanges]);
 
-  const handleUpdateStep = (updatedStep: FlowchartStep) => {
+  const handleUpdateStep = useCallback((updatedStep: FlowchartStep) => {
     const updatedSteps = steps.map(s =>
       s.id === updatedStep.id ? updatedStep : s
     );
     onStepsChange(updatedSteps);
     setHasUnsavedChanges(true);
-  };
+  }, [steps, onStepsChange, setHasUnsavedChanges]);
 
-  // Calculate canvas size
-  const canvasWidth = Math.max(
-    ...steps.map(s => s.position.x),
-    10
-  ) * gridSize + gridSize * 5;
+  // Convert FlowchartStep[] to React Flow nodes
+  const initialNodes: Node<StepNodeData>[] = useMemo(() => steps.map(step => ({
+    id: step.id,
+    type: 'stepNode',
+    position: { x: step.position.x * gridSize + 50, y: step.position.y * gridSize },
+    data: {
+      step,
+      onEdit: onEditStep,
+      onDelete: handleDelete,
+      onDuplicate: handleDuplicate,
+      onClick: onStepClick,
+      onUpdateStep: handleUpdateStep,
+      isEditMode,
+      selectedServiceType,
+    },
+    draggable: isEditMode,
+  })), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
 
-  const canvasHeight = Math.max(
-    ...steps.map(s => s.position.y),
-    Math.abs(Math.min(...steps.map(s => s.position.y), 0)),
-    10
-  ) * gridSize + gridSize * 5;
+  // Initialize edges (connections) - load from props
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
-  // Adjust for negative Y positions
-  const minY = Math.min(...steps.map(s => s.position.y), 0);
-  const offsetY = Math.abs(minY) * gridSize;
+  // Update nodes when steps change
+  useMemo(() => {
+    const newNodes: Node<StepNodeData>[] = steps.map(step => ({
+      id: step.id,
+      type: 'stepNode',
+      position: { x: step.position.x * gridSize + 50, y: step.position.y * gridSize },
+      data: {
+        step,
+        onEdit: onEditStep,
+        onDelete: handleDelete,
+        onDuplicate: handleDuplicate,
+        onClick: onStepClick,
+        onUpdateStep: handleUpdateStep,
+        isEditMode,
+        selectedServiceType,
+      },
+      draggable: isEditMode,
+    }));
+    setNodes(newNodes);
+  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, setNodes]);
 
-  const content = (
-    <div
-      ref={isEditMode ? (drop as any) : null}
-      className="relative overflow-auto bg-gray-50 dark:bg-gray-900 w-full h-full"
-      style={{
-        backgroundImage: isEditMode ? `
-          linear-gradient(to right, rgba(100,100,255,0.15) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(100,100,255,0.15) 1px, transparent 1px)
-        ` : undefined,
-        backgroundSize: isEditMode ? `${gridSize}px ${gridSize}px` : undefined,
-      }}
-    >
-        <div
-          className="relative"
-          style={{
-            width: `${canvasWidth}px`,
-            height: `${canvasHeight}px`,
-            minWidth: "100%",
-            minHeight: "100%",
-            transform: `scale(${zoom / 100})`,
-            transformOrigin: 'top left',
-            paddingTop: `${offsetY}px`,
-            paddingLeft: '50px'
-          }}
-        >
-          {/* Connection lines for parallel steps */}
-          <svg className="absolute inset-0 pointer-events-none" style={{ zIndex: 0 }}>
-            {(() => {
-              const lines: JSX.Element[] = [];
-              // Find parallel steps (same x position, consecutive IDs like 2-1 and 2-2)
-              const parallelPairs = [
-                ['step-2-1', 'step-2-2'],
-                ['step-5-1', 'step-5-2'],
-                ['step-8-1', 'step-8-2'],
-                ['step-9-1', 'step-9-2']
-              ];
+  // Handle node drag end - update step positions
+  const handleNodesChange = useCallback((changes: any) => {
+    onNodesChange(changes);
 
-              parallelPairs.forEach(([id1, id2], index) => {
-                const step1 = steps.find(s => s.id === id1);
-                const step2 = steps.find(s => s.id === id2);
+    // Update step positions when drag ends
+    const dragEndChange = changes.find((c: any) => c.type === 'position' && c.dragging === false);
+    if (dragEndChange && isEditMode) {
+      setNodes((nds) => {
+        const updatedSteps = nds.map(node => {
+          const step = steps.find(s => s.id === node.id);
+          if (step && node.position) {
+            return {
+              ...step,
+              position: {
+                x: Math.round((node.position.x - 50) / gridSize),
+                y: Math.round(node.position.y / gridSize)
+              }
+            };
+          }
+          return step!;
+        });
+        onStepsChange(updatedSteps);
+        setHasUnsavedChanges(true);
+        return nds;
+      });
+    }
+  }, [onNodesChange, isEditMode, steps, onStepsChange, setHasUnsavedChanges, gridSize, setNodes]);
 
-                if (step1 && step2) {
-                  const x = (step1.position.x * gridSize) + 150; // Center of box (300px wide / 2)
-                  const y1 = ((step1.position.y + Math.abs(minY)) * gridSize) + 168; // Bottom of first box
-                  const y2 = ((step2.position.y + Math.abs(minY)) * gridSize); // Top of second box
+  // Handle connection creation
+  const onConnect = useCallback((connection: Connection) => {
+    if (isEditMode) {
+      setEdges((eds) => addEdge({
+        ...connection,
+        type: 'straight', // Use straight lines instead of bezier curves
+        animated: true,
+        style: { stroke: '#6366f1', strokeWidth: 3 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#6366f1',
+        }
+      }, eds));
+      setHasUnsavedChanges(true);
+    }
+  }, [isEditMode, setHasUnsavedChanges]);
 
-                  lines.push(
-                    <line
-                      key={`line-${index}`}
-                      x1={x}
-                      y1={y1}
-                      x2={x}
-                      y2={y2}
-                      stroke="#6366f1"
-                      strokeWidth="3"
-                      strokeDasharray="8,4"
-                    />
-                  );
-                }
-              });
+  // Handle edge changes (deletion, etc.)
+  const handleEdgesChange = useCallback((changes: any) => {
+    onEdgesChange(changes);
+    if (isEditMode) {
+      setHasUnsavedChanges(true);
+    }
+  }, [onEdgesChange, isEditMode, setHasUnsavedChanges]);
 
-              return lines;
-            })()}
-          </svg>
+  // Sync initialEdges to edges state when they change (e.g., loaded from localStorage)
+  useEffect(() => {
+    if (initialEdges.length > 0) {
+      console.log('FlowchartEditor: syncing initialEdges to state:', initialEdges);
+      setEdges(initialEdges);
+    }
+  }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
-          {steps.map((step) => (
-            <DraggableStep
-              key={step.id}
-              step={{
-                ...step,
-                position: {
-                  x: step.position.x,
-                  y: step.position.y + Math.abs(minY)
-                }
-              }}
-              onMove={(id, x, y) => {
-                const updatedSteps = steps.map(s =>
-                  s.id === id
-                    ? { ...s, position: { x, y: y - Math.abs(minY) } }
-                    : s
-                );
-                onStepsChange(updatedSteps);
-              }}
-              onEdit={onEditStep}
-              onDelete={handleDelete}
-              onDuplicate={handleDuplicate}
-              onClick={onStepClick}
-              onUpdateStep={handleUpdateStep}
-              gridSize={gridSize}
-              isEditMode={isEditMode}
-              selectedServiceType={selectedServiceType}
-            />
-          ))}
+  // Sync edges to parent component whenever they change
+  useEffect(() => {
+    console.log('FlowchartEditor: edges changed:', edges);
+    onEdgesChangeProp?.(edges);
+  }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
 
-          {/* Helper text when empty */}
-          {steps.length === 0 && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-              <p className="text-muted-foreground mb-4">No steps yet. Click &quot;Add Step&quot; to begin.</p>
-              <Button onClick={onAddStep}>Add First Step</Button>
-            </div>
-          )}
+  // Handle node click to open detail drawer
+  const handleNodeClick = useCallback((_event: any, node: Node<StepNodeData>) => {
+    if (!isEditMode && onStepClick) {
+      onStepClick(node.data.step);
+    }
+  }, [isEditMode, onStepClick]);
+
+  // Define custom node types
+  const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
+
+  return (
+    <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={handleNodeClick}
+        nodeTypes={nodeTypes}
+        fitView
+        minZoom={0.5}
+        maxZoom={1.5}
+        defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
+        nodesDraggable={isEditMode}
+        nodesConnectable={isEditMode}
+        edgesUpdatable={isEditMode}
+        edgesFocusable={isEditMode}
+        elementsSelectable={isEditMode}
+      >
+        {isEditMode && (
+          <>
+            <Background variant={BackgroundVariant.Dots} gap={gridSize} size={1} color="#6366f1" />
+            <Controls />
+          </>
+        )}
+      </ReactFlow>
+
+      {/* Debug info */}
+      {isEditMode && (
+        <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-50">
+          Edges: {edges.length} | Nodes: {nodes.length}
         </div>
+      )}
+
+      {/* Helper text when empty */}
+      {steps.length === 0 && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center z-10">
+          <p className="text-muted-foreground mb-4">No steps yet. Click &quot;Add Step&quot; to begin.</p>
+          <Button onClick={onAddStep}>Add First Step</Button>
+        </div>
+      )}
     </div>
   );
-
-  return content;
 }
