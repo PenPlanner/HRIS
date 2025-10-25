@@ -920,113 +920,114 @@ export default function FlowchartViewerPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="border-b px-6 py-4 flex items-center justify-between bg-background">
-          <div className="flex items-center gap-4">
-            {!isFullscreen && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/flowcharts")}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            )}
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold">{flowchartData.model}</h1>
-                {flowchartData.isCustom && (
-                  <Badge variant="secondary">Custom</Badge>
-                )}
-                {hasUnsavedChanges && isEditMode && (
-                  <Badge variant="destructive">Unsaved</Badge>
-                )}
+        <div className="border-b px-6 py-4 bg-background">
+          {/* Title row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-4">
+              {!isFullscreen && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push("/flowcharts")}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+              )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold">{flowchartData.model}</h1>
+                  {flowchartData.isCustom && (
+                    <Badge variant="secondary">Custom</Badge>
+                  )}
+                  {hasUnsavedChanges && isEditMode && (
+                    <Badge variant="destructive">Unsaved</Badge>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground">{flowchartData.serviceType}</p>
               </div>
-              <p className="text-sm text-muted-foreground">{flowchartData.serviceType}</p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          {/* Controls row - wraps to multiple lines */}
+          <div className="flex flex-wrap items-center gap-2">
             {/* Edit Mode Controls */}
             {isEditMode ? (
               <>
-                {/* Row 1: Layout & Position tools */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddStep}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Step
-                  </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddStep}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Step
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAutoLayout}
-                  >
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Auto-Layout
-                  </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAutoLayout}
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Auto-Layout
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportPositions}
-                    title="Export step positions to JSON file"
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Export Positions
-                  </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPositions}
+                  title="Export step positions to JSON file"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export Positions
+                </Button>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleImportPositions}
-                    title="Import step positions from JSON file"
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Import Positions
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleImportPositions}
+                  title="Import step positions from JSON file"
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Import Positions
+                </Button>
 
-                {/* Row 2: Import/Export & Actions */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPdfImportOpen(true)}
-                  >
-                    <FileUp className="h-4 w-4 mr-2" />
-                    Import PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportFlowchart}
-                  >
-                    <FileDown className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleSaveFlowchart}
-                    disabled={!hasUnsavedChanges}
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleEditMode}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Mode
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPdfImportOpen(true)}
+                >
+                  <FileUp className="h-4 w-4 mr-2" />
+                  Import PDF
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportFlowchart}
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSaveFlowchart}
+                  disabled={!hasUnsavedChanges}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleEditMode}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Mode
+                </Button>
               </>
             ) : (
               <>
