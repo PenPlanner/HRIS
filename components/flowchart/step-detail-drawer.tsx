@@ -12,14 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Eye } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
-
-// Dynamically import PDF viewer to avoid SSR issues
-const PDFViewerDialog = dynamic(
-  () => import("./pdf-viewer-dialog").then((mod) => ({ default: mod.PDFViewerDialog })),
-  { ssr: false }
-);
+import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;

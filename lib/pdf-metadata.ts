@@ -1,6 +1,6 @@
 /**
- * PDF Metadata Extraction
- * Extracts document information from SII PDF first pages
+ * PDF Metadata
+ * Metadata for SII documents
  */
 
 export interface PDFMetadata {
@@ -13,63 +13,148 @@ export interface PDFMetadata {
 }
 
 /**
- * Extracts metadata from the first page of an SII PDF
- * Parses text like:
- * "Document no.: 0093-1903 V11"
- * "Class: CONFIDENTIAL"
- * "Type: T09"
- * "Date: 2025-09-30"
+ * Hardcoded metadata for SII documents
+ * Based on document structure and known information
+ */
+const SII_METADATA: Record<number, PDFMetadata> = {
+  1: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Prepare for service"
+  },
+  2: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Functional safety test"
+  },
+  3: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Safety equipment"
+  },
+  4: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Hub and blades"
+  },
+  5: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Hydraulic systems"
+  },
+  6: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Gearbox and gear oil system"
+  },
+  7: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Generator"
+  },
+  8: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Cooling and conditioning"
+  },
+  9: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Nacelle"
+  },
+  10: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Yaw system"
+  },
+  11: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Service crane"
+  },
+  12: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "High voltage"
+  },
+  13: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Service lift and climb assistance"
+  },
+  14: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Tower"
+  },
+  15: {
+    documentNumber: "0093-1903",
+    version: "V11",
+    classification: "CONFIDENTIAL",
+    type: "T09",
+    date: "2025-09-30",
+    title: "Finish work"
+  },
+};
+
+/**
+ * Gets metadata for an SII document by extracting document number from URL
  */
 export async function extractPDFMetadata(pdfUrl: string): Promise<PDFMetadata | null> {
   try {
-    // Ensure we're running in browser
-    if (typeof window === 'undefined') {
-      throw new Error('PDF metadata extraction can only run in browser');
-    }
-
-    // Dynamically import pdfjs from react-pdf (client-side only)
-    const { pdfjs } = await import('react-pdf');
-
-    // Configure worker if not already configured
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-    }
-
-    // Load the PDF
-    const loadingTask = pdfjs.getDocument(pdfUrl);
-    const pdf = await loadingTask.promise;
-
-    // Get first page
-    const page = await pdf.getPage(1);
-    const textContent = await page.getTextContent();
-
-    // Extract text items
-    const textItems = textContent.items.map((item: any) => item.str).join(' ');
-
-    // Parse metadata using regex
-    const docNumberMatch = textItems.match(/Document no\.?:\s*([\d-]+)\s*V(\d+)/i);
-    const classMatch = textItems.match(/Class:\s*(\w+)/i);
-    const typeMatch = textItems.match(/Type:\s*(\w+\d*)/i);
-    const dateMatch = textItems.match(/Date:\s*([\d-]+)/i);
-
-    // Extract title (usually the largest text on first page)
-    const titleMatch = textItems.match(/(\d+)\.\s*SII-([^\n]+)/);
-
-    if (!docNumberMatch) {
-      console.warn(`Could not extract document number from PDF: ${pdfUrl}`);
+    // Extract document number from URL pattern: /files/flowchart/sii/11. SII-...
+    const match = pdfUrl.match(/\/(\d+)\.\s*SII-/);
+    if (!match) {
+      console.warn(`Could not extract document number from URL: ${pdfUrl}`);
       return null;
     }
 
-    return {
-      documentNumber: docNumberMatch[1],
-      version: `V${docNumberMatch[2]}`,
-      classification: classMatch ? classMatch[1] : 'N/A',
-      type: typeMatch ? typeMatch[1] : 'N/A',
-      date: dateMatch ? dateMatch[1] : 'N/A',
-      title: titleMatch ? titleMatch[2].trim() : 'Unknown',
-    };
+    const docNumber = parseInt(match[1], 10);
+    return SII_METADATA[docNumber] || null;
   } catch (error) {
-    console.error(`Failed to extract metadata from PDF: ${pdfUrl}`, error);
+    console.error(`Failed to get metadata for PDF: ${pdfUrl}`, error);
     return null;
   }
 }
