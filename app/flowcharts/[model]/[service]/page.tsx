@@ -261,8 +261,38 @@ export default function FlowchartViewerPage() {
         setEdges([]);
       }
     } else {
-      setSteps(flowchartData.steps);
-      setEdges([]);
+      // No saved data, check if there's a default layout saved
+      const defaultLayoutKey = `default-layout-${flowchartData.id}`;
+      const defaultLayoutData = localStorage.getItem(defaultLayoutKey);
+
+      if (defaultLayoutData) {
+        try {
+          const defaultLayout = JSON.parse(defaultLayoutData);
+          console.log('=== LOADING DEFAULT LAYOUT ===');
+          console.log('Positions:', defaultLayout.positions?.length || 0);
+          console.log('Connections:', defaultLayout.edges?.length || 0);
+
+          // Apply default positions to steps
+          const stepsWithDefaultPositions = flowchartData.steps.map((step) => {
+            const savedPosition = defaultLayout.positions?.find((p: any) => p.id === step.id);
+            if (savedPosition) {
+              return { ...step, position: savedPosition.position };
+            }
+            return step;
+          });
+
+          setSteps(stepsWithDefaultPositions);
+          setEdges(defaultLayout.edges || []);
+        } catch (e) {
+          console.error("Failed to load default layout:", e);
+          setSteps(flowchartData.steps);
+          setEdges([]);
+        }
+      } else {
+        // No default layout either, use original data
+        setSteps(flowchartData.steps);
+        setEdges([]);
+      }
     }
   }, [flowchartData, modelId, serviceId]);
 
@@ -819,6 +849,28 @@ export default function FlowchartViewerPage() {
     exportFlowchartJSON(exportData);
   };
 
+  // Save current layout (positions + connections) as default
+  const handleSaveAsDefaultLayout = () => {
+    const defaultLayoutKey = `default-layout-${flowchartData?.id}`;
+
+    const defaultLayout = {
+      positions: steps.map(step => ({
+        id: step.id,
+        position: step.position
+      })),
+      edges: edges,
+      savedAt: new Date().toISOString()
+    };
+
+    localStorage.setItem(defaultLayoutKey, JSON.stringify(defaultLayout));
+
+    console.log('=== SAVED AS DEFAULT LAYOUT ===');
+    console.log('Positions:', defaultLayout.positions.length);
+    console.log('Connections:', defaultLayout.edges.length);
+
+    alert(`✅ Default layout saved!\n\n${defaultLayout.positions.length} positions\n${defaultLayout.edges.length} connections\n\nThis will load automatically next time!`);
+  };
+
   // Export positions only (for sharing layouts)
   const handleExportPositions = () => {
     const positions = steps.map(step => ({
@@ -970,6 +1022,17 @@ export default function FlowchartViewerPage() {
                 >
                   <Wand2 className="h-4 w-4 mr-2" />
                   Auto-Layout
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleSaveAsDefaultLayout}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  title="Save current positions and connections as default layout"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save as Default
                 </Button>
 
                 <Button
