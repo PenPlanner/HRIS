@@ -443,9 +443,9 @@ export function FlowchartEditor({
     if (isEditMode) {
       setEdges((eds) => addEdge({
         ...connection,
-        type: 'straight', // Use straight lines instead of bezier curves
-        animated: true,
-        style: { stroke: '#6366f1', strokeWidth: 3 },
+        type: 'smoothstep', // Use smooth 90-degree bends
+        animated: false, // Solid line, not animated
+        style: { stroke: '#6366f1', strokeWidth: 2.5 },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: '#6366f1',
