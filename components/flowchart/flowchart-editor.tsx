@@ -370,7 +370,7 @@ export function FlowchartEditor({
   const initialNodes: Node<StepNodeData>[] = useMemo(() => steps.map(step => ({
     id: step.id,
     type: 'stepNode',
-    position: { x: step.position.x * gridSize + 50, y: step.position.y * gridSize },
+    position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
     data: {
       step,
       onEdit: onEditStep,
@@ -395,7 +395,7 @@ export function FlowchartEditor({
     const newNodes: Node<StepNodeData>[] = steps.map(step => ({
       id: step.id,
       type: 'stepNode',
-      position: { x: step.position.x * gridSize + 50, y: step.position.y * gridSize },
+      position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
       data: {
         step,
         onEdit: onEditStep,
@@ -425,7 +425,7 @@ export function FlowchartEditor({
             return {
               ...step,
               position: {
-                x: Math.round((node.position.x - 50) / gridSize),
+                x: Math.round(node.position.x / gridSize),
                 y: Math.round(node.position.y / gridSize)
               }
             };
@@ -524,7 +524,8 @@ export function FlowchartEditor({
 
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
-      <ReactFlow
+      <div className="w-full h-full" style={{ paddingLeft: '50px' }}>
+        <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
@@ -554,6 +555,7 @@ export function FlowchartEditor({
           </>
         )}
       </ReactFlow>
+      </div>
 
       {/* Debug info */}
       {isEditMode && (
