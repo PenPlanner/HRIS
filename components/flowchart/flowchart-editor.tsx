@@ -39,7 +39,7 @@ interface FlowchartEditorProps {
   onEdgesChange?: (edges: Edge[]) => void;
 }
 
-const GRID_SIZE = 30; // pixels (default)
+const GRID_SIZE = 60; // pixels (default) - matches box width 300px / 5 = 60px
 
 interface StepNodeData {
   step: FlowchartStep;
@@ -524,8 +524,7 @@ export function FlowchartEditor({
 
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
-      <div className="w-full h-full" style={{ paddingLeft: '50px' }}>
-        <ReactFlow
+      <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={handleNodesChange}
@@ -535,9 +534,10 @@ export function FlowchartEditor({
         onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.5}
         maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
+        defaultViewport={{ x: 60, y: 0, zoom: zoom / 100 }}
         nodesDraggable={isEditMode}
         nodesConnectable={isEditMode}
         edgesUpdatable={isEditMode}
@@ -555,7 +555,6 @@ export function FlowchartEditor({
           </>
         )}
       </ReactFlow>
-      </div>
 
       {/* Debug info */}
       {isEditMode && (

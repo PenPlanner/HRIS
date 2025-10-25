@@ -36,7 +36,7 @@ export default function FlowchartViewerPage() {
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [gridSize, setGridSize] = useState(30);
+  const [gridSize, setGridSize] = useState(60);
 
   // State for steps (used for both view and edit mode)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
