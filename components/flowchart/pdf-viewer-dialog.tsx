@@ -43,12 +43,16 @@ export function PDFViewerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${isFullscreen ? 'max-w-[95vw] h-[95vh]' : 'max-w-5xl max-h-[90vh]'} flex flex-col overflow-hidden p-0`}
+        className={`${
+          isFullscreen
+            ? 'w-screen h-screen max-w-none m-0 p-0'
+            : 'max-w-6xl h-[85vh]'
+        } flex flex-col overflow-hidden p-0`}
       >
-        <DialogHeader className="px-6 pt-6 pb-4">
+        <DialogHeader className={`${isFullscreen ? 'px-4 pt-4 pb-3' : 'px-6 pt-6 pb-4'} flex-shrink-0 border-b`}>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-lg">{title}</DialogTitle>
-            <div className="flex items-center gap-2">
+            <DialogTitle className="text-lg truncate pr-4">{title}</DialogTitle>
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
@@ -63,7 +67,7 @@ export function PDFViewerDialog({
                 size="sm"
                 onClick={toggleFullscreen}
                 className="h-8 w-8 p-0"
-                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                title={isFullscreen ? "Exit fullscreen" : "Maximize"}
               >
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
@@ -76,7 +80,7 @@ export function PDFViewerDialog({
         </DialogHeader>
 
         {/* PDF Viewer - Using iframe for maximum compatibility */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden bg-gray-100">
           {pdfSrc && (
             <iframe
               src={pdfSrc}
