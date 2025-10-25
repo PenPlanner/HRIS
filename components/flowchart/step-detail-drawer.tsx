@@ -833,6 +833,7 @@ export function StepDetailDrawer({
                                     <div className="flex-shrink-0 ml-2">
                                       <TimeInput
                                         value={task.actualTimeMinutes}
+                                        targetMinutes={step ? Math.round(step.durationMinutes / siiTasks.length) : undefined}
                                         onChange={(minutes) => onTaskTimeChange(task.id, minutes)}
                                       />
                                     </div>

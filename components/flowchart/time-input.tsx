@@ -10,12 +10,13 @@ import { cn } from "@/lib/utils";
 import { CircularTimeSlider } from "./circular-time-slider";
 
 interface TimeInputProps {
-  value?: number; // Time in minutes
+  value?: number; // Actual time in minutes
+  targetMinutes?: number; // Target/planned time in minutes
   onChange: (minutes: number | undefined) => void;
   disabled?: boolean;
 }
 
-export function TimeInput({ value, onChange, disabled }: TimeInputProps) {
+export function TimeInput({ value, targetMinutes, onChange, disabled }: TimeInputProps) {
   const [open, setOpen] = useState(false);
   const [hours, setHours] = useState(Math.floor((value || 0) / 60));
   const [minutes, setMinutes] = useState((value || 0) % 60);
@@ -55,22 +56,34 @@ export function TimeInput({ value, onChange, disabled }: TimeInputProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="flex items-center gap-1.5 min-w-[140px]">
-          <span className="text-[10px] text-muted-foreground font-medium whitespace-nowrap">Time:</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={disabled}
-            className={cn(
-              "h-7 px-2.5 text-xs font-mono gap-1.5 border-dashed min-w-[95px] justify-start",
-              value
-                ? "text-blue-700 bg-blue-50 border-blue-300 hover:bg-blue-100 hover:border-blue-400"
-                : "text-gray-500 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
-            )}
-          >
-            <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-            <span className="flex-1 text-left">{value ? formatTime(value) : "Add time"}</span>
-          </Button>
+        <div className="flex flex-col gap-0.5 min-w-[140px]">
+          {/* Target time */}
+          {targetMinutes && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-500 font-medium whitespace-nowrap w-12">Target:</span>
+              <span className="text-[10px] text-gray-600 font-mono">{formatTime(targetMinutes)}</span>
+            </div>
+          )}
+          {/* Actual time button */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-gray-500 font-medium whitespace-nowrap w-12">Actual:</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              className={cn(
+                "h-7 px-2.5 text-xs font-mono gap-1.5 border-dashed min-w-[95px] justify-start",
+                value
+                  ? value <= (targetMinutes || Infinity)
+                    ? "text-green-700 bg-green-50 border-green-300 hover:bg-green-100 hover:border-green-400"
+                    : "text-red-700 bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400"
+                  : "text-gray-500 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+              )}
+            >
+              <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="flex-1 text-left">{value ? formatTime(value) : "Log time"}</span>
+            </Button>
+          </div>
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" side="bottom" sideOffset={8}>
