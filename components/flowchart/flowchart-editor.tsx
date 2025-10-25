@@ -44,16 +44,17 @@ interface FlowchartEditorProps {
 //
 // CARD WIDTH: 300px (10 grid units) - ALWAYS FIXED
 //
-// CARD HEIGHT: Calculated based on task count, rounded UP to nearest 60px (2 grid units)
-// - Formula: ceil((100 + tasks * 24) / 60) * 60
+// CARD HEIGHT: Calculated based on task count, rounded UP to nearest 60px + 60px padding
+// - Formula: ceil((100 + tasks * 24) / 60) * 60 + 60
 // - Examples:
-//   * 1-4 tasks  → 180px (6 units)
-//   * 5-7 tasks  → 240px (8 units)
-//   * 8-11 tasks → 300px (10 units)
-//   * 12-15 tasks → 360px (12 units)
-//   * 16-19 tasks → 420px (14 units)
+//   * 1-4 tasks  → 240px (8 units)
+//   * 5-7 tasks  → 300px (10 units)
+//   * 8-11 tasks → 360px (12 units)
+//   * 12-15 tasks → 420px (14 units)
+//   * 16-19 tasks → 480px (16 units)
+// - Extra 60px gives breathing room for content
 // - If content overflows, task list scrolls internally
-// - Maximum height: 600px (20 units)
+// - Minimum: 240px (8 units), Maximum: 660px (22 units)
 //
 // SPACING:
 // - Horizontal: 14 units (420px) between columns
@@ -86,7 +87,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
   // Calculate grid-aligned height based on task count
   // Each task row is ~24px, plus header/footer ~100px
-  // Round UP to nearest 60px (2 grid units) for perfect alignment
+  // Round UP to nearest 60px (2 grid units) + add 60px extra padding for breathing room
   const calculateGridHeight = () => {
     // Filter tasks that will be displayed (with reference numbers)
     const visibleTasks = step.tasks.filter(task =>
@@ -100,8 +101,11 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
     // Round UP to nearest 60px
     const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
 
-    // Minimum 180px, maximum 600px
-    return Math.max(180, Math.min(600, gridAlignedHeight));
+    // Add 60px (2 grid units) for extra breathing room
+    const heightWithPadding = gridAlignedHeight + 60;
+
+    // Minimum 240px (was 180), maximum 660px (was 600)
+    return Math.max(240, Math.min(660, heightWithPadding));
   };
 
   const cardHeight = calculateGridHeight();
