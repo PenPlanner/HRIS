@@ -946,81 +946,87 @@ export default function FlowchartViewerPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2">
             {/* Edit Mode Controls */}
             {isEditMode ? (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddStep}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Step
-                </Button>
+                {/* Row 1: Layout & Position tools */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddStep}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Step
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAutoLayout}
-                >
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Auto-Layout
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAutoLayout}
+                  >
+                    <Wand2 className="h-4 w-4 mr-2" />
+                    Auto-Layout
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportPositions}
-                  title="Export step positions to JSON file"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export Positions
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportPositions}
+                    title="Export step positions to JSON file"
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export Positions
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImportPositions}
-                  title="Import step positions from JSON file"
-                >
-                  <FileUp className="h-4 w-4 mr-2" />
-                  Import Positions
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleImportPositions}
+                    title="Import step positions from JSON file"
+                  >
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Import Positions
+                  </Button>
+                </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPdfImportOpen(true)}
-                >
-                  <FileUp className="h-4 w-4 mr-2" />
-                  Import PDF
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportFlowchart}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveFlowchart}
-                  disabled={!hasUnsavedChanges}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleEditMode}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Mode
-                </Button>
+                {/* Row 2: Import/Export & Actions */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPdfImportOpen(true)}
+                  >
+                    <FileUp className="h-4 w-4 mr-2" />
+                    Import PDF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportFlowchart}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleSaveFlowchart}
+                    disabled={!hasUnsavedChanges}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleEditMode}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Mode
+                  </Button>
+                </div>
               </>
             ) : (
               <>
