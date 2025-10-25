@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Eye } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -140,8 +140,8 @@ export function StepDetailDrawer({
                 )}
               </div>
 
-              {/* Tasks as compact chips */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
+              {/* Tasks as vertical list */}
+              <div className="space-y-1.5">
                 {step.title.split('\n').map((task, idx) => {
                   const taskMatch = task.match(/^([\d.]+)\s+(.+)$/);
                   if (!taskMatch) return null;
@@ -150,52 +150,66 @@ export function StepDetailDrawer({
                   const isCompleted = taskObj?.completed || false;
 
                   return (
-                    <Badge
+                    <div
                       key={idx}
-                      variant={isCompleted ? "default" : "outline"}
                       className={cn(
-                        "text-xs py-0.5 px-2 font-normal",
-                        isCompleted && "bg-green-100 text-green-700 border-green-300"
+                        "flex items-center gap-2 text-sm py-1",
+                        isCompleted && "text-muted-foreground"
                       )}
                     >
-                      {ref} {desc.length > 25 ? desc.substring(0, 25) + '...' : desc}
-                    </Badge>
+                      {isCompleted ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                      )}
+                      <span className={cn(
+                        "font-mono text-xs text-blue-600 font-medium flex-shrink-0",
+                        isCompleted && "line-through text-muted-foreground"
+                      )}>
+                        {ref}
+                      </span>
+                      <span className={cn(
+                        isCompleted && "line-through"
+                      )}>
+                        {desc}
+                      </span>
+                    </div>
                   );
                 }).filter(Boolean)}
               </div>
             </div>
 
-            {/* Right side - Stats cards */}
-            <div className="flex flex-col gap-2 flex-shrink-0">
-              {/* Duration card */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 min-w-[140px]">
-                <div className="flex items-center gap-1.5 text-blue-700">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">Duration</span>
+            {/* Right side - Compact stats */}
+            <div className="flex flex-col gap-1.5 flex-shrink-0">
+              {/* Duration */}
+              <div className="bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5 min-w-[110px]">
+                <div className="flex items-center gap-1 text-blue-700">
+                  <Clock className="h-3 w-3" />
+                  <span className="text-[10px] font-medium uppercase tracking-wide">Duration</span>
                 </div>
-                <p className="text-lg font-semibold text-blue-900 mt-0.5">{step.duration}</p>
+                <p className="text-base font-bold text-blue-900">{step.duration}</p>
               </div>
 
-              {/* Progress card */}
+              {/* Progress */}
               <div className={cn(
-                "border rounded-lg px-3 py-2",
+                "border rounded-md px-2.5 py-1.5",
                 isComplete ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"
               )}>
                 <div className={cn(
-                  "flex items-center gap-1.5",
+                  "flex items-center gap-1",
                   isComplete ? "text-green-700" : "text-gray-700"
                 )}>
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">Progress</span>
+                  <CheckCircle2 className="h-3 w-3" />
+                  <span className="text-[10px] font-medium uppercase tracking-wide">Tasks</span>
                 </div>
                 <p className={cn(
-                  "text-lg font-semibold mt-0.5",
+                  "text-base font-bold",
                   isComplete ? "text-green-900" : "text-gray-900"
                 )}>
                   {completedTasks}/{totalTasks}
                 </p>
                 {/* Mini progress bar */}
-                <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5 overflow-hidden">
+                <div className="w-full bg-gray-200 rounded-full h-0.5 mt-1 overflow-hidden">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all duration-300",
@@ -288,7 +302,7 @@ export function StepDetailDrawer({
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => openSIIDocument(refs[0])}
+                              onClick={() => openPdfViewer(refs[0])}
                               className="gap-2 ml-4"
                             >
                               Open PDF
@@ -332,18 +346,6 @@ export function StepDetailDrawer({
                                     {ref.description || '—'}
                                   </p>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openPdfViewer(ref);
-                                  }}
-                                  className="h-7 w-7 p-0 flex-shrink-0"
-                                  title={`View PDF at section ${ref.section}`}
-                                >
-                                  <Eye className="h-3.5 w-3.5 text-blue-600" />
-                                </Button>
                               </div>
                             );
                           })}
