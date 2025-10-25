@@ -39,7 +39,7 @@ interface FlowchartEditorProps {
   onEdgesChange?: (edges: Edge[]) => void;
 }
 
-const GRID_SIZE = 60; // pixels (default) - matches box width 300px / 5 = 60px
+const GRID_SIZE = 30; // pixels (default) - matches box width 300px / 10 = 30px
 
 interface StepNodeData {
   step: FlowchartStep;
@@ -557,8 +557,6 @@ export function FlowchartEditor({
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
         minZoom={0.5}
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
