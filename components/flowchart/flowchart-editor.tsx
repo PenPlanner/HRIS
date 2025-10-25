@@ -20,7 +20,7 @@ import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, TrendingUp } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 
@@ -550,7 +550,70 @@ export function FlowchartEditor({
       return edge;
     }));
     setHasUnsavedChanges(true);
-    setSelectedEdge(null);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Update edge arrow markers
+  const updateEdgeArrows = useCallback((edgeId: string, arrowType: 'none' | 'end' | 'start' | 'both') => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        const color = edge.style?.stroke || '#6366f1';
+        return {
+          ...edge,
+          markerStart: arrowType === 'start' || arrowType === 'both'
+            ? { type: MarkerType.ArrowClosed, color }
+            : undefined,
+          markerEnd: arrowType === 'end' || arrowType === 'both'
+            ? { type: MarkerType.ArrowClosed, color }
+            : undefined,
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Toggle edge animation
+  const toggleEdgeAnimation = useCallback((edgeId: string) => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          animated: !edge.animated,
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Update edge color
+  const updateEdgeColor = useCallback((edgeId: string, color: string) => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          style: { ...(edge.style || {}), stroke: color },
+          markerStart: edge.markerStart ? { ...edge.markerStart, color } : undefined,
+          markerEnd: edge.markerEnd ? { ...edge.markerEnd, color } : undefined,
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Update edge width
+  const updateEdgeWidth = useCallback((edgeId: string, width: number) => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          style: { ...(edge.style || {}), strokeWidth: width },
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
   }, [setEdges, setHasUnsavedChanges]);
 
   // Define custom node types
@@ -595,11 +658,11 @@ export function FlowchartEditor({
         </div>
       )}
 
-      {/* Edge style selector */}
+      {/* Edge style selector - Enhanced menu */}
       {isEditMode && selectedEdge && (
-        <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-blue-500 p-4 z-50 min-w-[280px]">
+        <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-blue-500 p-4 z-50 min-w-[320px] max-h-[85vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Line Style</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Connection Settings</h3>
             <Button
               variant="ghost"
               size="sm"
@@ -610,49 +673,167 @@ export function FlowchartEditor({
             </Button>
           </div>
 
-          <div className="space-y-2">
-            <Button
-              variant={selectedEdge.type === 'smoothstep' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => updateEdgeStyle(selectedEdge.id, 'smoothstep')}
-              className="w-full justify-start gap-2"
-            >
-              <Workflow className="h-4 w-4" />
-              Smooth Bends (90°)
-            </Button>
+          {/* Line Shape */}
+          <div className="space-y-2 mb-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Line Shape</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={selectedEdge.type === 'smoothstep' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'smoothstep')}
+                className="justify-start gap-2"
+              >
+                <Workflow className="h-4 w-4" />
+                Smooth 90°
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'step' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'step')}
+                className="justify-start gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Sharp 90°
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'straight' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'straight')}
+                className="justify-start gap-2"
+              >
+                <Minus className="h-4 w-4" />
+                Straight
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'default' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'default')}
+                className="justify-start gap-2"
+              >
+                <Workflow className="h-4 w-4" />
+                Curved
+              </Button>
+            </div>
+          </div>
 
-            <Button
-              variant={selectedEdge.type === 'step' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => updateEdgeStyle(selectedEdge.id, 'step')}
-              className="w-full justify-start gap-2"
-            >
-              <TrendingUp className="h-4 w-4" />
-              Sharp Bends (90°)
-            </Button>
+          {/* Arrow Direction */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Arrow Direction</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant={!selectedEdge.markerStart && !selectedEdge.markerEnd ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeArrows(selectedEdge.id, 'none')}
+                className="justify-start gap-2"
+              >
+                <Minus className="h-4 w-4" />
+                No Arrow
+              </Button>
+              <Button
+                variant={!selectedEdge.markerStart && selectedEdge.markerEnd ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeArrows(selectedEdge.id, 'end')}
+                className="justify-start gap-2"
+              >
+                <ArrowRight className="h-4 w-4" />
+                End →
+              </Button>
+              <Button
+                variant={selectedEdge.markerStart && !selectedEdge.markerEnd ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeArrows(selectedEdge.id, 'start')}
+                className="justify-start gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                ← Start
+              </Button>
+              <Button
+                variant={selectedEdge.markerStart && selectedEdge.markerEnd ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeArrows(selectedEdge.id, 'both')}
+                className="justify-start gap-2"
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                ↔ Both
+              </Button>
+            </div>
+          </div>
 
+          {/* Animation */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Animation</p>
             <Button
-              variant={selectedEdge.type === 'straight' ? 'default' : 'outline'}
+              variant={selectedEdge.animated ? 'default' : 'outline'}
               size="sm"
-              onClick={() => updateEdgeStyle(selectedEdge.id, 'straight')}
+              onClick={() => toggleEdgeAnimation(selectedEdge.id)}
               className="w-full justify-start gap-2"
             >
-              <ArrowRight className="h-4 w-4" />
-              Straight Line
-            </Button>
-
-            <Button
-              variant={selectedEdge.type === 'default' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => updateEdgeStyle(selectedEdge.id, 'default')}
-              className="w-full justify-start gap-2"
-            >
-              <Copy className="h-4 w-4" />
-              Curved Line
+              <Zap className="h-4 w-4" />
+              {selectedEdge.animated ? 'Animated (ON)' : 'Animated (OFF)'}
             </Button>
           </div>
 
-          <div className="mt-3 pt-3 border-t">
+          {/* Color */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Color</p>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { color: '#6366f1', name: 'Blue' },
+                { color: '#10b981', name: 'Green' },
+                { color: '#ef4444', name: 'Red' },
+                { color: '#f59e0b', name: 'Orange' },
+                { color: '#8b5cf6', name: 'Purple' },
+                { color: '#ec4899', name: 'Pink' },
+                { color: '#6b7280', name: 'Gray' },
+                { color: '#ffffff', name: 'White' },
+              ].map(({ color, name }) => (
+                <button
+                  key={color}
+                  onClick={() => updateEdgeColor(selectedEdge.id, color)}
+                  className={cn(
+                    "h-8 w-full rounded border-2 transition-all hover:scale-110",
+                    selectedEdge.style?.stroke === color ? "ring-2 ring-offset-2 ring-blue-500" : "border-gray-300"
+                  )}
+                  style={{ backgroundColor: color }}
+                  title={name}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Width */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Line Width</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant={selectedEdge.style?.strokeWidth === 1.5 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeWidth(selectedEdge.id, 1.5)}
+                className="justify-center"
+              >
+                Thin
+              </Button>
+              <Button
+                variant={selectedEdge.style?.strokeWidth === 2.5 || !selectedEdge.style?.strokeWidth ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeWidth(selectedEdge.id, 2.5)}
+                className="justify-center"
+              >
+                Normal
+              </Button>
+              <Button
+                variant={selectedEdge.style?.strokeWidth === 4 ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeWidth(selectedEdge.id, 4)}
+                className="justify-center"
+              >
+                Thick
+              </Button>
+            </div>
+          </div>
+
+          {/* Delete */}
+          <div className="pt-3 border-t">
             <Button
               variant="destructive"
               size="sm"
