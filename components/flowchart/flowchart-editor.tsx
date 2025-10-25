@@ -41,13 +41,14 @@ interface FlowchartEditorProps {
 
 // GRID ALIGNMENT SYSTEM
 // All dimensions are designed to align perfectly with the 30px grid:
-// - Card width: 300px = 10 grid units
-// - Card height: 180px = 6 grid units (FIXED, not min-height)
+// - Card width: 300px = 10 grid units (FIXED)
+// - Card height: min 180px (6 units), grows in 60px increments (2 units)
+//   Examples: 180px (6u), 240px (8u), 300px (10u), 360px (12u)
 // - Horizontal spacing: 14 grid units = 420px (between columns)
 // - Vertical spacing: 8 grid units = 240px (between rows)
 //
 // This ensures handles align to grid points for straight connections.
-// If content overflows, the task list scrolls internally.
+// Cards grow based on content, but height is always a multiple of 60px.
 const GRID_SIZE = 30; // pixels (default)
 
 interface StepNodeData {
@@ -184,7 +185,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] h-[180px] hover:shadow-lg transition-all border-2 flex flex-col",
+          "relative p-4 w-[300px] min-h-[180px] hover:shadow-lg transition-all border-2 flex flex-col",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : "border-gray-700/50",
@@ -249,10 +250,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           </div>
         </div>
 
-        {/* Step Content - Scrollable task list with fixed bottom section */}
-        <div className="flex-1 flex flex-col min-h-0 mt-2">
-          {/* Task list - compact format - scrollable if overflow */}
-          <div className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2">
+        {/* Step Content - Task list grows naturally */}
+        <div className="mt-2">
+          {/* Task list - compact format - grows with content */}
+          <div className="space-y-0.5 mb-3 pr-10">
             {step.tasks.map((task) => {
               // Only show tasks with reference numbers (e.g., "1. Description" or "13.5.1 Description")
               const hasRefNumber = /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description);
@@ -307,8 +308,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
             })}
           </div>
 
-          {/* Bottom Section - Duration & Progress - Fixed at bottom */}
-          <div className="pt-2 border-t border-gray-700/30 space-y-2 flex-shrink-0">
+          {/* Bottom Section - Duration & Progress */}
+          <div className="pt-2 border-t border-gray-700/30 space-y-2">
             {/* Duration and Status */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
