@@ -849,6 +849,46 @@ export default function FlowchartViewerPage() {
     exportFlowchartJSON(exportData);
   };
 
+  // Export TypeScript code to update flowchart-data.ts permanently
+  const handleExportToCode = () => {
+    // Generate TypeScript code for positions
+    const positionCode = steps.map(step => {
+      return `      // ${step.title}\n      position: { x: ${step.position.x}, y: ${step.position.y} },`;
+    }).join('\n');
+
+    const edgesCode = JSON.stringify(edges, null, 2);
+
+    const fullCode = `
+// ==========================================
+// COPY THIS TO lib/flowchart-data.ts
+// ==========================================
+
+// 1. Update each step's position in the steps array:
+${positionCode}
+
+// 2. Add this edges array to FlowchartData interface if not exists:
+// defaultEdges?: Edge[];
+
+// 3. Add this to the flowchart data object (${flowchartData?.id}):
+defaultEdges: ${edgesCode}
+
+// ==========================================
+// INSTRUCTIONS:
+// 1. Open lib/flowchart-data.ts
+// 2. Find the flowchart: ${flowchartData?.id}
+// 3. Replace each step's position with the values above
+// 4. Add the defaultEdges array to the data object
+// ==========================================
+`;
+
+    console.log(fullCode);
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(fullCode).then(() => {
+      alert('✅ TypeScript code copied to clipboard!\n\nCheck the console for full code.\n\nPaste it into lib/flowchart-data.ts to make positions permanent.');
+    });
+  };
+
   // Save current layout (positions + connections) as default
   const handleSaveAsDefaultLayout = () => {
     const defaultLayoutKey = `default-layout-${flowchartData?.id}`;
@@ -1033,6 +1073,17 @@ export default function FlowchartViewerPage() {
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save as Default
+                </Button>
+
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleExportToCode}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  title="Export TypeScript code to paste into flowchart-data.ts for permanent storage"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export to Code
                 </Button>
 
                 <Button

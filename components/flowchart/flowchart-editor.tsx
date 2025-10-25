@@ -124,7 +124,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
   return (
     <div className="group relative">
-      {/* Connection handles - always rendered but only visible in edit mode */}
+      {/* Connection handles - only render in edit mode */}
+      {isEditMode && (
       <>
         {/* Top handles - both target and source */}
         <Handle
@@ -132,10 +133,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Top}
           id="top-target"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ top: '-21px' }}
+          style={{ top: '-10px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -143,10 +144,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Top}
           id="top-source"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ top: '-21px' }}
+          style={{ top: '-10px' }}
           isConnectable={isEditMode}
         />
 
@@ -156,10 +157,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Bottom}
           id="bottom-target"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ bottom: '-21px' }}
+          style={{ bottom: '-10px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -167,10 +168,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Bottom}
           id="bottom-source"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ bottom: '-21px' }}
+          style={{ bottom: '-10px' }}
           isConnectable={isEditMode}
         />
 
@@ -180,10 +181,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Left}
           id="left-target"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ left: '-21px' }}
+          style={{ left: '-10px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -191,10 +192,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Left}
           id="left-source"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ left: '-21px' }}
+          style={{ left: '-10px' }}
           isConnectable={isEditMode}
         />
 
@@ -204,10 +205,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Right}
           id="right-target"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ right: '-21px' }}
+          style={{ right: '-10px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -215,13 +216,14 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Right}
           id="right-source"
           className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
+            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
           )}
-          style={{ right: '-21px' }}
+          style={{ right: '-10px' }}
           isConnectable={isEditMode}
         />
       </>
+      )}
 
       <Card
         className={cn(
@@ -698,7 +700,7 @@ export function FlowchartEditor({
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
         // Touch device support
-        panOnDrag={!isEditMode ? [1, 2] : false}
+        panOnDrag={!isEditMode ? [1, 2] : [1, 2]}
         panOnScroll={true}
         zoomOnPinch={true}
         preventScrolling={true}
