@@ -113,13 +113,13 @@ export default function FlowchartViewerPage() {
       console.log('No saved data found - will auto-arrange on first load');
 
       // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-      // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
-      // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
+      // Box width is 300px (10 grid units), so we need x spacing of 14 grid units (420px) for horizontal separation
+      // Box height is 180px (6 grid units), so we need y spacing of 8 grid units (240px) for vertical separation
       const arrangedSteps: FlowchartStep[] = [];
       const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
       let currentCol = 0; // Horizontal position (steps go left to right)
       const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing (for 300px wide cards)
-      const ROW_SPACING = 10; // 10 * 30px = 300px vertical spacing (for 168px tall cards)
+      const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (for 180px tall cards)
       const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
       let stepNumber = 1; // For automatic step numbering
       let i = 0;
@@ -629,13 +629,13 @@ export default function FlowchartViewerPage() {
     console.log("Starting auto-layout with steps:", steps.length);
 
     // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-    // Box width is ~200px, so we need x spacing of ~9 grid units (at 30px grid) for horizontal separation
-    // Box height is ~140px, so we need y spacing of ~8 grid units for vertical separation
+    // Box width is 300px (10 grid units), so we need x spacing of 14 grid units (420px) for horizontal separation
+    // Box height is 180px (6 grid units), so we need y spacing of 8 grid units (240px) for vertical separation
     const arrangedSteps: FlowchartStep[] = [];
     const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
     let currentCol = 0; // Horizontal position (steps go left to right)
     const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing (for 300px wide cards)
-    const ROW_SPACING = 10; // 10 * 30px = 300px vertical spacing (for 168px tall cards)
+    const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (for 180px tall cards)
     const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
     let stepNumber = 1; // For automatic step numbering
     let i = 0;

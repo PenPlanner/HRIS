@@ -175,7 +175,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] min-h-[168px] hover:shadow-lg transition-all border-2",
+          "relative p-4 w-[300px] min-h-[180px] hover:shadow-lg transition-all border-2",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : "border-gray-700/50",
