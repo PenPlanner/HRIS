@@ -542,6 +542,9 @@ export function FlowchartEditor({
         edgesUpdatable={isEditMode}
         edgesFocusable={isEditMode}
         elementsSelectable={isEditMode}
+        snapToGrid={isEditMode}
+        snapGrid={[gridSize, gridSize]}
+        connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
       >
         {isEditMode && (
