@@ -50,13 +50,11 @@ interface StepNodeData {
   onUpdateStep: (step: FlowchartStep) => void;
   isEditMode: boolean;
   selectedServiceType?: string;
-  onHandleClick?: (nodeId: string, handleId: string, type: 'source' | 'target') => void;
-  selectedHandle?: { nodeId: string; handleId: string; type: 'source' | 'target' } | null;
 }
 
 // Custom node component for flowchart steps
-function StepNode({ data, id }: NodeProps<StepNodeData>) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, onHandleClick, selectedHandle } = data;
+function StepNode({ data }: NodeProps<StepNodeData>) {
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType } = data;
 
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
@@ -87,34 +85,20 @@ function StepNode({ data, id }: NodeProps<StepNodeData>) {
           position={Position.Top}
           id="top-target"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "top-target" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "top-target", "target");
-            }
-          }}
         />
         <Handle
           type="source"
           position={Position.Top}
           id="top-source"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "top-source" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "top-source", "source");
-            }
-          }}
         />
 
         {/* Bottom handles - both target and source */}
@@ -123,34 +107,20 @@ function StepNode({ data, id }: NodeProps<StepNodeData>) {
           position={Position.Bottom}
           id="bottom-target"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "bottom-target" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "bottom-target", "target");
-            }
-          }}
         />
         <Handle
           type="source"
           position={Position.Bottom}
           id="bottom-source"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "bottom-source" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "bottom-source", "source");
-            }
-          }}
         />
 
         {/* Left handles - both target and source */}
@@ -159,34 +129,20 @@ function StepNode({ data, id }: NodeProps<StepNodeData>) {
           position={Position.Left}
           id="left-target"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "left-target" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "left-target", "target");
-            }
-          }}
         />
         <Handle
           type="source"
           position={Position.Left}
           id="left-source"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "left-source" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "left-source", "source");
-            }
-          }}
         />
 
         {/* Right handles - both target and source */}
@@ -195,34 +151,20 @@ function StepNode({ data, id }: NodeProps<StepNodeData>) {
           position={Position.Right}
           id="right-target"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "right-target" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "right-target", "target");
-            }
-          }}
         />
         <Handle
           type="source"
           position={Position.Right}
           id="right-source"
           className={cn(
-            "!w-4 !h-4 !cursor-pointer transition-all",
-            isEditMode ? "!bg-blue-500" : "!opacity-0",
-            selectedHandle?.nodeId === id && selectedHandle?.handleId === "right-source" && "!bg-green-500 !w-5 !h-5 !ring-2 !ring-green-300"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
           isConnectable={isEditMode}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (isEditMode && onHandleClick) {
-              onHandleClick(id, "right-source", "source");
-            }
-          }}
         />
       </>
 
@@ -418,14 +360,6 @@ export function FlowchartEditor({
   initialEdges = [],
   onEdgesChange: onEdgesChangeProp
 }: FlowchartEditorProps) {
-  // State for click-to-connect
-  const [selectedHandle, setSelectedHandle] = useState<{ nodeId: string; handleId: string; type: 'source' | 'target' } | null>(null);
-
-  // Dummy handle click function for initialization (real one defined later)
-  const handleHandleClickPlaceholder = useCallback((_nodeId: string, _handleId: string, _type: 'source' | 'target') => {
-    // Will be overridden
-  }, []);
-
   // Define handlers first before using them in useMemo
   const handleDelete = useCallback((stepId: string) => {
     if (confirm("Are you sure you want to delete this step?")) {
@@ -470,11 +404,9 @@ export function FlowchartEditor({
       onUpdateStep: handleUpdateStep,
       isEditMode,
       selectedServiceType,
-      onHandleClick: handleHandleClickPlaceholder,
-      selectedHandle,
     },
     draggable: isEditMode,
-  })), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, handleHandleClickPlaceholder]);
+  })), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -497,13 +429,11 @@ export function FlowchartEditor({
         onUpdateStep: handleUpdateStep,
         isEditMode,
         selectedServiceType,
-        onHandleClick: handleHandleClickPlaceholder,
-        selectedHandle,
       },
       draggable: isEditMode,
     }));
     setNodes(newNodes);
-  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, setNodes, handleHandleClickPlaceholder]);
+  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, setNodes]);
 
   // Handle node drag end - update step positions
   const handleNodesChange = useCallback((changes: any) => {
@@ -613,53 +543,6 @@ export function FlowchartEditor({
     setSelectedEdge(null);
   }, [setEdges, setHasUnsavedChanges]);
 
-  // Handle click-to-connect - defined here after all hooks
-  const handleHandleClick = useCallback((nodeId: string, handleId: string, type: 'source' | 'target') => {
-    if (!isEditMode) return;
-
-    if (!selectedHandle) {
-      // First click - select this handle
-      setSelectedHandle({ nodeId, handleId, type });
-    } else {
-      // Second click - create connection
-      // Determine source and target based on handle types
-      let source = selectedHandle.type === 'source' ? selectedHandle.nodeId : nodeId;
-      let sourceHandle = selectedHandle.type === 'source' ? selectedHandle.handleId : handleId;
-      let target = selectedHandle.type === 'source' ? nodeId : selectedHandle.nodeId;
-      let targetHandle = selectedHandle.type === 'source' ? handleId : selectedHandle.handleId;
-
-      // Create the edge
-      setEdges((eds) => addEdge({
-        source,
-        sourceHandle,
-        target,
-        targetHandle,
-        type: 'smoothstep',
-        animated: false,
-        style: { stroke: '#6366f1', strokeWidth: 2.5 },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: '#6366f1',
-        }
-      }, eds));
-
-      setHasUnsavedChanges(true);
-      setSelectedHandle(null);
-    }
-  }, [isEditMode, selectedHandle, setEdges, setHasUnsavedChanges]);
-
-  // Update nodes with real handleHandleClick function and selectedHandle
-  useEffect(() => {
-    setNodes((nds) => nds.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        onHandleClick: handleHandleClick,
-        selectedHandle,
-      }
-    })));
-  }, [handleHandleClick, selectedHandle, setNodes]);
-
   // Define custom node types
   const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
 
@@ -687,10 +570,7 @@ export function FlowchartEditor({
         snapToGrid={isEditMode}
         snapGrid={[gridSize, gridSize]}
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
-        onPaneClick={() => {
-          setSelectedEdge(null);
-          setSelectedHandle(null);
-        }}
+        onPaneClick={() => setSelectedEdge(null)}
       >
         {isEditMode && (
           <>
