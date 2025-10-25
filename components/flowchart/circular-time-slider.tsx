@@ -31,7 +31,7 @@ export function CircularTimeSlider({
     }
   }, []);
 
-  const getAngleFromPoint = (clientX: number, clientY: number): number => {
+  const getAngleFromPoint = useCallback((clientX: number, clientY: number): number => {
     if (!containerRef.current) return 0;
 
     const rect = containerRef.current.getBoundingClientRect();
@@ -43,9 +43,9 @@ export function CircularTimeSlider({
     if (angle < 0) angle += 360;
 
     return angle;
-  };
+  }, [center.x, center.y]);
 
-  const getMinutesFromAngle = (angle: number): number => {
+  const getMinutesFromAngle = useCallback((angle: number): number => {
     // Convert angle (0-360) to minutes (0-maxMinutes)
     let minutes = Math.round((angle / 360) * maxMinutes);
 
@@ -54,7 +54,7 @@ export function CircularTimeSlider({
 
     // Ensure within bounds
     return Math.max(0, Math.min(maxMinutes, minutes));
-  };
+  }, [maxMinutes, step]);
 
   const getAngleFromMinutes = (minutes: number): number => {
     return (minutes / maxMinutes) * 360;

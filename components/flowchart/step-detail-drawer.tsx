@@ -662,7 +662,7 @@ export function StepDetailDrawer({
                 <label className="ml-auto flex items-center gap-2 cursor-pointer">
                   <Checkbox
                     checked={showAllTasks}
-                    onCheckedChange={setShowAllTasks}
+                    onCheckedChange={(checked) => setShowAllTasks(checked === true)}
                     className="h-4 w-4"
                   />
                   <span className="text-xs text-blue-700 font-medium">Show All Tasks</span>
