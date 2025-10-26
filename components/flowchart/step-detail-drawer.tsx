@@ -1,7 +1,7 @@
 "use client"
 
 import { FlowchartStep, FlowchartTask, TaskNote } from "@/lib/flowchart-data";
-import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, SIIReference } from "@/lib/sii-documents";
+import { extractSIIReferences, groupReferencesByDocument, openSIIDocument, parseSIIReference, SIIReference } from "@/lib/sii-documents";
 import { getSectionPage } from "@/lib/sii-page-mapping";
 import { getIncludedServiceTypes, SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import type { PDFMetadata } from "@/lib/pdf-metadata";
@@ -106,6 +106,11 @@ export function StepDetailDrawer({
   // Extract SII references from filtered task descriptions
   const siiReferences = useMemo(() => step ? extractSIIReferences(filteredTasks) : [], [filteredTasks, step]);
   const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
+
+  // Identify tasks WITHOUT SII references
+  const tasksWithoutSII = useMemo(() => {
+    return filteredTasks.filter(task => !parseSIIReference(task.description));
+  }, [filteredTasks]);
 
   // Count ALL filtered tasks, not just those with SII references
   const completedTasks = filteredTasks.filter(t => t.completed).length;
@@ -380,7 +385,8 @@ export function StepDetailDrawer({
                   const tasks = filteredTasks.map((taskObj, idx) => {
                     // Try to extract reference number from description
                     const taskMatch = taskObj.description.match(/^([\d.\-]+)\s+(.+)$/);
-                    const ref = taskMatch ? taskMatch[1] : `${idx + 1}`;
+                    // Use task ID as fallback to ensure uniqueness, not index
+                    const ref = taskMatch ? taskMatch[1] : taskObj.id;
                     const desc = taskMatch ? taskMatch[2] : taskObj.description;
 
                     const isCompleted = taskObj?.completed || false;
@@ -424,6 +430,12 @@ export function StepDetailDrawer({
                               return acc;
                             }, {} as Record<string, typeof inProgressTasks>);
 
+                            console.log("Grouped by service:", Object.entries(groupedByService).map(([type, tasks]) => ({
+                              type,
+                              count: tasks.length,
+                              tasks: tasks.map(t => ({ id: t.taskObj.id, desc: t.desc }))
+                            })));
+
                             return (
                               <div className="space-y-3">
                                 {Object.entries(groupedByService)
@@ -436,12 +448,13 @@ export function StepDetailDrawer({
                                   .map(([serviceType, tasks]) => (
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
+                                        console.log(`⭐ Rendering task:`, { id: taskObj.id, ref, desc });
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
                                         const isIndented = taskObj?.isIndented || false;
 
                                         return (
                                           <div
-                                            key={idx}
+                                            key={taskObj.id}
                                             className={cn(
                                               "flex items-center gap-2 text-sm py-1.5 pr-3 rounded-md overflow-hidden",
                                               isIndented && "ml-6",
@@ -614,12 +627,13 @@ export function StepDetailDrawer({
                                   .map(([serviceType, tasks]) => (
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
+                                        console.log(`⭐ Rendering task:`, { id: taskObj.id, ref, desc });
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
                                         const isIndented = taskObj?.isIndented || false;
 
                                         return (
                                           <div
-                                            key={idx}
+                                            key={taskObj.id}
                                             className={cn(
                                               "flex items-center gap-2 text-sm py-1.5 pr-3 rounded-md overflow-hidden",
                                               isIndented && "ml-6",
@@ -796,6 +810,133 @@ export function StepDetailDrawer({
               </div>
             )}
 
+            {/* Tasks WITHOUT SII References Section */}
+            {tasksWithoutSII.length > 0 && (
+              <Card className="border-l-4 border-l-gray-500 mb-4">
+                <CardContent className="pt-4 pb-4">
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-gray-600" />
+                        <p className="font-medium text-sm">General Tasks (No SII Reference)</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {tasksWithoutSII.length} task{tasksWithoutSII.length > 1 ? 's' : ''} without document references
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 mt-3">
+                      {tasksWithoutSII.map((task) => {
+                        const isCompleted = task.completed || false;
+
+                        return (
+                          <div
+                            key={task.id}
+                            className={cn(
+                              "p-2 rounded-md transition-colors",
+                              isCompleted && "bg-green-50/30"
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                checked={isCompleted}
+                                onCheckedChange={() => onTaskToggle(task.id)}
+                                className="flex-shrink-0"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className={cn(
+                                    "text-xs flex-1",
+                                    isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+                                  )}>
+                                    {task.description}
+                                  </p>
+
+                                  {/* Service Type Badge */}
+                                  {isEditMode ? (
+                                    <Popover>
+                                      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-6 px-2 text-[10px] font-mono flex-shrink-0"
+                                          style={{
+                                            backgroundColor: task.serviceType ? (SERVICE_TYPE_COLORS[task.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default) : 'white',
+                                            color: task.serviceType ? 'white' : 'black',
+                                            borderColor: task.serviceType ? 'transparent' : '#ccc'
+                                          }}
+                                        >
+                                          {task.serviceType || 'Set Type'}
+                                          <Pencil className="h-2.5 w-2.5 ml-1" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-72" onClick={(e) => e.stopPropagation()}>
+                                        <ServiceTypeSelector
+                                          currentType={task.serviceType}
+                                          onSelect={(type) => {
+                                            if (onTaskServiceTypeChange) {
+                                              onTaskServiceTypeChange(task.id, type);
+                                            }
+                                          }}
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                  ) : (
+                                    task.serviceType && (
+                                      <Badge
+                                        style={{
+                                          backgroundColor: SERVICE_TYPE_COLORS[task.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default,
+                                          color: 'white'
+                                        }}
+                                        className="text-[9px] font-mono px-1.5 py-0 flex-shrink-0"
+                                      >
+                                        {task.serviceType}
+                                      </Badge>
+                                    )
+                                  )}
+
+                                  {/* Bug Report Icon */}
+                                  {step && (
+                                    <BugReportDialog
+                                      flowchartId={flowchartId}
+                                      flowchartName={flowchartName}
+                                      stepId={step.id}
+                                      stepTitle={step.title}
+                                      taskId={task.id}
+                                      taskDescription={task.description}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Time input */}
+                              <div className="flex-shrink-0 ml-2">
+                                <TimeInput
+                                  value={task.actualTimeMinutes}
+                                  targetMinutes={step ? Math.round(step.durationMinutes / filteredTasks.length) : undefined}
+                                  onChange={(minutes) => onTaskTimeChange(task.id, minutes)}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Notes section */}
+                            <TaskNotes
+                              taskId={task.id}
+                              notes={task.notes}
+                              onAddNote={onTaskNotesChange}
+                              onEditNote={onTaskNoteEdit}
+                              onDeleteNote={onTaskNoteDelete}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* SII References Section */}
             {siiReferences.length > 0 ? (
               <>
                 <div className="mb-4">
@@ -972,13 +1113,13 @@ export function StepDetailDrawer({
                   );
                 })}
               </>
-            ) : (
+            ) : null}
+
+            {/* Show message only if there are NO tasks at all (neither SII nor non-SII) */}
+            {siiReferences.length === 0 && tasksWithoutSII.length === 0 && (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">No SII references found in this step</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Task descriptions should start with references like &quot;11.5.1 Description&quot;
-                </p>
+                <p className="text-sm text-muted-foreground">No tasks found in this step</p>
               </div>
             )}
           </TabsContent>

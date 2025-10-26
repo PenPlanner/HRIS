@@ -154,7 +154,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     // Step 1: PPE equipment on (Both technicians) - 2 tasks
     {
       id: "step-1",
-      title: "PPE equipment on\n1. Prepare for Service",
+      title: "PPE equipment on\nPrepare for Service",
       duration: "1h",
       durationMinutes: 60,
       color: getServiceTypeColor("Multi"),
@@ -162,8 +162,8 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       technician: "both",
       position: { x: 1, y: 2 },
       tasks: [
-        { id: "1-1", description: "PPE equipment on", serviceType: "1Y" },
-        { id: "1-2", description: "1. Prepare for Service", serviceType: "1Y" }
+        { id: "1-task-1", description: "PPE equipment on", serviceType: "1Y" },
+        { id: "1-task-2", description: "Prepare for Service", serviceType: "1Y" }
       ]
     },
 
