@@ -2325,8 +2325,8 @@ function FlowchartEditorInner({
         return {
           ...edge,
           style: { ...(edge.style || {}), stroke: color },
-          markerStart: edge.markerStart ? { ...edge.markerStart, color } : undefined,
-          markerEnd: edge.markerEnd ? { ...edge.markerEnd, color } : undefined,
+          markerStart: edge.markerStart && typeof edge.markerStart === 'object' ? { ...edge.markerStart, color } : edge.markerStart,
+          markerEnd: edge.markerEnd && typeof edge.markerEnd === 'object' ? { ...edge.markerEnd, color } : edge.markerEnd,
         };
       }
       return edge;
@@ -2408,7 +2408,7 @@ function FlowchartEditorInner({
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
       <ReactFlow
-        nodes={nodes}
+        nodes={nodes as any}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}

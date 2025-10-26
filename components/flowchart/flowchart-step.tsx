@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Clock, StickyNote, User, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { parseSIIReference } from "@/lib/sii-documents";
+import { parseSIIReference, SII_DOCUMENTS } from "@/lib/sii-documents";
 import { getSectionPage } from "@/lib/sii-page-mapping";
 import { useState } from "react";
 import { PDFViewerDialog } from "./pdf-viewer-dialog";
@@ -271,11 +271,12 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
     </div>
 
     {/* PDF Viewer Dialog */}
-    {pdfDocument && (
+    {pdfDocument && SII_DOCUMENTS[pdfDocument] && (
       <PDFViewerDialog
         open={pdfViewerOpen}
         onOpenChange={setPdfViewerOpen}
-        documentNumber={pdfDocument}
+        pdfUrl={`/files/flowchart/sii/${SII_DOCUMENTS[pdfDocument].filename}`}
+        title={SII_DOCUMENTS[pdfDocument].title}
         initialPage={pdfPage}
       />
     )}

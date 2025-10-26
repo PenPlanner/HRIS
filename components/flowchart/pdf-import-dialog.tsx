@@ -218,7 +218,7 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     const BASELINE_Y = 5;   // Start 5 units from top (150px)
 
     // Convert parsed data to FlowchartData format with smart positioning
-    const arrangedSteps: FlowchartStep[] = [];
+    const arrangedSteps: { step: any; position: { x: number; y: number }; colorCode: string }[] = [];
     const standalone4YSteps: any[] = [];
     let currentCol = 0;
     let stepNumber = 1;
