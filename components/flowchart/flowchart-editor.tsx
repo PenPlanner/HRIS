@@ -147,56 +147,95 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
         />
       )}
 
-      {/* Connection handles - centered in view mode, multiple in edit mode */}
+      {/* Connection handles - always present, styled differently in edit vs view mode */}
       <>
-        {isEditMode ? (
-          // EDIT MODE: Multiple handles for flexibility
-          <>
-            {/* Top handles */}
-            <Handle type="target" position={Position.Top} id="top-target"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
-              style={{ left: 'calc(50% - 20px)' }} isConnectable={true} />
-            <Handle type="source" position={Position.Top} id="top-source"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
-              style={{ left: 'calc(50% + 20px)' }} isConnectable={true} />
+        {/* Top handles - 20px outside the card */}
+        <Handle type="target" position={Position.Top} id="top-target"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            top: '-20px',
+            left: isEditMode ? 'calc(50% - 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
+        <Handle type="source" position={Position.Top} id="top-source"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            top: '-20px',
+            left: isEditMode ? 'calc(50% + 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
 
-            {/* Bottom handles */}
-            <Handle type="target" position={Position.Bottom} id="bottom-target"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
-              style={{ left: 'calc(50% - 20px)' }} isConnectable={true} />
-            <Handle type="source" position={Position.Bottom} id="bottom-source"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
-              style={{ left: 'calc(50% + 20px)' }} isConnectable={true} />
+        {/* Bottom handles - 20px outside the card */}
+        <Handle type="target" position={Position.Bottom} id="bottom-target"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            bottom: '-20px',
+            left: isEditMode ? 'calc(50% - 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
+        <Handle type="source" position={Position.Bottom} id="bottom-source"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            bottom: '-20px',
+            left: isEditMode ? 'calc(50% + 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
 
-            {/* Left handles */}
-            <Handle type="target" position={Position.Left} id="left-target"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
-              style={{ top: 'calc(50% - 20px)' }} isConnectable={true} />
-            <Handle type="source" position={Position.Left} id="left-source"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
-              style={{ top: 'calc(50% + 20px)' }} isConnectable={true} />
+        {/* Left handles - 20px outside the card */}
+        <Handle type="target" position={Position.Left} id="left-target"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            left: '-20px',
+            top: isEditMode ? 'calc(50% - 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
+        <Handle type="source" position={Position.Left} id="left-source"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            left: '-20px',
+            top: isEditMode ? 'calc(50% + 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
 
-            {/* Right handles */}
-            <Handle type="target" position={Position.Right} id="right-target"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
-              style={{ top: 'calc(50% - 20px)' }} isConnectable={true} />
-            <Handle type="source" position={Position.Right} id="right-source"
-              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
-              style={{ top: 'calc(50% + 20px)' }} isConnectable={true} />
-          </>
-        ) : (
-          // VIEW MODE: Single centered invisible handle per side (for clean centered lines)
-          <>
-            <Handle type="source" position={Position.Top} id="top"
-              className="!opacity-0 !pointer-events-none" isConnectable={false} />
-            <Handle type="source" position={Position.Bottom} id="bottom"
-              className="!opacity-0 !pointer-events-none" isConnectable={false} />
-            <Handle type="source" position={Position.Left} id="left"
-              className="!opacity-0 !pointer-events-none" isConnectable={false} />
-            <Handle type="source" position={Position.Right} id="right"
-              className="!opacity-0 !pointer-events-none" isConnectable={false} />
-          </>
-        )}
+        {/* Right handles - 20px outside the card */}
+        <Handle type="target" position={Position.Right} id="right-target"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            right: '-20px',
+            top: isEditMode ? 'calc(50% - 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
+        <Handle type="source" position={Position.Right} id="right-source"
+          className={cn(
+            "!w-4 !h-4 transition-all",
+            isEditMode ? "!cursor-crosshair hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg" : "!opacity-0 !pointer-events-none"
+          )}
+          style={{
+            right: '-20px',
+            top: isEditMode ? 'calc(50% + 20px)' : '50%'
+          }}
+          isConnectable={isEditMode} />
       </>
 
       <Card
@@ -646,7 +685,7 @@ function FlowchartEditorInner({
   }, [isEditMode]);
 
   // Update edge style
-  const updateEdgeStyle = useCallback((edgeId: string, type: 'straight' | 'smoothstep' | 'step' | 'default') => {
+  const updateEdgeStyle = useCallback((edgeId: string, type: 'straight' | 'smoothstep' | 'step' | 'default' | 'simplebezier') => {
     setEdges((eds) => eds.map(edge => {
       if (edge.id === edgeId) {
         return {
@@ -723,6 +762,53 @@ function FlowchartEditorInner({
     setHasUnsavedChanges(true);
   }, [setEdges, setHasUnsavedChanges]);
 
+  // Update edge line style (solid, dashed, dotted)
+  const updateEdgeLineStyle = useCallback((edgeId: string, lineStyle: 'solid' | 'dashed' | 'dotted') => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        const dashArray = lineStyle === 'dashed' ? '5 5' : lineStyle === 'dotted' ? '2 4' : undefined;
+        return {
+          ...edge,
+          style: { ...(edge.style || {}), strokeDasharray: dashArray },
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Update edge label
+  const updateEdgeLabel = useCallback((edgeId: string, label: string) => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          label: label || undefined,
+          labelStyle: label ? { fill: '#fff', fontWeight: 600, fontSize: 12 } : undefined,
+          labelBgStyle: label ? { fill: '#6366f1', fillOpacity: 0.9 } : undefined,
+          labelBgPadding: label ? [4, 8] as [number, number] : undefined,
+          labelBgBorderRadius: label ? 4 : undefined,
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
+  // Update edge animation duration
+  const updateEdgeAnimationDuration = useCallback((edgeId: string, duration: number) => {
+    setEdges((eds) => eds.map(edge => {
+      if (edge.id === edgeId) {
+        return {
+          ...edge,
+          style: { ...(edge.style || {}), animationDuration: `${duration}s` },
+        };
+      }
+      return edge;
+    }));
+    setHasUnsavedChanges(true);
+  }, [setEdges, setHasUnsavedChanges]);
+
   // Define custom node types
   const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
 
@@ -767,7 +853,7 @@ function FlowchartEditorInner({
 
       {/* Debug info & Help text */}
       {isEditMode && (
-        <div className="absolute bottom-2 left-2 bg-black/90 text-white text-xs p-3 rounded-lg z-50 max-w-xs">
+        <div className="absolute bottom-16 left-4 bg-black/90 text-white text-xs p-3 rounded-lg z-50 max-w-xs">
           <div className="font-bold mb-2">Edit Mode Guide:</div>
           <div className="space-y-1 mb-2">
             <div className="font-semibold text-blue-300">Connections:</div>
@@ -807,37 +893,46 @@ function FlowchartEditorInner({
                 variant={selectedEdge.type === 'smoothstep' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeStyle(selectedEdge.id, 'smoothstep')}
-                className="justify-start gap-2"
+                className="justify-start gap-2 text-xs"
               >
-                <Workflow className="h-4 w-4" />
+                <Workflow className="h-3 w-3" />
                 Smooth 90°
               </Button>
               <Button
                 variant={selectedEdge.type === 'step' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeStyle(selectedEdge.id, 'step')}
-                className="justify-start gap-2"
+                className="justify-start gap-2 text-xs"
               >
-                <TrendingUp className="h-4 w-4" />
+                <TrendingUp className="h-3 w-3" />
                 Sharp 90°
               </Button>
               <Button
                 variant={selectedEdge.type === 'straight' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeStyle(selectedEdge.id, 'straight')}
-                className="justify-start gap-2"
+                className="justify-start gap-2 text-xs"
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-3 w-3" />
                 Straight
               </Button>
               <Button
                 variant={selectedEdge.type === 'default' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeStyle(selectedEdge.id, 'default')}
-                className="justify-start gap-2"
+                className="justify-start gap-2 text-xs"
               >
-                <Workflow className="h-4 w-4" />
-                Curved
+                <Workflow className="h-3 w-3" />
+                Bezier
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'simplebezier' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'simplebezier')}
+                className="justify-start gap-2 text-xs col-span-2"
+              >
+                <Workflow className="h-3 w-3" />
+                Simple Bezier
               </Button>
             </div>
           </div>
@@ -935,7 +1030,7 @@ function FlowchartEditorInner({
                 variant={selectedEdge.style?.strokeWidth === 1.5 ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeWidth(selectedEdge.id, 1.5)}
-                className="justify-center"
+                className="justify-center text-xs"
               >
                 Thin
               </Button>
@@ -943,7 +1038,7 @@ function FlowchartEditorInner({
                 variant={selectedEdge.style?.strokeWidth === 2.5 || !selectedEdge.style?.strokeWidth ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeWidth(selectedEdge.id, 2.5)}
-                className="justify-center"
+                className="justify-center text-xs"
               >
                 Normal
               </Button>
@@ -951,12 +1046,88 @@ function FlowchartEditorInner({
                 variant={selectedEdge.style?.strokeWidth === 4 ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => updateEdgeWidth(selectedEdge.id, 4)}
-                className="justify-center"
+                className="justify-center text-xs"
               >
                 Thick
               </Button>
             </div>
           </div>
+
+          {/* Line Style (NEW) */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Line Style</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant={!selectedEdge.style?.strokeDasharray ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeLineStyle(selectedEdge.id, 'solid')}
+                className="justify-center text-xs"
+              >
+                Solid
+              </Button>
+              <Button
+                variant={selectedEdge.style?.strokeDasharray === '5 5' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeLineStyle(selectedEdge.id, 'dashed')}
+                className="justify-center text-xs"
+              >
+                Dashed
+              </Button>
+              <Button
+                variant={selectedEdge.style?.strokeDasharray === '2 4' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeLineStyle(selectedEdge.id, 'dotted')}
+                className="justify-center text-xs"
+              >
+                Dotted
+              </Button>
+            </div>
+          </div>
+
+          {/* Label (NEW) */}
+          <div className="space-y-2 mb-4 pt-3 border-t">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">Label</p>
+            <input
+              type="text"
+              placeholder="Add label text..."
+              defaultValue={selectedEdge.label as string || ''}
+              onChange={(e) => updateEdgeLabel(selectedEdge.id, e.target.value)}
+              className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            />
+          </div>
+
+          {/* Animation Speed (NEW) - Only show when animated */}
+          {selectedEdge.animated && (
+            <div className="space-y-2 mb-4 pt-3 border-t">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Animation Speed</p>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant={selectedEdge.style?.animationDuration === '0.5s' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateEdgeAnimationDuration(selectedEdge.id, 0.5)}
+                  className="justify-center text-xs"
+                >
+                  Fast
+                </Button>
+                <Button
+                  variant={!selectedEdge.style?.animationDuration || selectedEdge.style?.animationDuration === '1s' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateEdgeAnimationDuration(selectedEdge.id, 1)}
+                  className="justify-center text-xs"
+                >
+                  Normal
+                </Button>
+                <Button
+                  variant={selectedEdge.style?.animationDuration === '2s' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => updateEdgeAnimationDuration(selectedEdge.id, 2)}
+                  className="justify-center text-xs"
+                >
+                  Slow
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Delete */}
           <div className="pt-3 border-t">

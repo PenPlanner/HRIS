@@ -37,6 +37,8 @@ export default function FlowchartViewerPage() {
   const [zoom, setZoom] = useState(100);
   const [isEditMode, setIsEditMode] = useState(false);
   const [gridSize, setGridSize] = useState(30);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
 
   // State for steps (used for both view and edit mode)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
@@ -989,8 +991,10 @@ defaultEdges: ${edgesCode}
       saveFlowchart(updatedFlowchart);
       setHasUnsavedChanges(false);
 
-      // Show brief confirmation
-      alert("Changes saved automatically!");
+      // Show brief confirmation toast (auto-dismiss after 3 seconds)
+      setToastMessage("Changes saved automatically!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
     }
     setIsEditMode(!isEditMode);
   };
@@ -1403,6 +1407,45 @@ defaultEdges: ${edgesCode}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          className="fixed bottom-6 right-6 z-[9999] transition-all duration-500 ease-in-out"
+          style={{
+            animation: 'slideInUp 0.3s ease-out, fadeOut 0.5s ease-in 2.5s forwards'
+          }}
+        >
+          <div className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-green-300/50 backdrop-blur-sm">
+            <div className="text-2xl animate-bounce">✅</div>
+            <div className="font-semibold text-lg">{toastMessage}</div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slideInUp {
+          from {
+            transform: translateY(100px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: translateY(0);
+          }
+          to {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+        }
+      `}</style>
     </div>
   );
 }
