@@ -19,6 +19,7 @@ import { StepEditorDialog } from "@/components/flowchart/step-editor-dialog";
 import { extractSIIReferences } from "@/lib/sii-documents";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
 
 // Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
 const PDFImportDialog = dynamic(
@@ -1348,6 +1349,10 @@ defaultEdges: ${edgesCode}
               </Button>
             </div>
             )}
+
+            {/* Offline Status Indicator */}
+            <OfflineStatusIndicator />
+
             <Button
               variant="outline"
               size="sm"

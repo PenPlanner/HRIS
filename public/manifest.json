@@ -1,0 +1,37 @@
+{
+  "name": "HRIS - Wind Turbine Service Manager",
+  "short_name": "HRIS",
+  "description": "Offline-capable wind turbine service flowchart and documentation manager",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "View Flowcharts",
+      "short_name": "Flowcharts",
+      "description": "Open flowcharts overview",
+      "url": "/flowcharts",
+      "icons": []
+    }
+  ],
+  "prefer_related_applications": false
+}

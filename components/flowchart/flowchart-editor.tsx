@@ -90,6 +90,7 @@ interface StepNodeData {
   isEditMode: boolean;
   selectedServiceType?: string;
   gridSize: number;
+  [key: string]: unknown; // Index signature for React Flow compatibility
 }
 
 // Custom Horizontal Edge - Always draws a straight horizontal line
@@ -414,7 +415,11 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
 }
 
 // Custom node component for flowchart steps
-function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: NodeProps<StepNodeData>) {
+interface StepNodeProps extends NodeProps {
+  data: StepNodeData;
+}
+
+function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: StepNodeProps) {
   const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
@@ -956,10 +961,15 @@ interface InfoCardNodeData {
   isEditMode: boolean;
   selectedServiceType?: string;
   onServiceTypeChange?: (serviceType: string) => void;
+  [key: string]: unknown; // Index signature for React Flow compatibility
 }
 
 // Custom node component for info card
-function InfoCardNode({ data }: NodeProps<InfoCardNodeData>) {
+interface InfoCardNodeProps extends NodeProps {
+  data: InfoCardNodeData;
+}
+
+function InfoCardNode({ data }: InfoCardNodeProps) {
   const { flowchart, onUpdateFlowchart, isEditMode, selectedServiceType = "all", onServiceTypeChange } = data;
   const [editingModel, setEditingModel] = useState(false);
   const [editingTechnicians, setEditingTechnicians] = useState(false);
@@ -2204,8 +2214,8 @@ function FlowchartEditorInner({
           return {
             ...edge,
             style: { ...(edge.style || {}), stroke: '#10b981', strokeWidth: edge.style?.strokeWidth || 2.5 },
-            markerEnd: edge.markerEnd ? { ...edge.markerEnd, color: '#10b981' } : undefined,
-            markerStart: edge.markerStart ? { ...edge.markerStart, color: '#10b981' } : undefined,
+            markerEnd: edge.markerEnd && typeof edge.markerEnd === 'object' ? { ...edge.markerEnd, color: '#10b981' } : edge.markerEnd,
+            markerStart: edge.markerStart && typeof edge.markerStart === 'object' ? { ...edge.markerStart, color: '#10b981' } : edge.markerStart,
             label: edge.label || '✓',
             labelStyle: { fill: '#fff', fontWeight: 700, fontSize: 14 },
             labelBgStyle: { fill: '#10b981', fillOpacity: 0.95 },

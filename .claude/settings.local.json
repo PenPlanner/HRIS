@@ -13,7 +13,9 @@
       "Bash(awk:*)",
       "Bash(pkill:*)",
       "Bash(node calculate-positions.js:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm start)"
     ],
     "deny": [],
     "ask": []

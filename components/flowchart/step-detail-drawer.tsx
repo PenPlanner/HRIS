@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight, Download, CloudOff, Loader2 } from "lucide-react";
 import { BugReportDialog } from "../bug-report/bug-report-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
@@ -23,6 +23,7 @@ import { PDFViewerDialog } from "./pdf-viewer-dialog";
 import { TimeInput } from "./time-input";
 import { TaskNotes } from "./task-notes";
 import { Clock as ClockIcon } from "lucide-react";
+import { useOfflinePDFs } from "@/hooks/use-offline-pdfs";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;
@@ -79,6 +80,9 @@ export function StepDetailDrawer({
   // State for collapsible sections - collapsed by default
   const [inProgressOpen, setInProgressOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
+
+  // Offline PDF management
+  const { downloadPDF, isAvailable, loading: offlineLoading } = useOfflinePDFs();
 
   // Filter tasks based on selected service type
   const filteredTasks = useMemo(() => {
@@ -1132,9 +1136,43 @@ export function StepDetailDrawer({
                 {siiReferences.length > 0 && (
                   <>
                     <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <BookOpen className="h-4 w-4 text-blue-600" />
-                        <p className="text-sm font-medium">Service Instruction Instructions (SII)</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-4 w-4 text-blue-600" />
+                          <p className="text-sm font-medium">Service Instruction Instructions (SII)</p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const allRefs = Array.from(groupedReferences.entries());
+                            for (const [docNum, refs] of allRefs) {
+                              const pdfId = `sii-${docNum}`;
+                              const pdfUrl = refs[0].documentPath;
+                              if (!isAvailable(pdfId)) {
+                                try {
+                                  await downloadPDF(pdfId, pdfUrl, `Doc ${docNum}: ${refs[0].documentTitle}`);
+                                } catch (error) {
+                                  console.error(`Failed to download ${pdfId}:`, error);
+                                }
+                              }
+                            }
+                          }}
+                          disabled={offlineLoading}
+                          className="h-7 text-xs"
+                        >
+                          {offlineLoading ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-3 w-3 mr-1" />
+                              Download All
+                            </>
+                          )}
+                        </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {groupedReferences.size} SII document{groupedReferences.size > 1 ? 's' : ''} referenced in this step
@@ -1145,20 +1183,35 @@ export function StepDetailDrawer({
                     <div className="space-y-2">
                       {Array.from(groupedReferences.entries()).map(([docNum, refs]) => {
                         const metadata = pdfMetadata.get(docNum);
+                        const pdfId = `sii-${docNum}`;
+                        const pdfUrl = refs[0].documentPath;
+                        const isOffline = isAvailable(pdfId);
 
                         return (
-                          <Card key={docNum} className="hover:bg-accent cursor-pointer transition-colors">
-                            <CardContent
-                              className="pt-4 pb-4"
-                              onClick={() => openSIIDocument(refs[0])}
-                            >
+                          <Card key={docNum} className="hover:bg-accent transition-colors">
+                            <CardContent className="pt-4 pb-4">
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1">
-                                  <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                <div
+                                  className="flex items-center gap-3 flex-1 cursor-pointer"
+                                  onClick={() => openSIIDocument(refs[0])}
+                                >
+                                  <div className="relative">
+                                    <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
+                                    {isOffline && (
+                                      <CloudOff className="h-3 w-3 text-green-600 absolute -bottom-1 -right-1 bg-white rounded-full p-0.5" />
+                                    )}
+                                  </div>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium">
-                                      Doc {docNum}: {refs[0].documentTitle}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-medium">
+                                        Doc {docNum}: {refs[0].documentTitle}
+                                      </p>
+                                      {isOffline && (
+                                        <Badge variant="outline" className="text-[9px] bg-green-50 text-green-700 border-green-200">
+                                          Offline
+                                        </Badge>
+                                      )}
+                                    </div>
                                     <p className="text-xs text-muted-foreground">
                                       {refs.length} section{refs.length > 1 ? 's' : ''} referenced
                                     </p>
@@ -1183,7 +1236,33 @@ export function StepDetailDrawer({
                                     ) : null}
                                   </div>
                                 </div>
-                                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+                                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                  <Button
+                                    size="sm"
+                                    variant={isOffline ? "ghost" : "outline"}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      if (!isOffline) {
+                                        try {
+                                          await downloadPDF(pdfId, pdfUrl, `Doc ${docNum}: ${refs[0].documentTitle}`);
+                                        } catch (error) {
+                                          console.error('Download failed:', error);
+                                        }
+                                      }
+                                    }}
+                                    disabled={offlineLoading || isOffline}
+                                    className="h-8 px-2"
+                                  >
+                                    {offlineLoading ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : isOffline ? (
+                                      <CloudOff className="h-4 w-4 text-green-600" />
+                                    ) : (
+                                      <Download className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                </div>
                               </div>
                             </CardContent>
                           </Card>

@@ -4,12 +4,28 @@ import "@xyflow/react/dist/style.css"; // Import React Flow CSS before Tailwind
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "sonner";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { OnlineStatusBanner } from "@/components/online-status-banner";
+import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HRIS - Human Resources Information System",
-  description: "Modern HRIS system for managing technicians, vehicles, and training",
+  title: "HRIS - Wind Turbine Service Manager",
+  description: "Offline-capable wind turbine service flowchart and documentation manager",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "HRIS",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({
@@ -19,6 +35,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="HRIS" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"
@@ -26,6 +49,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* Service Worker Registration */}
+          <ServiceWorkerRegistration />
+
+          {/* Online/Offline Status Banner */}
+          <OnlineStatusBanner />
+
+          {/* PWA Install Prompt */}
+          <PWAInstallPrompt />
+
           {children}
           <Toaster position="top-right" />
         </ThemeProvider>
