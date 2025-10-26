@@ -175,8 +175,8 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
               <div
                 key={task.id}
                 className={cn(
-                  "grid items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden",
-                  "grid-cols-[auto_95px_1fr]",
+                  "grid items-center gap-2 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden",
+                  "grid-cols-[auto_80px_1fr]",
                   isIndented && "ml-6 text-muted-foreground"
                 )}
                 style={{
@@ -189,7 +189,7 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
                     className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                   >
                     <span className="text-[9px] font-mono font-bold text-white">
-                      {task.serviceType || "All"}
+                      {task.serviceType === "All" ? "Ext" : task.serviceType}
                     </span>
                   </div>
                 )}

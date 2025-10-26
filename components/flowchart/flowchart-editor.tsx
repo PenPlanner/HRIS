@@ -25,17 +25,20 @@ import {
   BaseEdge,
   getStraightPath,
 } from '@xyflow/react';
-import { FlowchartStep, generateStepId, parseServiceTimes, getCumulativeServiceTime } from "@/lib/flowchart-data";
+import { FlowchartStep, FlowchartData, generateStepId, parseServiceTimes, getCumulativeServiceTime } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface FlowchartEditorProps {
+  flowchart: FlowchartData;
   steps: FlowchartStep[];
   onStepsChange: (steps: FlowchartStep[]) => void;
+  onFlowchartChange?: (flowchart: FlowchartData) => void;
   onEditStep: (step: FlowchartStep) => void;
   onAddStep: () => void;
   onStepClick?: (step: FlowchartStep) => void;
@@ -44,6 +47,7 @@ interface FlowchartEditorProps {
   isEditMode: boolean;
   setHasUnsavedChanges: (value: boolean) => void;
   selectedServiceType?: string;
+  onServiceTypeChange?: (serviceType: string) => void;
   initialEdges?: Edge[];
   onEdgesChange?: (edges: Edge[]) => void;
   hideCompletedSteps?: boolean;
@@ -300,7 +304,7 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
           x2={last.x}
           y2={baseY}
           stroke="#e5e7eb"
-          strokeWidth="8"
+          strokeWidth="12"
           strokeLinecap="round"
         />
 
@@ -312,7 +316,7 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
             x2={calculateXFromTime(totalTargetTime)}
             y2={baseY}
             stroke="#10b981"
-            strokeWidth="8"
+            strokeWidth="12"
             strokeLinecap="round"
             opacity="0.9"
             className="transition-all duration-500"
@@ -341,7 +345,7 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
           x2={last.x}
           y2={baseY + 20}
           stroke="#e5e7eb"
-          strokeWidth="8"
+          strokeWidth="12"
           strokeLinecap="round"
         />
 
@@ -355,7 +359,7 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
               x2={calculateXFromTime(Math.min(totalActualTime, totalTargetTime))}
               y2={baseY + 20}
               stroke="#eab308"
-              strokeWidth="8"
+              strokeWidth="12"
               strokeLinecap="round"
               opacity="0.9"
               className="transition-all duration-500"
@@ -370,7 +374,7 @@ function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Nod
                   x2={calculateXFromTime(totalActualTime)}
                   y2={baseY + 20}
                   stroke="#ef4444"
-                  strokeWidth="8"
+                  strokeWidth="12"
                   strokeLinecap="round"
                   opacity="0.9"
                   className="transition-all duration-500"
@@ -736,8 +740,8 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                 <div
                   key={task.id}
                   className={cn(
-                    "grid items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
-                    "grid-cols-[auto_95px_1fr_auto]",
+                    "grid items-center gap-2 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
+                    "grid-cols-[auto_80px_1fr_auto]",
                     isIndented && "ml-6 text-muted-foreground"
                   )}
                   style={{
@@ -759,9 +763,8 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         }}
                         onClick={(e) => e.stopPropagation()}
                         style={{ backgroundColor: badgeColor }}
-                        className="px-2 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0 w-[42px]"
+                        className="px-1.5 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0 w-[50px]"
                       >
-                        <option value="All" style={{ backgroundColor: SERVICE_TYPE_COLORS.All, color: 'white' }}>All</option>
                         <option value="1Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["1Y"], color: 'white' }}>1Y</option>
                         <option value="2Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["2Y"], color: 'white' }}>2Y</option>
                         <option value="3Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["3Y"], color: 'white' }}>3Y</option>
@@ -771,6 +774,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         <option value="7Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["7Y"], color: 'black' }}>7Y</option>
                         <option value="10Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["10Y"], color: 'black' }}>10Y</option>
                         <option value="12Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["12Y"], color: 'white' }}>12Y</option>
+                        <option value="All" style={{ backgroundColor: SERVICE_TYPE_COLORS.All, color: 'white' }}>Ext</option>
                       </select>
                     ) : (
                       <div
@@ -778,7 +782,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                       >
                         <span className="text-[9px] font-mono font-bold text-white">
-                          {serviceType}
+                          {serviceType === "All" ? "Ext" : serviceType}
                         </span>
                       </div>
                     )
@@ -815,13 +819,13 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   ) : isEditMode ? (
                     hasRefNumber ? (
                       <>
-                        <span className="font-semibold text-white font-mono cursor-text hover:bg-blue-500/20 px-1 rounded" onClick={(e) => {
+                        <span className="font-semibold text-white font-mono cursor-text hover:bg-blue-500/20 rounded" onClick={(e) => {
                           e.stopPropagation();
                           setEditingTaskId(task.id);
                         }}>
                           {refNumber}
                         </span>
-                        <span className={cn("font-semibold text-white cursor-text hover:bg-blue-500/20 px-1 rounded", task.completed && "line-through text-gray-400")} onClick={(e) => {
+                        <span className={cn("font-semibold text-white cursor-text hover:bg-blue-500/20 rounded", task.completed && "line-through text-gray-400")} onClick={(e) => {
                           e.stopPropagation();
                           setEditingTaskId(task.id);
                         }}>
@@ -835,7 +839,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                           className={cn(
                             !isIndented ? "font-semibold" : "font-normal",
                             task.completed ? "line-through text-gray-400" : "text-white",
-                            "cursor-text hover:bg-blue-500/20 px-1 rounded"
+                            "cursor-text hover:bg-blue-500/20 rounded"
                           )}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -945,6 +949,276 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   );
 }
 
+// Info Card Node Data Interface
+interface InfoCardNodeData {
+  flowchart: FlowchartData;
+  onUpdateFlowchart: (updates: Partial<FlowchartData>) => void;
+  isEditMode: boolean;
+  selectedServiceType?: string;
+  onServiceTypeChange?: (serviceType: string) => void;
+}
+
+// Custom node component for info card
+function InfoCardNode({ data }: NodeProps<InfoCardNodeData>) {
+  const { flowchart, onUpdateFlowchart, isEditMode, selectedServiceType = "all", onServiceTypeChange } = data;
+  const [editingModel, setEditingModel] = useState(false);
+  const [editingTechnicians, setEditingTechnicians] = useState(false);
+  const [editingTotalMinutes, setEditingTotalMinutes] = useState(false);
+
+  console.log("InfoCardNode render:", { selectedServiceType, hasOnServiceTypeChange: !!onServiceTypeChange });
+
+  // Format minutes to H:M format with minutes in parentheses (e.g., "38:00h (2280m)")
+  const formatTimeWithMinutes = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}h (${minutes}m)`;
+  };
+
+  // Calculate duration from totalMinutes and number of technicians
+  const durationMinutes = Math.round(flowchart.totalMinutes / flowchart.technicians);
+  const totalTimeFormatted = formatTimeWithMinutes(flowchart.totalMinutes);
+  const downtimeFormatted = formatTimeWithMinutes(durationMinutes);
+
+  return (
+    <div className="group relative" style={{ pointerEvents: 'all' }}>
+      <Card className="w-[350px] shadow-lg border-2">
+        <CardHeader className="pb-3 bg-blue-600">
+          {isEditMode && editingModel ? (
+            <input
+              type="text"
+              defaultValue={flowchart.model}
+              autoFocus
+              onBlur={(e) => {
+                const newModel = e.target.value.trim();
+                if (newModel && newModel !== flowchart.model) {
+                  onUpdateFlowchart({ model: newModel });
+                }
+                setEditingModel(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+                if (e.key === 'Escape') {
+                  setEditingModel(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white px-2 py-1 rounded border border-blue-300 text-base font-bold text-gray-900 w-full"
+            />
+          ) : (
+            <CardTitle
+              className={cn(
+                "text-base font-bold text-white",
+                isEditMode && "cursor-pointer hover:bg-blue-700 rounded px-2 py-1"
+              )}
+              onClick={() => isEditMode && setEditingModel(true)}
+            >
+              {flowchart.model}
+            </CardTitle>
+          )}
+        </CardHeader>
+        <CardContent className="p-4 space-y-3">
+          {/* Info Table */}
+          <div className="space-y-2 text-sm">
+            <div className="border-b pb-2">
+              <div className="flex items-center gap-2 font-semibold mb-1">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span>No. of Technicians</span>
+              </div>
+              <div className="flex items-center gap-2 ml-6">
+                {isEditMode && editingTechnicians ? (
+                  <input
+                    type="number"
+                    defaultValue={flowchart.technicians}
+                    autoFocus
+                    min="1"
+                    max="10"
+                    onBlur={(e) => {
+                      const newTechnicians = parseInt(e.target.value);
+                      if (!isNaN(newTechnicians) && newTechnicians > 0 && newTechnicians !== flowchart.technicians) {
+                        onUpdateFlowchart({ technicians: newTechnicians });
+                      }
+                      setEditingTechnicians(false);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur();
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingTechnicians(false);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white px-2 py-1 rounded border border-blue-500 text-sm font-bold text-gray-900 w-20"
+                  />
+                ) : flowchart.technicians === 2 ? (
+                  <div
+                    className={cn(
+                      "flex items-center gap-2",
+                      isEditMode && "cursor-pointer hover:bg-gray-100 rounded px-1 py-0.5"
+                    )}
+                    onClick={() => isEditMode && setEditingTechnicians(true)}
+                  >
+                    <div className="flex items-center gap-1 bg-blue-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                      <Users className="h-3 w-3" />
+                      <span>T1</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-purple-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                      <Users className="h-3 w-3" />
+                      <span>T2</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span
+                    className={cn(
+                      "font-bold",
+                      isEditMode && "cursor-pointer hover:bg-gray-100 rounded px-2 py-1"
+                    )}
+                    onClick={() => isEditMode && setEditingTechnicians(true)}
+                  >
+                    {flowchart.technicians}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="border-b pb-2">
+              <div className="flex items-center gap-2 font-semibold mb-1">
+                <Timer className="h-4 w-4 text-green-600" />
+                <span className="text-xs">Total time for all techs in turbine</span>
+              </div>
+              {isEditMode && editingTotalMinutes ? (
+                <input
+                  type="number"
+                  defaultValue={flowchart.totalMinutes}
+                  autoFocus
+                  min="1"
+                  onBlur={(e) => {
+                    const newTotalMinutes = parseInt(e.target.value);
+                    if (!isNaN(newTotalMinutes) && newTotalMinutes > 0 && newTotalMinutes !== flowchart.totalMinutes) {
+                      onUpdateFlowchart({ totalMinutes: newTotalMinutes });
+                    }
+                    setEditingTotalMinutes(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    }
+                    if (e.key === 'Escape') {
+                      setEditingTotalMinutes(false);
+                    }
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white px-2 py-1 rounded border border-blue-500 text-sm font-bold text-gray-900 w-full ml-6"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    "font-bold ml-6 text-sm",
+                    isEditMode && "cursor-pointer hover:bg-gray-100 rounded px-2 py-1 inline-block"
+                  )}
+                  onClick={() => isEditMode && setEditingTotalMinutes(true)}
+                >
+                  {totalTimeFormatted}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 font-semibold mb-1">
+                <Clock className="h-4 w-4 text-orange-600" />
+                <span className="text-xs">Total downtime of turbine</span>
+              </div>
+              <div className="font-bold ml-6 text-sm">{downtimeFormatted}</div>
+            </div>
+          </div>
+
+          {/* Service Type Legend / Filter */}
+          <div className="pt-3 border-t nodrag">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-600">Service Filter</span>
+              {selectedServiceType !== "all" && onServiceTypeChange && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log("Reset clicked!");
+                    onServiceTypeChange("all");
+                  }}
+                  className="h-6 px-2 text-xs nodrag"
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+            <div className="grid grid-cols-5 gap-2 nodrag">
+              {/* First row: 1Y/12Y, 2Y, 3Y, 4Y, 5Y */}
+              {["1Y", "2Y", "3Y", "4Y", "5Y"].map((serviceType) => {
+                const isActive = selectedServiceType === serviceType;
+                return (
+                  <div
+                    key={serviceType}
+                    className={cn(
+                      "flex items-center justify-center px-2 py-1.5 rounded font-bold text-xs transition-all nodrag",
+                      onServiceTypeChange && "cursor-pointer hover:scale-105 hover:shadow-md",
+                      isActive && "ring-4 ring-blue-500 ring-offset-2 scale-105"
+                    )}
+                    style={{
+                      backgroundColor: SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS],
+                      color: "white"
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log(`Service type ${serviceType} clicked!`);
+                      onServiceTypeChange?.(serviceType);
+                    }}
+                  >
+                    {serviceType === "1Y" ? "1Y/12Y" : serviceType}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-2 grid grid-cols-4 gap-2 nodrag">
+              {/* Second row: 6Y, 7Y, 10Y, External */}
+              {[
+                { code: "6Y", label: "6Y", textColor: "white" },
+                { code: "7Y", label: "7Y", textColor: "black" },
+                { code: "10Y", label: "10Y", textColor: "black" },
+                { code: "All", label: "External", textColor: "white" }
+              ].map(({ code, label, textColor }) => {
+                const isActive = selectedServiceType === code;
+                return (
+                  <div
+                    key={code}
+                    className={cn(
+                      "flex items-center justify-center px-2 py-1.5 rounded font-bold text-xs transition-all nodrag",
+                      onServiceTypeChange && "cursor-pointer hover:scale-105 hover:shadow-md",
+                      isActive && "ring-4 ring-blue-500 ring-offset-2 scale-105"
+                    )}
+                    style={{
+                      backgroundColor: SERVICE_TYPE_COLORS[code as keyof typeof SERVICE_TYPE_COLORS],
+                      color: textColor
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log(`Service type ${code} clicked!`);
+                      onServiceTypeChange?.(code);
+                    }}
+                  >
+                    {label}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Custom heights for specific steps (for this flowchart layout)
 // These are specific to the current flowchart and not part of the import/export
 const CUSTOM_STEP_HEIGHTS: Record<string, number> = {
@@ -967,8 +1241,10 @@ const CUSTOM_STEP_HEIGHTS: Record<string, number> = {
 
 // Inner component that uses React Flow hooks
 function FlowchartEditorInner({
+  flowchart,
   steps,
   onStepsChange,
+  onFlowchartChange,
   onEditStep,
   onAddStep,
   onStepClick,
@@ -977,12 +1253,13 @@ function FlowchartEditorInner({
   isEditMode,
   setHasUnsavedChanges,
   selectedServiceType,
+  onServiceTypeChange,
   initialEdges = [],
   onEdgesChange: onEdgesChangeProp,
   hideCompletedSteps = false,
   onRealignToGrid,
   freePositioning = false,
-  layoutMode = 'topdown'
+  layoutMode = 'centered'
 }: FlowchartEditorProps) {
   // Filter steps based on hideCompletedSteps
   const displayedSteps = useMemo(() => {
@@ -1028,40 +1305,73 @@ function FlowchartEditorInner({
     setHasUnsavedChanges(true);
   }, [steps, onStepsChange, setHasUnsavedChanges]);
 
-  // Convert FlowchartStep[] to React Flow nodes
-  const initialNodes: Node<StepNodeData>[] = useMemo(() => displayedSteps.map(step => {
-    // Standard dimensions: 370px width
-    // Use custom height if defined, otherwise use default based on task count
-    const totalTasks = step.tasks.length;
-    const initialHeight = CUSTOM_STEP_HEIGHTS[step.id] ?? (totalTasks > 4 ? 450 : 350);
-    const initialWidth = 370;
+  const handleUpdateFlowchart = useCallback((updates: Partial<FlowchartData>) => {
+    const updatedFlowchart = { ...flowchart, ...updates };
+    if (onFlowchartChange) {
+      onFlowchartChange(updatedFlowchart);
+    }
+    setHasUnsavedChanges(true);
+  }, [flowchart, onFlowchartChange, setHasUnsavedChanges]);
 
-    return {
-      id: step.id,
-      type: 'stepNode',
-      position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
-      style: { width: initialWidth, height: initialHeight },
-      data: {
-        step,
-        onEdit: onEditStep,
-        onDelete: handleDelete,
-        onDuplicate: handleDuplicate,
-        onClick: onStepClick,
-        onUpdateStep: handleUpdateStep,
-        isEditMode,
-        selectedServiceType,
-        gridSize,
-      },
-      draggable: isEditMode,
-    };
-  }), [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
+  // Convert FlowchartStep[] to React Flow nodes
+  const initialNodes: Node[] = useMemo(() => {
+    const stepNodes: Node<StepNodeData>[] = displayedSteps.map(step => {
+      // Standard dimensions: 370px width
+      // Use custom height if defined, otherwise use default based on task count
+      const totalTasks = step.tasks.length;
+      const initialHeight = CUSTOM_STEP_HEIGHTS[step.id] ?? (totalTasks > 4 ? 450 : 350);
+      const initialWidth = 370;
+
+      return {
+        id: step.id,
+        type: 'stepNode',
+        position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
+        style: { width: initialWidth, height: initialHeight },
+        data: {
+          step,
+          onEdit: onEditStep,
+          onDelete: handleDelete,
+          onDuplicate: handleDuplicate,
+          onClick: onStepClick,
+          onUpdateStep: handleUpdateStep,
+          isEditMode,
+          selectedServiceType,
+          gridSize,
+        },
+        draggable: isEditMode,
+      };
+    });
+
+    // Add info card node - positioned to the left of Step 1
+    const step1 = displayedSteps.find(s => s.id === 'step-1');
+    if (step1) {
+      const infoCardNode: Node<InfoCardNodeData> = {
+        id: 'info-card',
+        type: 'infoCardNode',
+        position: {
+          x: (step1.position.x - 13) * gridSize, // 13 grid units left of step 1 (400px / 30px)
+          y: step1.position.y * gridSize
+        },
+        data: {
+          flowchart,
+          onUpdateFlowchart: handleUpdateFlowchart,
+          isEditMode,
+          selectedServiceType,
+          onServiceTypeChange,
+        },
+        draggable: isEditMode,
+      };
+      return [...stepNodes, infoCardNode];
+    }
+
+    return stepNodes;
+  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const hasLoadedInitialEdges = useRef(false);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
-  const [isLegendOpen, setIsLegendOpen] = useState(true);
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
 
@@ -1376,8 +1686,9 @@ function FlowchartEditorInner({
 
     // Layout constants (in grid units)
     const START_X_GRID = 1; // Starting X position
-    const CENTER_Y_GRID = 15; // Center Y position for the layout
-    const SPACING_GRID = 4; // Spacing between boxes
+    const SPACING_GRID = 4; // Horizontal spacing between columns
+    const PARALLEL_SPACING_GRID = 1.5; // Vertical spacing for parallel boxes from center
+    const STEP1_START_Y_GRID = 2; // Step 1 starts here
 
     // Standard box dimensions
     const calculateBoxWidth = (step: FlowchartStep): number => {
@@ -1409,6 +1720,12 @@ function FlowchartEditorInner({
       });
     });
 
+    // STEP 1 BECOMES THE CENTER REFERENCE
+    // Calculate center point as the middle of Step 1
+    const step1 = steps.find(s => s.id === "step-1");
+    const step1Height = step1 ? stepDimensions.get(step1.id)!.heightGrid : 10;
+    const CENTER_Y_GRID = STEP1_START_Y_GRID + (step1Height / 2);
+
     // Calculate max width for each column
     const columnWidthsGrid = new Map<number, number>();
     sortedColumns.forEach((colNum) => {
@@ -1439,27 +1756,82 @@ function FlowchartEditorInner({
       }
 
       // CENTER-BASED VERTICAL DISTRIBUTION
-      // Calculate total height needed for all steps in column
-      const totalHeightGrid = stepsInColumn.reduce((sum, step) => {
-        return sum + stepDimensions.get(step.id)!.heightGrid + SPACING_GRID;
-      }, 0) - SPACING_GRID; // Remove last spacing
+      // If column has only ONE box, center it at CENTER_Y_GRID
+      // If column has multiple boxes (parallels), use spacing from center line
 
-      // Start Y position so that all steps are centered around CENTER_Y_GRID
-      let currentYGrid = CENTER_Y_GRID - (totalHeightGrid / 2);
-
-      stepsInColumn.forEach((step) => {
+      if (stepsInColumn.length === 1) {
+        // Single box - center it directly at CENTER_Y_GRID
+        const step = stepsInColumn[0];
         const dimensions = stepDimensions.get(step.id)!;
+
+        let yPos;
+        if (step.id === "step-1") {
+          // Step 1 is placed at the fixed starting position
+          yPos = STEP1_START_Y_GRID;
+        } else {
+          // All other single boxes: center their middle at CENTER_Y_GRID
+          yPos = CENTER_Y_GRID - (dimensions.heightGrid / 2);
+        }
 
         newPositions.set(step.id, {
           xGrid: xPosGrid,
-          yGrid: Math.round(currentYGrid), // Round to avoid half-grid positions
+          yGrid: Math.round(yPos),
           widthPx: dimensions.widthPx,
           heightPx: dimensions.heightPx
         });
+      } else {
+        // Multiple boxes - use above/below logic with equal spacing from center
+        const boxesAbove: typeof steps = [];
+        const boxesBelow: typeof steps = [];
 
-        // Move down for next parallel step
-        currentYGrid += dimensions.heightGrid + SPACING_GRID;
-      });
+        stepsInColumn.forEach((step) => {
+          const parsed = parseStepId(step.id);
+          const minor = parsed.minor ?? 1; // Default to 1 if no minor number
+
+          if (minor % 2 === 1) {
+            // Odd minor numbers go above center
+            boxesAbove.push(step);
+          } else {
+            // Even minor numbers go below center
+            boxesBelow.push(step);
+          }
+        });
+
+        // Place boxes above center (going upward from center)
+        let currentYAbove = CENTER_Y_GRID - PARALLEL_SPACING_GRID; // Start just above center with spacing
+        boxesAbove.reverse().forEach((step) => {
+          const dimensions = stepDimensions.get(step.id)!;
+
+          // Place box so its bottom edge is at currentYAbove
+          const yPos = currentYAbove - dimensions.heightGrid;
+
+          newPositions.set(step.id, {
+            xGrid: xPosGrid,
+            yGrid: Math.round(yPos),
+            widthPx: dimensions.widthPx,
+            heightPx: dimensions.heightPx
+          });
+
+          // Move up for next box (subtract height + spacing)
+          currentYAbove = yPos - PARALLEL_SPACING_GRID;
+        });
+
+        // Place boxes below center (going downward from center)
+        let currentYBelow = CENTER_Y_GRID + PARALLEL_SPACING_GRID; // Start just below center with spacing
+        boxesBelow.forEach((step) => {
+          const dimensions = stepDimensions.get(step.id)!;
+
+          newPositions.set(step.id, {
+            xGrid: xPosGrid,
+            yGrid: Math.round(currentYBelow),
+            widthPx: dimensions.widthPx,
+            heightPx: dimensions.heightPx
+          });
+
+          // Move down for next box (add height + spacing)
+          currentYBelow += dimensions.heightGrid + PARALLEL_SPACING_GRID;
+        });
+      }
     });
 
     // Position 4Y Bolts under Step 10
@@ -1623,16 +1995,20 @@ function FlowchartEditorInner({
     }
   }, [layoutMode, handleRealignToGridCentered, handleRealignToGridTopDown]);
 
-  // Expose realign function to parent
+  // Expose realign functions to parent
   useEffect(() => {
     if (onRealignToGrid) {
-      // Create a reference that can be called from parent
+      // Expose both layout functions directly
       (window as any).__flowchartRealignToGrid = handleRealignToGrid;
+      (window as any).__flowchartRealignToGridTopDown = handleRealignToGridTopDown;
+      (window as any).__flowchartRealignToGridCentered = handleRealignToGridCentered;
     }
     return () => {
       delete (window as any).__flowchartRealignToGrid;
+      delete (window as any).__flowchartRealignToGridTopDown;
+      delete (window as any).__flowchartRealignToGridCentered;
     };
-  }, [handleRealignToGrid, onRealignToGrid]);
+  }, [handleRealignToGrid, handleRealignToGridTopDown, handleRealignToGridCentered, onRealignToGrid]);
 
   // Update node DATA only (not positions) when steps/props change
   // This prevents boxes from jumping when clicking edges
@@ -1643,8 +2019,21 @@ function FlowchartEditorInner({
 
       // Update existing nodes (keep their positions)
       const updatedNodes = nds
-        .filter(node => newStepIds.has(node.id)) // Remove deleted/hidden steps
+        .filter(node => newStepIds.has(node.id) || node.id === 'info-card') // Keep info card and valid steps
         .map((node) => {
+          // Handle info card node separately
+          if (node.id === 'info-card') {
+            return {
+              ...node,
+              data: {
+                flowchart,
+                onUpdateFlowchart: handleUpdateFlowchart,
+                isEditMode,
+              },
+              draggable: isEditMode,
+            };
+          }
+
           const step = displayedSteps.find((s) => s.id === node.id);
           if (!step) return node;
 
@@ -1697,6 +2086,31 @@ function FlowchartEditorInner({
           };
         });
 
+      // Add info card if not present
+      const hasInfoCard = updatedNodes.some(n => n.id === 'info-card');
+      if (!hasInfoCard) {
+        const step1 = displayedSteps.find(s => s.id === 'step-1');
+        if (step1) {
+          const infoCardNode: Node<InfoCardNodeData> = {
+            id: 'info-card',
+            type: 'infoCardNode',
+            position: {
+              x: (step1.position.x - 13) * gridSize,
+              y: step1.position.y * gridSize
+            },
+            data: {
+              flowchart,
+              onUpdateFlowchart: handleUpdateFlowchart,
+              isEditMode,
+              selectedServiceType,
+              onServiceTypeChange,
+            },
+            draggable: isEditMode,
+          };
+          return [...updatedNodes, ...newNodes, infoCardNode];
+        }
+      }
+
       return [...updatedNodes, ...newNodes];
     });
 
@@ -1707,7 +2121,7 @@ function FlowchartEditorInner({
         updateNodeInternals(step.id);
       });
     }, 0);
-  }, [displayedSteps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, updateNodeInternals, setNodes]);
+  }, [displayedSteps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, updateNodeInternals, setNodes, flowchart, handleUpdateFlowchart]);
 
   // Handle node drag end - update step positions
   const handleNodesChange = useCallback((changes: any) => {
@@ -1833,7 +2247,8 @@ function FlowchartEditorInner({
 
   // Handle node click to open detail drawer
   const handleNodeClick = useCallback((_event: any, node: Node<StepNodeData>) => {
-    if (!isEditMode && onStepClick) {
+    // Only handle clicks on step nodes, not info card nodes
+    if (!isEditMode && onStepClick && node.type === 'stepNode' && node.data.step) {
       onStepClick(node.data.step);
     }
   }, [isEditMode, onStepClick]);
@@ -1971,7 +2386,10 @@ function FlowchartEditorInner({
   }, [setEdges, setHasUnsavedChanges]);
 
   // Define custom node types
-  const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
+  const nodeTypes = useMemo(() => ({
+    stepNode: StepNode,
+    infoCardNode: InfoCardNode
+  }), []);
   const edgeTypes = useMemo(() => ({
     horizontal: HorizontalEdge,
     vertical: VerticalEdge
@@ -1999,6 +2417,7 @@ function FlowchartEditorInner({
         snapGrid={[gridSize, gridSize]}
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
+        proOptions={{ hideAttribution: true }}
         // Touch device support
         panOnDrag={!isEditMode ? [1, 2] : [1, 2]}
         panOnScroll={true}
@@ -2008,11 +2427,13 @@ function FlowchartEditorInner({
         // connectOnClick can cause conflicts with handle interactions
       >
         {isEditMode && (
-          <>
-            <Background variant={BackgroundVariant.Dots} gap={gridSize} size={1} color="#6366f1" />
-            <Controls />
-          </>
+          <Background variant={BackgroundVariant.Dots} gap={gridSize} size={1} color="#6366f1" />
         )}
+        <Controls
+          className="!bg-gray-800 !border-gray-600 [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-white [&_button:hover]:!bg-gray-600 [&_button]:!shadow-lg"
+          position="bottom-left"
+          style={{ bottom: '65px' }}
+        />
 
         {/* Progress Line - Shows overall completion across all steps */}
         {!isEditMode && (
@@ -2021,111 +2442,6 @@ function FlowchartEditorInner({
           </ViewportPortal>
         )}
       </ReactFlow>
-
-      {/* Legend & Guide */}
-      <div className={cn("absolute right-4 z-50 max-w-sm", isEditMode ? "bottom-16" : "bottom-16")}>
-        <div className="bg-black/90 text-white rounded-lg overflow-hidden">
-          {/* Toggle Button */}
-          <button
-            onClick={() => setIsLegendOpen(!isLegendOpen)}
-            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              <span className="font-bold text-sm">Legend & Guide</span>
-            </div>
-            {isLegendOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
-
-          {/* Content */}
-          {isLegendOpen && (
-            <div className="px-4 pb-3 text-xs space-y-3">
-              {/* Service Types */}
-              <div>
-                <div className="font-semibold text-blue-300 mb-1.5">Service Types:</div>
-                <div className="grid grid-cols-2 gap-1">
-                  {[
-                    { code: "All", label: "All Intervals" },
-                    { code: "1Y", label: "1 Year" },
-                    { code: "2Y", label: "2 Year" },
-                    { code: "3Y", label: "3 Year" },
-                    { code: "4Y", label: "4 Year" },
-                    { code: "5Y", label: "5 Year" },
-                    { code: "6Y", label: "6 Year" },
-                    { code: "7Y", label: "7 Year" },
-                    { code: "10Y", label: "10 Year" },
-                    { code: "12Y", label: "12 Year" },
-                  ].map(({ code, label }) => (
-                    <div key={code} className="flex items-center gap-1.5">
-                      <div
-                        className="w-3 h-3 rounded"
-                        style={{ backgroundColor: SERVICE_TYPE_COLORS[code as keyof typeof SERVICE_TYPE_COLORS] }}
-                      />
-                      <span className="text-[10px]">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Icons */}
-              <div className="border-t border-white/20 pt-2">
-                <div className="font-semibold text-amber-300 mb-1.5">Icons:</div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="h-3 w-3 text-blue-400" />
-                    <span>Technician (T1/T2)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3 w-3 text-green-400" />
-                    <span>Task Completed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StickyNote className="h-3 w-3 text-amber-400" />
-                    <span>Has Notes</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3 w-3 text-gray-400" />
-                    <span>Time Duration</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Bug className="h-3 w-3 text-red-400" />
-                    <span>Report Bug/Issue</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Edit Mode Guide */}
-              {isEditMode && (
-                <div className="border-t border-white/20 pt-2">
-                  <div className="font-semibold text-green-300 mb-1.5">Edit Mode:</div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-blue-400">🔵</span>
-                      <span>Blue = Target (incoming)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-green-400">🟢</span>
-                      <span>Green = Source (outgoing)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-amber-400">🟡</span>
-                      <span>Orange = Resize handles</span>
-                    </div>
-                    <div className="text-[10px] text-gray-400 mt-1">
-                      Drag Green → Blue to connect
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Stats */}
-              <div className="border-t border-white/20 pt-2 text-[10px] text-gray-400">
-                Steps: {nodes.length} | Connections: {edges.length}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Edge style selector - Enhanced menu */}
       {isEditMode && selectedEdge && (

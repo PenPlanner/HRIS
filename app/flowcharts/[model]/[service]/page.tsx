@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
@@ -66,7 +67,7 @@ export default function FlowchartViewerPage() {
   const [freePositioning, setFreePositioning] = useState(false);
 
   // State for layout mode
-  const [layoutMode, setLayoutMode] = useState<'topdown' | 'centered'>('topdown');
+  const [layoutMode, setLayoutMode] = useState<'topdown' | 'centered'>('centered');
 
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
@@ -1124,6 +1125,7 @@ defaultEdges: ${edgesCode}
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
+        {!isFullscreen && (
         <div className="border-b px-6 py-4 bg-background">
           {/* Title row */}
           <div className="flex items-center justify-between mb-3">
@@ -1182,6 +1184,16 @@ defaultEdges: ${edgesCode}
                   Export
                 </Button>
 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportToCode}
+                  className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Layout as Centered
+                </Button>
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -1198,7 +1210,13 @@ defaultEdges: ${edgesCode}
                       <button
                         onClick={() => {
                           setLayoutMode('topdown');
-                          handleRealignToGrid();
+                          // Call the specific layout function directly
+                          if ((window as any).__flowchartRealignToGridTopDown) {
+                            (window as any).__flowchartRealignToGridTopDown();
+                            setToastMessage("Applied Top-Down layout!");
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 2000);
+                          }
                         }}
                         className={cn(
                           "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
@@ -1210,7 +1228,13 @@ defaultEdges: ${edgesCode}
                       <button
                         onClick={() => {
                           setLayoutMode('centered');
-                          handleRealignToGrid();
+                          // Call the specific layout function directly
+                          if ((window as any).__flowchartRealignToGridCentered) {
+                            (window as any).__flowchartRealignToGridCentered();
+                            setToastMessage("Applied Centered layout!");
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 2000);
+                          }
                         }}
                         className={cn(
                           "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
@@ -1340,10 +1364,26 @@ defaultEdges: ${edgesCode}
             </Button>
           </div>
         </div>
+        )}
+
+        {/* Fullscreen Mode - Minimal header with just exit button */}
+        {isFullscreen && (
+          <div className="absolute top-4 right-4 z-50">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsFullscreen(false)}
+              className="bg-gray-800/90 hover:bg-gray-700 text-white border-gray-600 shadow-lg"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
 
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
         <div className="flex-1 overflow-hidden">
           <FlowchartEditor
+            flowchart={flowchartData}
             steps={steps}
             onStepsChange={setSteps}
             onEditStep={handleEditStep}
@@ -1354,6 +1394,7 @@ defaultEdges: ${edgesCode}
             isEditMode={isEditMode}
             setHasUnsavedChanges={setHasUnsavedChanges}
             selectedServiceType={selectedServiceType}
+            onServiceTypeChange={setSelectedServiceType}
             initialEdges={edges}
             onEdgesChange={setEdges}
             hideCompletedSteps={hideCompletedSteps}
@@ -1365,9 +1406,9 @@ defaultEdges: ${edgesCode}
       </div>
 
       {/* Progress Tracker Sidebar */}
-      {showProgressTracker && (
+      {showProgressTracker && !isFullscreen && (
         <div className="w-64 border-l bg-background overflow-y-auto">
-          <div className="p-4">
+          <div className="p-4 space-y-4">
             <ProgressTracker
               flowchart={flowchartData}
               steps={steps}

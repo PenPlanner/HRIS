@@ -84,6 +84,8 @@ export function StepDetailDrawer({
   const filteredTasks = useMemo(() => {
     if (!step) return [];
 
+    console.log(`Step ${step.id} has ${step.tasks.length} total tasks:`, step.tasks.map(t => t.description));
+
     // If "Show All" is enabled, return all tasks
     if (showAllTasks) return step.tasks;
 
@@ -91,12 +93,14 @@ export function StepDetailDrawer({
     if (selectedServiceType === "all") return step.tasks;
 
     const includedTypes = getIncludedServiceTypes(selectedServiceType);
-    return step.tasks.filter(task => {
+    const filtered = step.tasks.filter(task => {
       // If task has no serviceType, include it (base service)
       if (!task.serviceType) return true;
       // Check if task's serviceType is in the included types
       return includedTypes.includes(task.serviceType);
     });
+    console.log(`After filtering for ${selectedServiceType}: ${filtered.length} tasks`, filtered.map(t => t.description));
+    return filtered;
   }, [step, selectedServiceType, showAllTasks]);
 
   // Extract SII references from filtered task descriptions
@@ -385,8 +389,13 @@ export function StepDetailDrawer({
                     return { idx, ref, desc, taskObj, isCompleted, siiRef };
                   });
 
+                  console.log(`Parsed tasks for ${step.id}:`, tasks.map(t => ({ idx: t.idx, ref: t.ref, desc: t.desc, serviceType: t.taskObj.serviceType })));
+
                   const inProgressTasks = tasks.filter(t => !t.isCompleted);
                   const completedTasks = tasks.filter(t => t.isCompleted);
+
+                  console.log(`In progress tasks:`, inProgressTasks.map(t => ({ idx: t.idx, desc: t.desc })));
+                  console.log(`Completed tasks:`, completedTasks.map(t => ({ idx: t.idx, desc: t.desc })));
 
                   return (
                     <>
