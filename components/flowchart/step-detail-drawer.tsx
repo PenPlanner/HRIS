@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight } from "lucide-react";
 import { BugReportDialog } from "../bug-report/bug-report-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
@@ -75,6 +75,10 @@ export function StepDetailDrawer({
   // State for inline editing
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState<string>("");
+
+  // State for collapsible sections - collapsed by default
+  const [inProgressOpen, setInProgressOpen] = useState(false);
+  const [completedOpen, setCompletedOpen] = useState(false);
 
   // Filter tasks based on selected service type
   const filteredTasks = useMemo(() => {
@@ -221,88 +225,68 @@ export function StepDetailDrawer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="sr-only">
             Step {step.colorCode} Details
           </DialogTitle>
 
           {/* Header Cards - Horizontal Layout */}
-          <div className="flex items-stretch gap-2 mb-4">
+          <div className="flex items-stretch gap-2 mb-3">
             {/* Technician Badge Card */}
-            <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-md px-3 py-2 flex items-center gap-2">
+            <div className="rounded-md px-2 py-1.5 flex items-center gap-1.5">
               {step.technician === "both" ? (
                 <>
-                  <div className="bg-blue-500/90 px-3 py-1.5 rounded-md">
-                    <span className="text-xs font-bold text-white">T1</span>
+                  <div className="bg-blue-500/90 px-2 py-1 rounded-md">
+                    <span className="text-[10px] font-bold text-white">T1</span>
                   </div>
-                  <div className="bg-purple-500/90 px-3 py-1.5 rounded-md">
-                    <span className="text-xs font-bold text-white">T2</span>
+                  <div className="bg-purple-500/90 px-2 py-1 rounded-md">
+                    <span className="text-[10px] font-bold text-white">T2</span>
                   </div>
                 </>
               ) : step.technician === "T1" ? (
-                <div className="bg-blue-500/90 px-3 py-1.5 rounded-md">
-                  <span className="text-xs font-bold text-white">T1</span>
+                <div className="bg-blue-500/90 px-2 py-1 rounded-md">
+                  <span className="text-[10px] font-bold text-white">T1</span>
                 </div>
               ) : (
-                <div className="bg-purple-500/90 px-3 py-1.5 rounded-md">
-                  <span className="text-xs font-bold text-white">T2</span>
+                <div className="bg-purple-500/90 px-2 py-1 rounded-md">
+                  <span className="text-[10px] font-bold text-white">T2</span>
                 </div>
               )}
             </div>
 
-            {/* Duration Card */}
-            <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2 min-w-[140px]">
-              <div className="flex items-center gap-1 text-blue-700 mb-1">
-                <Clock className="h-3 w-3" />
-                <span className="text-[10px] font-medium uppercase tracking-wide">Duration (Target)</span>
-              </div>
-              <p className="text-lg font-bold text-blue-900 mb-1.5">{formatDurationTarget(step.duration)}</p>
-
-              <div className="flex items-center gap-1 text-green-700 mt-2">
-                <ClockIcon className="h-3 w-3" />
-                <span className="text-[10px] font-medium uppercase tracking-wide">Actual Time</span>
-              </div>
-              <p className={cn(
-                "text-lg font-bold font-mono",
-                totalStepTimeMinutes === 0 ? "text-gray-500" : totalStepTimeMinutes <= step.durationMinutes ? "text-green-900" : "text-red-900"
-              )}>
-                {formatTime(totalStepTimeMinutes)}
-              </p>
-            </div>
-
             {/* Progress Card */}
             <div className={cn(
-              "border rounded-md px-3 py-2 flex items-center gap-3",
-              isComplete ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
+              "border rounded-md px-2 py-1.5 flex items-center gap-2",
+              isComplete ? "bg-green-50 border-green-200" : "border-gray-200"
             )}>
-              <div className="relative w-16 h-16 flex-shrink-0">
+              <div className="relative w-10 h-10 flex-shrink-0">
                 {/* Background Circle */}
-                <svg className="w-16 h-16 transform -rotate-90">
+                <svg className="w-10 h-10 transform -rotate-90">
                   <circle
-                    cx="32"
-                    cy="32"
-                    r="26"
+                    cx="20"
+                    cy="20"
+                    r="16"
                     stroke="currentColor"
-                    strokeWidth="5"
+                    strokeWidth="3"
                     fill="none"
                     className={cn(
-                      isComplete ? "text-green-200" : "text-yellow-200"
+                      isComplete ? "text-green-200" : "text-gray-200"
                     )}
                   />
                   {/* Progress Circle */}
                   <circle
-                    cx="32"
-                    cy="32"
-                    r="26"
+                    cx="20"
+                    cy="20"
+                    r="16"
                     stroke="currentColor"
-                    strokeWidth="5"
+                    strokeWidth="3"
                     fill="none"
-                    strokeDasharray={`${2 * Math.PI * 26}`}
-                    strokeDashoffset={`${2 * Math.PI * 26 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
+                    strokeDasharray={`${2 * Math.PI * 16}`}
+                    strokeDashoffset={`${2 * Math.PI * 16 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
                     className={cn(
                       "transition-all duration-500",
-                      isComplete ? "text-green-500" : "text-yellow-500"
+                      isComplete ? "text-green-500" : "text-blue-500"
                     )}
                     strokeLinecap="round"
                   />
@@ -311,37 +295,51 @@ export function StepDetailDrawer({
                 {/* Center Content */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   {isComplete ? (
-                    <CheckCircle2 className="h-7 w-7 text-green-600" />
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                   ) : (
-                    <>
-                      <p className="text-base font-bold leading-none text-yellow-700">
-                        {completedTasks}/{totalTasks}
-                      </p>
-                      <p className="text-[8px] font-medium uppercase tracking-wide mt-0.5 text-yellow-600">
-                        Tasks
-                      </p>
-                    </>
+                    <Clock className="h-4 w-4 text-blue-600" />
                   )}
                 </div>
+              </div>
+
+              {/* Time Info */}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-gray-500 uppercase tracking-wide">Target:</span>
+                  <span className="text-[10px] font-semibold text-gray-700 font-mono">
+                    {formatDurationTarget(step.duration)}
+                  </span>
+                </div>
+                {totalStepTimeMinutes > 0 && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-gray-500 uppercase tracking-wide">Actual:</span>
+                    <span className={cn(
+                      "text-[10px] font-semibold font-mono",
+                      totalStepTimeMinutes <= step.durationMinutes ? "text-green-700" : "text-red-700"
+                    )}>
+                      {formatTime(totalStepTimeMinutes)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Completion Info */}
               {isComplete && step.completedAt && (
                 <div>
-                  <p className="text-sm font-bold text-green-700 font-mono leading-tight">
+                  <p className="text-[10px] font-bold text-green-700 font-mono leading-tight">
                     {new Date(step.completedAt).toLocaleDateString('sv-SE', {
                       year: 'numeric',
                       month: '2-digit',
                       day: '2-digit'
                     })}
                   </p>
-                  <p className="text-sm font-bold text-green-700 font-mono">
+                  <p className="text-[10px] font-bold text-green-700 font-mono">
                     {new Date(step.completedAt).toLocaleTimeString('sv-SE', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
                   </p>
-                  <p className="text-[9px] font-medium uppercase tracking-wide text-green-600 mt-0.5">
+                  <p className="text-[8px] font-medium uppercase tracking-wide text-green-600">
                     Completed
                   </p>
                 </div>
@@ -395,10 +393,18 @@ export function StepDetailDrawer({
                       {/* In Progress Section */}
                       {inProgressTasks.length > 0 && (
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                            In Progress
-                          </p>
-                          {(() => {
+                          <button
+                            onClick={() => setInProgressOpen(!inProgressOpen)}
+                            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5 hover:text-gray-700 transition-colors"
+                          >
+                            {inProgressOpen ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            In Progress ({inProgressTasks.length})
+                          </button>
+                          {inProgressOpen && (() => {
                             // Group tasks by service type
                             const groupedByService = inProgressTasks.reduce((acc, task) => {
                               const serviceType = task.taskObj?.serviceType || '1Y';
@@ -474,7 +480,7 @@ export function StepDetailDrawer({
                                                     ? '#6B7280'
                                                     : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
                                                 }}
-                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 self-stretch"
+                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 self-stretch w-[50px]"
                                               >
                                                 <span className="text-[10px] font-mono font-bold text-white">
                                                   {serviceType}
@@ -484,9 +490,10 @@ export function StepDetailDrawer({
                                             {siiRef ? (
                                               <button
                                                 onClick={() => openPdfViewer(siiRef)}
-                                                className="font-mono text-xs text-blue-600 font-medium flex-shrink-0 hover:text-blue-800 hover:underline cursor-pointer"
+                                                className="font-mono text-xs text-blue-600 font-medium flex-shrink-0 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
                                                 title={`View PDF at section ${siiRef.section}`}
                                               >
+                                                <FileText className="h-3 w-3" />
                                                 {ref}
                                               </button>
                                             ) : (
@@ -564,10 +571,18 @@ export function StepDetailDrawer({
                       {/* Completed Section */}
                       {completedTasks.length > 0 && (
                         <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-green-600 mb-1.5">
-                            Completed
-                          </p>
-                          {(() => {
+                          <button
+                            onClick={() => setCompletedOpen(!completedOpen)}
+                            className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-green-600 mb-1.5 hover:text-green-700 transition-colors"
+                          >
+                            {completedOpen ? (
+                              <ChevronDown className="h-3 w-3" />
+                            ) : (
+                              <ChevronRight className="h-3 w-3" />
+                            )}
+                            Completed ({completedTasks.length})
+                          </button>
+                          {completedOpen && (() => {
                             // Group completed tasks by service type
                             const groupedByService = completedTasks.reduce((acc, task) => {
                               const serviceType = task.taskObj?.serviceType || '1Y';
@@ -643,7 +658,7 @@ export function StepDetailDrawer({
                                                     ? '#6B7280'
                                                     : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
                                                 }}
-                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 opacity-90 self-stretch"
+                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 opacity-90 self-stretch w-[50px]"
                                               >
                                                 <span className="text-[10px] font-mono font-bold text-white">
                                                   {serviceType}
@@ -654,9 +669,10 @@ export function StepDetailDrawer({
                                             {siiRef ? (
                                               <button
                                                 onClick={() => openPdfViewer(siiRef)}
-                                                className="font-mono text-xs text-white/90 font-medium flex-shrink-0 hover:text-white hover:underline cursor-pointer line-through"
+                                                className="font-mono text-xs text-white/90 font-medium flex-shrink-0 hover:text-white hover:underline cursor-pointer line-through flex items-center gap-1"
                                                 title={`View PDF at section ${siiRef.section}`}
                                               >
+                                                <FileText className="h-3 w-3" />
                                                 {ref}
                                               </button>
                                             ) : (
@@ -815,21 +831,6 @@ export function StepDetailDrawer({
                                 PDF
                               </Button>
                             </div>
-                            <div className="mt-1 space-y-1">
-                              <p className="text-xs text-muted-foreground">
-                                {refs.length} section{refs.length > 1 ? 's' : ''} referenced · {completedCount}/{totalCount} completed
-                              </p>
-                              {/* Progress bar */}
-                              <div className="w-48 bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                                <div
-                                  className={cn(
-                                    "h-full rounded-full transition-all",
-                                    isDocComplete ? "bg-green-500" : "bg-blue-500"
-                                  )}
-                                  style={{ width: `${progressPercent}%` }}
-                                />
-                              </div>
-                            </div>
                           </div>
 
                         {/* List all sections from this document with checkboxes */}
@@ -858,9 +859,10 @@ export function StepDetailDrawer({
                                     <div className="flex items-center gap-2">
                                       <button
                                         onClick={() => openPdfViewer(ref)}
-                                        className="font-mono text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer flex-shrink-0"
+                                        className="font-mono text-xs text-blue-600 font-medium hover:text-blue-800 hover:underline cursor-pointer flex-shrink-0 flex items-center gap-1"
                                         title={`View PDF at section ${ref.section}`}
                                       >
+                                        <FileText className="h-3 w-3" />
                                         § {ref.section}
                                       </button>
                                       <div className="flex items-center gap-2 flex-1">

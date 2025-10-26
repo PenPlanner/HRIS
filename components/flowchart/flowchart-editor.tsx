@@ -29,7 +29,7 @@ import { FlowchartStep, generateStepId, parseServiceTimes, getCumulativeServiceT
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 
@@ -49,6 +49,7 @@ interface FlowchartEditorProps {
   hideCompletedSteps?: boolean;
   onRealignToGrid?: () => void;
   freePositioning?: boolean;
+  layoutMode?: 'topdown' | 'centered';
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -671,13 +672,25 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
           <div className="flex gap-1">
             {step.technician === "both" ? (
               <>
-                <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0">T1</Badge>
-                <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0">T2</Badge>
+                <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0 flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  T1
+                </Badge>
+                <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0 flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  T2
+                </Badge>
               </>
             ) : step.technician === "T1" ? (
-              <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0">T1</Badge>
+              <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0 flex items-center gap-1">
+                <User className="h-3 w-3" />
+                T1
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0">T2</Badge>
+              <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0 flex items-center gap-1">
+                <User className="h-3 w-3" />
+                T2
+              </Badge>
             )}
           </div>
         </div>
@@ -685,7 +698,13 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
         {/* Step Content - Task list with scroll if needed */}
         <div className="flex-1 flex flex-col min-h-0 mt-2">
           {/* Task list - compact format - scrollable if overflow */}
-          <div className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2 scrollbar-thin">
+          <div
+            className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2 scrollbar-thin"
+            onWheel={(e) => {
+              // Stop propagation to prevent React Flow from zooming
+              e.stopPropagation();
+            }}
+          >
             {step.tasks.map((task) => {
               // Check if task is indented (sub-task)
               const isIndented = task.isIndented || false;
@@ -705,11 +724,20 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
               const serviceType = task.serviceType || "All";
               const badgeColor = SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
 
+              // Split reference number and description
+              // Matches patterns like: "13.5.1.Lift", "13.5.1 Lift", "3.5.1-4.71 ResQ", "6.5.2.11 Visual"
+              // Note: \.? matches optional trailing dot but doesn't include it in capture group
+              const refMatch = task.description.match(/^(\d+(?:\.\d+)*(?:-\d+(?:\.\d+)*)*)\.?\s*(.+)$/);
+              const hasRefNumber = refMatch !== null;
+              const refNumber = refMatch ? refMatch[1] : '';
+              const description = refMatch ? refMatch[2] : task.description;
+
               return (
                 <div
                   key={task.id}
                   className={cn(
-                    "flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
+                    "grid items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
+                    "grid-cols-[auto_95px_1fr_auto]",
                     isIndented && "ml-6 text-muted-foreground"
                   )}
                   style={{
@@ -731,7 +759,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         }}
                         onClick={(e) => e.stopPropagation()}
                         style={{ backgroundColor: badgeColor }}
-                        className="px-2 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0"
+                        className="px-2 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0 w-[42px]"
                       >
                         <option value="All" style={{ backgroundColor: SERVICE_TYPE_COLORS.All, color: 'white' }}>All</option>
                         <option value="1Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["1Y"], color: 'white' }}>1Y</option>
@@ -747,7 +775,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                     ) : (
                       <div
                         style={{ backgroundColor: badgeColor }}
-                        className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
+                        className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                       >
                         <span className="text-[9px] font-mono font-bold text-white">
                           {serviceType}
@@ -785,30 +813,63 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                       className="flex-1 bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-blue-500 text-xs text-foreground"
                     />
                   ) : isEditMode ? (
-                    <span
-                      className={cn(
-                        !isIndented ? "font-semibold" : "font-normal",
-                        "flex-1",
-                        task.completed ? "line-through text-gray-400" : "text-white",
-                        "cursor-text hover:bg-blue-500/20 px-1 rounded"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingTaskId(task.id);
-                      }}
-                    >
-                      {task.description}
-                    </span>
+                    hasRefNumber ? (
+                      <>
+                        <span className="font-semibold text-white font-mono cursor-text hover:bg-blue-500/20 px-1 rounded" onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTaskId(task.id);
+                        }}>
+                          {refNumber}
+                        </span>
+                        <span className={cn("font-semibold text-white cursor-text hover:bg-blue-500/20 px-1 rounded", task.completed && "line-through text-gray-400")} onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTaskId(task.id);
+                        }}>
+                          {description}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span></span>
+                        <span
+                          className={cn(
+                            !isIndented ? "font-semibold" : "font-normal",
+                            task.completed ? "line-through text-gray-400" : "text-white",
+                            "cursor-text hover:bg-blue-500/20 px-1 rounded"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingTaskId(task.id);
+                          }}
+                        >
+                          {task.description}
+                        </span>
+                      </>
+                    )
                   ) : (
-                    <span
-                      className={cn(
-                        !isIndented ? "font-semibold" : "font-normal",
-                        "line-clamp-1 flex-1",
-                        task.completed ? "line-through text-gray-400" : "text-white"
-                      )}
-                    >
-                      {task.description}
-                    </span>
+                    hasRefNumber ? (
+                      <>
+                        <span className="font-semibold text-white font-mono">
+                          {refNumber}
+                        </span>
+                        <span className={cn("font-semibold text-white line-clamp-1", task.completed && "line-through text-gray-400")}>
+                          {description}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span></span>
+                        <span
+                          className={cn(
+                            !isIndented ? "font-semibold" : "font-normal",
+                            "line-clamp-1",
+                            task.completed ? "line-through text-gray-400" : "text-white"
+                          )}
+                        >
+                          {task.description}
+                        </span>
+                      </>
+                    )
                   )}
                   {task.completed && (
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
@@ -884,6 +945,26 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   );
 }
 
+// Custom heights for specific steps (for this flowchart layout)
+// These are specific to the current flowchart and not part of the import/export
+const CUSTOM_STEP_HEIGHTS: Record<string, number> = {
+  "step-1": 290,
+  "step-2-1": 450,
+  "step-2-2": 420,
+  "step-3": 450,
+  "step-4": 660,
+  "step-5-1": 510,
+  "step-5-2": 800,
+  "step-6": 320,
+  "step-7": 480,
+  "step-8-1": 420,
+  "step-8-2": 420,
+  "step-9-1": 350,
+  "step-9-2": 420,
+  "step-10": 420,
+  "step-4y-bolts": 350
+};
+
 // Inner component that uses React Flow hooks
 function FlowchartEditorInner({
   steps,
@@ -900,7 +981,8 @@ function FlowchartEditorInner({
   onEdgesChange: onEdgesChangeProp,
   hideCompletedSteps = false,
   onRealignToGrid,
-  freePositioning = false
+  freePositioning = false,
+  layoutMode = 'topdown'
 }: FlowchartEditorProps) {
   // Filter steps based on hideCompletedSteps
   const displayedSteps = useMemo(() => {
@@ -948,18 +1030,17 @@ function FlowchartEditorInner({
 
   // Convert FlowchartStep[] to React Flow nodes
   const initialNodes: Node<StepNodeData>[] = useMemo(() => displayedSteps.map(step => {
-    // Calculate initial height based on ALL tasks
+    // Standard dimensions: 370px width
+    // Use custom height if defined, otherwise use default based on task count
     const totalTasks = step.tasks.length;
-    const estimatedHeight = 100 + (totalTasks * 24);
-    const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
-    const heightWithPadding = gridAlignedHeight + 60;
-    const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
+    const initialHeight = CUSTOM_STEP_HEIGHTS[step.id] ?? (totalTasks > 4 ? 450 : 350);
+    const initialWidth = 370;
 
     return {
       id: step.id,
       type: 'stepNode',
       position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
-      style: { width: 300, height: initialHeight },
+      style: { width: initialWidth, height: initialHeight },
       data: {
         step,
         onEdit: onEditStep,
@@ -980,35 +1061,567 @@ function FlowchartEditorInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const hasLoadedInitialEdges = useRef(false);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
+  const [isLegendOpen, setIsLegendOpen] = useState(true);
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Re-align all nodes to grid - snaps positions to nearest grid point
-  const handleRealignToGrid = useCallback(() => {
+  // Re-align all nodes to grid - Auto-layout with intelligent positioning (TOP-DOWN)
+  const handleRealignToGridTopDown = useCallback(() => {
+    // Parse step number from ID (e.g., "step-2-1" -> {major: 2, minor: 1})
+    const parseStepId = (stepId: string): { major: number; minor?: number; original: string; is4YBolts: boolean } => {
+      // Handle special cases - 4Y bolts should be in column 10
+      if (stepId === "step-4y-bolts") return { major: 10, original: stepId, is4YBolts: true };
+
+      const idPart = stepId.replace('step-', '');
+      const parts = idPart.split('-').map(p => parseInt(p)).filter(n => !isNaN(n));
+
+      return {
+        major: parts[0] || 0,
+        minor: parts[1],
+        original: stepId,
+        is4YBolts: false
+      };
+    };
+
+    // Separate 4Y bolts from regular steps
+    const boltsStep = steps.find(s => s.id === "step-4y-bolts");
+    const regularSteps = steps.filter(s => s.id !== "step-4y-bolts");
+
+    // Group regular steps by major number (column)
+    const stepsByColumn = new Map<number, typeof steps>();
+    regularSteps.forEach(step => {
+      const parsed = parseStepId(step.id);
+      if (!stepsByColumn.has(parsed.major)) {
+        stepsByColumn.set(parsed.major, []);
+      }
+      stepsByColumn.get(parsed.major)!.push(step);
+    });
+
+    // Sort columns
+    const sortedColumns = Array.from(stepsByColumn.keys()).sort((a, b) => a - b);
+
+    // Layout constants (in grid units)
+    const START_X_GRID = 1; // Starting X position (1 grid unit = 30px)
+    const START_Y_GRID = 5; // Starting Y position (5 grid units = 150px) - room for progress tracker
+    const SPACING_GRID = 4; // Spacing between boxes (4 grid units = 120px)
+
+    // Standard box dimensions
+    const calculateBoxWidth = (step: FlowchartStep): number => {
+      return 370; // Standard width for all boxes
+    };
+
+    // Calculate box height based on task count (in pixels)
+    const calculateBoxHeight = (step: FlowchartStep): number => {
+      // Use custom height if defined, otherwise use default based on task count
+      if (CUSTOM_STEP_HEIGHTS[step.id]) {
+        return CUSTOM_STEP_HEIGHTS[step.id];
+      }
+
+      const totalTasks = step.tasks.length;
+      // 450px if more than 4 tasks, 350px if 4 or fewer
+      return totalTasks > 4 ? 450 : 350;
+    };
+
+    // First pass: Calculate widths and heights for all steps (in grid units)
+    const stepDimensions = new Map<string, { widthGrid: number; heightGrid: number; widthPx: number; heightPx: number }>();
+    steps.forEach(step => {
+      const widthPx = calculateBoxWidth(step);
+      const heightPx = calculateBoxHeight(step);
+      stepDimensions.set(step.id, {
+        widthGrid: Math.ceil(widthPx / gridSize), // Convert to grid units
+        heightGrid: Math.ceil(heightPx / gridSize),
+        widthPx: widthPx,
+        heightPx: heightPx
+      });
+    });
+
+    // Calculate max width for each column (in grid units)
+    const columnWidthsGrid = new Map<number, number>();
+    sortedColumns.forEach((colNum) => {
+      const stepsInColumn = stepsByColumn.get(colNum)!;
+      const maxWidthGrid = Math.max(...stepsInColumn.map(s => stepDimensions.get(s.id)!.widthGrid));
+      columnWidthsGrid.set(colNum, maxWidthGrid);
+    });
+
+    // Calculate positions for all steps (in grid units)
+    const newPositions = new Map<string, { xGrid: number; yGrid: number; widthPx: number; heightPx: number }>();
+
+    sortedColumns.forEach((colNum, colIndex) => {
+      const stepsInColumn = stepsByColumn.get(colNum)!;
+
+      // Sort steps in column by minor number
+      stepsInColumn.sort((a, b) => {
+        const aMinor = parseStepId(a.id).minor ?? 0;
+        const bMinor = parseStepId(b.id).minor ?? 0;
+        return aMinor - bMinor;
+      });
+
+      // Calculate X position for this column based on previous columns' widths (in grid units)
+      let xPosGrid = START_X_GRID;
+      for (let i = 0; i < colIndex; i++) {
+        const prevColNum = sortedColumns[i];
+        const prevColWidthGrid = columnWidthsGrid.get(prevColNum)!;
+        xPosGrid += prevColWidthGrid + SPACING_GRID;
+      }
+
+      // Position steps vertically in this column (in grid units)
+      let currentYGrid = START_Y_GRID;
+      stepsInColumn.forEach((step) => {
+        const dimensions = stepDimensions.get(step.id)!;
+
+        newPositions.set(step.id, {
+          xGrid: xPosGrid,
+          yGrid: currentYGrid,
+          widthPx: dimensions.widthPx,
+          heightPx: dimensions.heightPx
+        });
+
+        // Move down for next parallel step (box height + spacing in grid units)
+        currentYGrid += dimensions.heightGrid + SPACING_GRID;
+      });
+    });
+
+    // Position 4Y Bolts under Step 10
+    if (boltsStep) {
+      const step10 = regularSteps.find(s => s.id === "step-10");
+      if (step10) {
+        const step10Pos = newPositions.get(step10.id);
+        const boltsDimensions = stepDimensions.get(boltsStep.id);
+
+        if (step10Pos && boltsDimensions) {
+          // Place 4Y bolts at same X as step-10, but 4 grid units below
+          newPositions.set(boltsStep.id, {
+            xGrid: step10Pos.xGrid,
+            yGrid: step10Pos.yGrid + stepDimensions.get(step10.id)!.heightGrid + SPACING_GRID,
+            widthPx: boltsDimensions.widthPx,
+            heightPx: boltsDimensions.heightPx
+          });
+        }
+      }
+    }
+
+    // Update nodes with new positions (convert grid units to pixels for React Flow)
     setNodes((nds) =>
       nds.map((node) => {
-        // Round position to nearest grid point
-        const alignedX = Math.round(node.position.x / gridSize) * gridSize;
-        const alignedY = Math.round(node.position.y / gridSize) * gridSize;
+        const newPos = newPositions.get(node.id);
+        if (newPos) {
+          return {
+            ...node,
+            position: {
+              x: newPos.xGrid * gridSize,
+              y: newPos.yGrid * gridSize
+            },
+            style: { ...node.style, width: newPos.widthPx, height: newPos.heightPx }
+          };
+        }
+        return node;
+      })
+    );
 
+    // Update step positions in parent state (already in grid units)
+    const layoutSteps = steps.map(step => {
+      const newPos = newPositions.get(step.id);
+      if (newPos) {
         return {
-          ...node,
-          position: { x: alignedX, y: alignedY }
+          ...step,
+          position: {
+            x: newPos.xGrid,
+            y: newPos.yGrid
+          }
         };
+      }
+      return step;
+    });
+    onStepsChange(layoutSteps);
+
+    // AUTO-GENERATE EDGES based on technician flow
+    const generateEdges = (): Edge[] => {
+      const newEdges: Edge[] = [];
+
+      sortedColumns.forEach((colNum, colIndex) => {
+        // Skip if this is the last column
+        if (colIndex >= sortedColumns.length - 1) return;
+
+        const currentSteps = stepsByColumn.get(colNum)!;
+        const nextColNum = sortedColumns[colIndex + 1];
+        const nextSteps = stepsByColumn.get(nextColNum)!;
+
+        // Check if current column or next column has parallel steps
+        const currentColHasParallel = currentSteps.length > 1;
+        const nextColHasParallel = nextSteps.length > 1;
+
+        currentSteps.forEach((currentStep) => {
+          const currentTech = currentStep.technician;
+
+          nextSteps.forEach((nextStep) => {
+            const nextTech = nextStep.technician;
+
+            // Determine if we should connect these steps
+            let shouldConnect = false;
+
+            if (currentTech === "both") {
+              // "both" connects to all next steps
+              shouldConnect = true;
+            } else if (nextTech === "both") {
+              // All current steps connect to "both"
+              shouldConnect = true;
+            } else if (currentTech === nextTech) {
+              // T1 → T1, T2 → T2
+              shouldConnect = true;
+            }
+
+            if (shouldConnect) {
+              // Use 'horizontal' for:
+              // 1. Solo-to-solo connections
+              // 2. Parallel-to-parallel connections where they have same minor number (same position: 8.1→9.1, 8.2→9.2)
+              // Use 'smoothstep' for diagonal/vertical connections (different positions)
+
+              const isSoloToSolo = !currentColHasParallel && !nextColHasParallel;
+
+              // Check if parallel steps are in same position (same minor number)
+              const currentMinor = parseStepId(currentStep.id).minor ?? 0;
+              const nextMinor = parseStepId(nextStep.id).minor ?? 0;
+              const isSamePosition = currentMinor === nextMinor;
+
+              const isHorizontal = isSoloToSolo || (currentColHasParallel && nextColHasParallel && isSamePosition);
+
+              newEdges.push({
+                id: `edge-${currentStep.id}-${nextStep.id}`,
+                source: currentStep.id,
+                target: nextStep.id,
+                sourceHandle: 'right-source',
+                targetHandle: 'left-target',
+                type: isHorizontal ? 'horizontal' : 'smoothstep',
+                animated: false,
+                style: { stroke: '#6366f1', strokeWidth: 2.5 },
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  color: '#6366f1',
+                }
+              });
+            }
+          });
+        });
+      });
+
+      // Add dotted edge from step-10 to 4Y bolts
+      if (boltsStep) {
+        const step10 = regularSteps.find(s => s.id === "step-10");
+        if (step10) {
+          newEdges.push({
+            id: `edge-step-10-4y-bolts`,
+            source: step10.id,
+            target: boltsStep.id,
+            sourceHandle: 'bottom-source',
+            targetHandle: 'top-target',
+            type: 'straight',
+            animated: false,
+            style: {
+              stroke: '#eab308',
+              strokeWidth: 2.5,
+              strokeDasharray: '5,5' // Dotted line
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#eab308',
+            }
+          });
+        }
+      }
+
+      return newEdges;
+    };
+
+    // Set the auto-generated edges
+    const autoEdges = generateEdges();
+    setEdges(autoEdges);
+
+    setHasUnsavedChanges(true);
+  }, [setNodes, setEdges, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
+
+  // Re-align all nodes to grid - CENTER-BASED layout (parallels expand from center)
+  const handleRealignToGridCentered = useCallback(() => {
+    // Parse step number from ID (e.g., "step-2-1" -> {major: 2, minor: 1})
+    const parseStepId = (stepId: string): { major: number; minor?: number; original: string; is4YBolts: boolean } => {
+      // Handle special cases - 4Y bolts should be in column 10
+      if (stepId === "step-4y-bolts") return { major: 10, original: stepId, is4YBolts: true };
+
+      const idPart = stepId.replace('step-', '');
+      const parts = idPart.split('-').map(p => parseInt(p)).filter(n => !isNaN(n));
+
+      return {
+        major: parts[0] || 0,
+        minor: parts[1],
+        original: stepId,
+        is4YBolts: false
+      };
+    };
+
+    // Separate 4Y bolts from regular steps
+    const boltsStep = steps.find(s => s.id === "step-4y-bolts");
+    const regularSteps = steps.filter(s => s.id !== "step-4y-bolts");
+
+    // Group regular steps by major number (column)
+    const stepsByColumn = new Map<number, typeof steps>();
+    regularSteps.forEach(step => {
+      const parsed = parseStepId(step.id);
+      if (!stepsByColumn.has(parsed.major)) {
+        stepsByColumn.set(parsed.major, []);
+      }
+      stepsByColumn.get(parsed.major)!.push(step);
+    });
+
+    // Sort columns
+    const sortedColumns = Array.from(stepsByColumn.keys()).sort((a, b) => a - b);
+
+    // Layout constants (in grid units)
+    const START_X_GRID = 1; // Starting X position
+    const CENTER_Y_GRID = 15; // Center Y position for the layout
+    const SPACING_GRID = 4; // Spacing between boxes
+
+    // Standard box dimensions
+    const calculateBoxWidth = (step: FlowchartStep): number => {
+      return 370; // Standard width for all boxes
+    };
+
+    // Calculate box height based on task count (in pixels)
+    const calculateBoxHeight = (step: FlowchartStep): number => {
+      // Use custom height if defined, otherwise use default based on task count
+      if (CUSTOM_STEP_HEIGHTS[step.id]) {
+        return CUSTOM_STEP_HEIGHTS[step.id];
+      }
+
+      const totalTasks = step.tasks.length;
+      // 450px if more than 4 tasks, 350px if 4 or fewer
+      return totalTasks > 4 ? 450 : 350;
+    };
+
+    // Calculate dimensions for all steps
+    const stepDimensions = new Map<string, { widthGrid: number; heightGrid: number; widthPx: number; heightPx: number }>();
+    steps.forEach(step => {
+      const widthPx = calculateBoxWidth(step);
+      const heightPx = calculateBoxHeight(step);
+      stepDimensions.set(step.id, {
+        widthGrid: Math.ceil(widthPx / gridSize),
+        heightGrid: Math.ceil(heightPx / gridSize),
+        widthPx: widthPx,
+        heightPx: heightPx
+      });
+    });
+
+    // Calculate max width for each column
+    const columnWidthsGrid = new Map<number, number>();
+    sortedColumns.forEach((colNum) => {
+      const stepsInColumn = stepsByColumn.get(colNum)!;
+      const maxWidthGrid = Math.max(...stepsInColumn.map(s => stepDimensions.get(s.id)!.widthGrid));
+      columnWidthsGrid.set(colNum, maxWidthGrid);
+    });
+
+    // Calculate positions for all steps (CENTER-BASED)
+    const newPositions = new Map<string, { xGrid: number; yGrid: number; widthPx: number; heightPx: number }>();
+
+    sortedColumns.forEach((colNum, colIndex) => {
+      const stepsInColumn = stepsByColumn.get(colNum)!;
+
+      // Sort steps in column by minor number
+      stepsInColumn.sort((a, b) => {
+        const aMinor = parseStepId(a.id).minor ?? 0;
+        const bMinor = parseStepId(b.id).minor ?? 0;
+        return aMinor - bMinor;
+      });
+
+      // Calculate X position for this column
+      let xPosGrid = START_X_GRID;
+      for (let i = 0; i < colIndex; i++) {
+        const prevColNum = sortedColumns[i];
+        const prevColWidthGrid = columnWidthsGrid.get(prevColNum)!;
+        xPosGrid += prevColWidthGrid + SPACING_GRID;
+      }
+
+      // CENTER-BASED VERTICAL DISTRIBUTION
+      // Calculate total height needed for all steps in column
+      const totalHeightGrid = stepsInColumn.reduce((sum, step) => {
+        return sum + stepDimensions.get(step.id)!.heightGrid + SPACING_GRID;
+      }, 0) - SPACING_GRID; // Remove last spacing
+
+      // Start Y position so that all steps are centered around CENTER_Y_GRID
+      let currentYGrid = CENTER_Y_GRID - (totalHeightGrid / 2);
+
+      stepsInColumn.forEach((step) => {
+        const dimensions = stepDimensions.get(step.id)!;
+
+        newPositions.set(step.id, {
+          xGrid: xPosGrid,
+          yGrid: Math.round(currentYGrid), // Round to avoid half-grid positions
+          widthPx: dimensions.widthPx,
+          heightPx: dimensions.heightPx
+        });
+
+        // Move down for next parallel step
+        currentYGrid += dimensions.heightGrid + SPACING_GRID;
+      });
+    });
+
+    // Position 4Y Bolts under Step 10
+    if (boltsStep) {
+      const step10 = regularSteps.find(s => s.id === "step-10");
+      if (step10) {
+        const step10Pos = newPositions.get(step10.id);
+        const boltsDimensions = stepDimensions.get(boltsStep.id);
+
+        if (step10Pos && boltsDimensions) {
+          // Place 4Y bolts at same X as step-10, but 4 grid units below
+          newPositions.set(boltsStep.id, {
+            xGrid: step10Pos.xGrid,
+            yGrid: step10Pos.yGrid + stepDimensions.get(step10.id)!.heightGrid + SPACING_GRID,
+            widthPx: boltsDimensions.widthPx,
+            heightPx: boltsDimensions.heightPx
+          });
+        }
+      }
+    }
+
+    // Update nodes with new positions
+    setNodes((nds) =>
+      nds.map((node) => {
+        const newPos = newPositions.get(node.id);
+        if (newPos) {
+          return {
+            ...node,
+            position: {
+              x: newPos.xGrid * gridSize,
+              y: newPos.yGrid * gridSize
+            },
+            style: { ...node.style, width: newPos.widthPx, height: newPos.heightPx }
+          };
+        }
+        return node;
       })
     );
 
     // Update step positions in parent state
-    const alignedSteps = steps.map(step => ({
-      ...step,
-      position: {
-        x: Math.round((step.position.x * gridSize) / gridSize), // Grid units
-        y: Math.round((step.position.y * gridSize) / gridSize)  // Grid units
+    const layoutSteps = steps.map(step => {
+      const newPos = newPositions.get(step.id);
+      if (newPos) {
+        return {
+          ...step,
+          position: {
+            x: newPos.xGrid,
+            y: newPos.yGrid
+          }
+        };
       }
-    }));
-    onStepsChange(alignedSteps);
+      return step;
+    });
+    onStepsChange(layoutSteps);
+
+    // AUTO-GENERATE EDGES based on technician flow (same as topdown)
+    const generateEdges = (): Edge[] => {
+      const newEdges: Edge[] = [];
+
+      sortedColumns.forEach((colNum, colIndex) => {
+        if (colIndex >= sortedColumns.length - 1) return;
+
+        const currentSteps = stepsByColumn.get(colNum)!;
+        const nextColNum = sortedColumns[colIndex + 1];
+        const nextSteps = stepsByColumn.get(nextColNum)!;
+
+        // Check if current column or next column has parallel steps
+        const currentColHasParallel = currentSteps.length > 1;
+        const nextColHasParallel = nextSteps.length > 1;
+
+        currentSteps.forEach((currentStep) => {
+          const currentTech = currentStep.technician;
+
+          nextSteps.forEach((nextStep) => {
+            const nextTech = nextStep.technician;
+
+            let shouldConnect = false;
+
+            if (currentTech === "both") {
+              shouldConnect = true;
+            } else if (nextTech === "both") {
+              shouldConnect = true;
+            } else if (currentTech === nextTech) {
+              shouldConnect = true;
+            }
+
+            if (shouldConnect) {
+              // Use 'horizontal' for:
+              // 1. Solo-to-solo connections
+              // 2. Parallel-to-parallel connections where they have same minor number (same position: 8.1→9.1, 8.2→9.2)
+              // Use 'smoothstep' for diagonal/vertical connections (different positions)
+
+              const isSoloToSolo = !currentColHasParallel && !nextColHasParallel;
+
+              // Check if parallel steps are in same position (same minor number)
+              const currentMinor = parseStepId(currentStep.id).minor ?? 0;
+              const nextMinor = parseStepId(nextStep.id).minor ?? 0;
+              const isSamePosition = currentMinor === nextMinor;
+
+              const isHorizontal = isSoloToSolo || (currentColHasParallel && nextColHasParallel && isSamePosition);
+
+              newEdges.push({
+                id: `edge-${currentStep.id}-${nextStep.id}`,
+                source: currentStep.id,
+                target: nextStep.id,
+                sourceHandle: 'right-source',
+                targetHandle: 'left-target',
+                type: isHorizontal ? 'horizontal' : 'smoothstep',
+                animated: false,
+                style: { stroke: '#6366f1', strokeWidth: 2.5 },
+                markerEnd: {
+                  type: MarkerType.ArrowClosed,
+                  color: '#6366f1',
+                }
+              });
+            }
+          });
+        });
+      });
+
+      // Add dotted edge from step-10 to 4Y bolts
+      if (boltsStep) {
+        const step10 = regularSteps.find(s => s.id === "step-10");
+        if (step10) {
+          newEdges.push({
+            id: `edge-step-10-4y-bolts`,
+            source: step10.id,
+            target: boltsStep.id,
+            sourceHandle: 'bottom-source',
+            targetHandle: 'top-target',
+            type: 'straight',
+            animated: false,
+            style: {
+              stroke: '#eab308',
+              strokeWidth: 2.5,
+              strokeDasharray: '5,5' // Dotted line
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: '#eab308',
+            }
+          });
+        }
+      }
+
+      return newEdges;
+    };
+
+    const autoEdges = generateEdges();
+    setEdges(autoEdges);
+
     setHasUnsavedChanges(true);
-  }, [setNodes, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
+  }, [setNodes, setEdges, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
+
+  // Main handler that delegates to the appropriate layout function
+  const handleRealignToGrid = useCallback(() => {
+    if (layoutMode === 'centered') {
+      handleRealignToGridCentered();
+    } else {
+      handleRealignToGridTopDown();
+    }
+  }, [layoutMode, handleRealignToGridCentered, handleRealignToGridTopDown]);
 
   // Expose realign function to parent
   useEffect(() => {
@@ -1409,24 +2022,110 @@ function FlowchartEditorInner({
         )}
       </ReactFlow>
 
-      {/* Debug info & Help text */}
-      {isEditMode && (
-        <div className="absolute bottom-16 left-4 bg-black/90 text-white text-xs p-3 rounded-lg z-50 max-w-xs">
-          <div className="font-bold mb-2">Edit Mode Guide:</div>
-          <div className="space-y-1 mb-2">
-            <div className="font-semibold text-blue-300">Connections:</div>
-            <div>🔵 Blue = Target (incoming)</div>
-            <div>🟢 Green = Source (outgoing)</div>
-            <div>→ Drag from Green to Blue</div>
-            <div className="font-semibold text-amber-300 mt-2">Resize Box:</div>
-            <div>🟡 Orange handles = Drag to resize</div>
-            <div className="text-xs text-gray-400">4 corners + 4 sides</div>
-          </div>
-          <div className="pt-2 border-t border-white/30">
-            Edges: {edges.length} | Nodes: {nodes.length}
-          </div>
+      {/* Legend & Guide */}
+      <div className={cn("absolute right-4 z-50 max-w-sm", isEditMode ? "bottom-16" : "bottom-16")}>
+        <div className="bg-black/90 text-white rounded-lg overflow-hidden">
+          {/* Toggle Button */}
+          <button
+            onClick={() => setIsLegendOpen(!isLegendOpen)}
+            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              <span className="font-bold text-sm">Legend & Guide</span>
+            </div>
+            {isLegendOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </button>
+
+          {/* Content */}
+          {isLegendOpen && (
+            <div className="px-4 pb-3 text-xs space-y-3">
+              {/* Service Types */}
+              <div>
+                <div className="font-semibold text-blue-300 mb-1.5">Service Types:</div>
+                <div className="grid grid-cols-2 gap-1">
+                  {[
+                    { code: "All", label: "All Intervals" },
+                    { code: "1Y", label: "1 Year" },
+                    { code: "2Y", label: "2 Year" },
+                    { code: "3Y", label: "3 Year" },
+                    { code: "4Y", label: "4 Year" },
+                    { code: "5Y", label: "5 Year" },
+                    { code: "6Y", label: "6 Year" },
+                    { code: "7Y", label: "7 Year" },
+                    { code: "10Y", label: "10 Year" },
+                    { code: "12Y", label: "12 Year" },
+                  ].map(({ code, label }) => (
+                    <div key={code} className="flex items-center gap-1.5">
+                      <div
+                        className="w-3 h-3 rounded"
+                        style={{ backgroundColor: SERVICE_TYPE_COLORS[code as keyof typeof SERVICE_TYPE_COLORS] }}
+                      />
+                      <span className="text-[10px]">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Icons */}
+              <div className="border-t border-white/20 pt-2">
+                <div className="font-semibold text-amber-300 mb-1.5">Icons:</div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-blue-400" />
+                    <span>Technician (T1/T2)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3 w-3 text-green-400" />
+                    <span>Task Completed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StickyNote className="h-3 w-3 text-amber-400" />
+                    <span>Has Notes</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3 text-gray-400" />
+                    <span>Time Duration</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bug className="h-3 w-3 text-red-400" />
+                    <span>Report Bug/Issue</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Edit Mode Guide */}
+              {isEditMode && (
+                <div className="border-t border-white/20 pt-2">
+                  <div className="font-semibold text-green-300 mb-1.5">Edit Mode:</div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-blue-400">🔵</span>
+                      <span>Blue = Target (incoming)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-green-400">🟢</span>
+                      <span>Green = Source (outgoing)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-amber-400">🟡</span>
+                      <span>Orange = Resize handles</span>
+                    </div>
+                    <div className="text-[10px] text-gray-400 mt-1">
+                      Drag Green → Blue to connect
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="border-t border-white/20 pt-2 text-[10px] text-gray-400">
+                Steps: {nodes.length} | Connections: {edges.length}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Edge style selector - Enhanced menu */}
       {isEditMode && selectedEdge && (

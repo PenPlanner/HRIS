@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
@@ -63,6 +64,9 @@ export default function FlowchartViewerPage() {
 
   // State for free positioning (disables grid snap)
   const [freePositioning, setFreePositioning] = useState(false);
+
+  // State for layout mode
+  const [layoutMode, setLayoutMode] = useState<'topdown' | 'centered'>('topdown');
 
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
@@ -1178,15 +1182,46 @@ defaultEdges: ${edgesCode}
                   Export
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRealignToGrid}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
-                >
-                  <Grid3x3 className="h-4 w-4 mr-2" />
-                  Re-align to Grid
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
+                    >
+                      <Grid3x3 className="h-4 w-4 mr-2" />
+                      Auto Layout
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-48 p-2">
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setLayoutMode('topdown');
+                          handleRealignToGrid();
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+                          layoutMode === 'topdown' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                        )}
+                      >
+                        Top-Down
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLayoutMode('centered');
+                          handleRealignToGrid();
+                        }}
+                        className={cn(
+                          "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+                          layoutMode === 'centered' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                        )}
+                      >
+                        Centered
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
                 {/* Free Positioning Toggle */}
                 <label className="flex items-center gap-2 border rounded-md px-3 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -1324,6 +1359,7 @@ defaultEdges: ${edgesCode}
             hideCompletedSteps={hideCompletedSteps}
             onRealignToGrid={handleRealignToGrid}
             freePositioning={freePositioning}
+            layoutMode={layoutMode}
           />
         </div>
       </div>

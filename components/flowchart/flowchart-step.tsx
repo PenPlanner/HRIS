@@ -3,8 +3,12 @@
 import { FlowchartStep as FlowchartStepType } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Clock, StickyNote } from "lucide-react";
+import { CheckCircle2, Clock, StickyNote, User, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseSIIReference } from "@/lib/sii-documents";
+import { getSectionPage } from "@/lib/sii-page-mapping";
+import { useState } from "react";
+import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface FlowchartStepProps {
   step: FlowchartStepType;
@@ -16,6 +20,23 @@ interface FlowchartStepProps {
 export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: FlowchartStepProps) {
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
   const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+  // PDF Viewer state
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [pdfDocument, setPdfDocument] = useState<number | null>(null);
+  const [pdfPage, setPdfPage] = useState<number>(1);
+
+  // Handle clicking on a reference number
+  const handleRefClick = (refText: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card onClick from firing
+    const ref = parseSIIReference(refText);
+    if (ref) {
+      const page = getSectionPage(ref.documentNumber, ref.section);
+      setPdfDocument(ref.documentNumber);
+      setPdfPage(page);
+      setPdfViewerOpen(true);
+    }
+  };
 
   // Get service type description from colorCode
   const getServiceTypeDescription = (colorCode: string): string => {
@@ -76,6 +97,7 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
   };
 
   return (
+    <>
     <div className="flex flex-col gap-1.5">
       {/* Step Label */}
       <div className="text-xs font-semibold text-muted-foreground pl-1">
@@ -93,46 +115,68 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
           borderLeft: `4px solid ${step.color}`
         }}
         onClick={onClick}
+        onWheel={(e) => {
+          // Stop propagation to allow scrolling inside the card
+          e.stopPropagation();
+        }}
       >
       {/* Top badges - Technicians only */}
       <div className="absolute top-2 right-2 flex gap-1">
         {step.technician === "both" ? (
           <>
-            <div className="bg-blue-500/90 px-2.5 py-1 rounded-md">
+            <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+              <User className="h-3 w-3 text-white" />
               <span className="text-xs font-bold text-white">T1</span>
             </div>
-            <div className="bg-purple-500/90 px-2.5 py-1 rounded-md">
+            <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+              <User className="h-3 w-3 text-white" />
               <span className="text-xs font-bold text-white">T2</span>
             </div>
           </>
         ) : step.technician === "T1" ? (
-          <div className="bg-blue-500/90 px-2.5 py-1 rounded-md">
+          <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+            <User className="h-3 w-3 text-white" />
             <span className="text-xs font-bold text-white">T1</span>
           </div>
         ) : (
-          <div className="bg-purple-500/90 px-2.5 py-1 rounded-md">
+          <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+            <User className="h-3 w-3 text-white" />
             <span className="text-xs font-bold text-white">T2</span>
           </div>
         )}
       </div>
 
       {/* Step Content - Compact task list */}
-      <div className="mt-6">
-        <div className="space-y-0.5 mb-3 pr-10">
+      <div className="mt-6 overflow-hidden">
+        <div
+          className="space-y-0.5 mb-3 pr-2 max-h-[350px] overflow-y-auto [&::-webkit-scrollbar]:w-6 md:[&::-webkit-scrollbar]:w-4 [&::-webkit-scrollbar-track]:bg-gray-800/30 [&::-webkit-scrollbar-thumb]:bg-gray-500 [&::-webkit-scrollbar-thumb]:rounded-lg [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 [&::-webkit-scrollbar-thumb]:active:bg-gray-600"
+          style={{
+            scrollbarWidth: 'auto',
+            scrollbarColor: '#6B7280 rgba(31, 41, 55, 0.3)',
+            WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+          }}
+        >
           {step.tasks.map((task, index) => {
             const text = task.description;
             if (!text) return null;
 
             // Check if this task is indented (sub-task)
             const isIndented = task.isIndented || false;
-            // Check if this line has a reference number (e.g., "13.5.1", "11.5.1.")
-            const hasRefNumber = /^\d+\.\d+(\.\d+)*\.?\s/.test(text);
+
+            // Split reference number and description
+            // Matches patterns like: "13.5.1.Lift", "13.5.1 Lift", "3.5.1-4.71 ResQ", "6.5.2.11 Visual"
+            // Note: \.? matches optional trailing dot but doesn't include it in capture group
+            const refMatch = text.match(/^(\d+(?:\.\d+)*(?:-\d+(?:\.\d+)*)*)\.?\s*(.+)$/);
+            const hasRefNumber = refMatch !== null;
+            const refNumber = refMatch ? refMatch[1] : '';
+            const description = refMatch ? refMatch[2] : text;
 
             return (
               <div
                 key={task.id}
                 className={cn(
-                  "flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden",
+                  "grid items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden",
+                  "grid-cols-[auto_95px_1fr]",
                   isIndented && "ml-6 text-muted-foreground"
                 )}
                 style={{
@@ -142,16 +186,34 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
                 {!isIndented && (
                   <div
                     style={{ backgroundColor: step.color }}
-                    className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
+                    className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                   >
                     <span className="text-[9px] font-mono font-bold text-white">
                       {task.serviceType || "All"}
                     </span>
                   </div>
                 )}
-                <span className={cn(!isIndented ? "font-semibold" : "font-normal", "line-clamp-1 text-white")}>
-                  {text}
-                </span>
+                {hasRefNumber ? (
+                  <>
+                    <span
+                      className="font-semibold text-white font-mono cursor-pointer hover:underline hover:text-blue-300 transition-colors flex items-center gap-1"
+                      onClick={(e) => handleRefClick(text, e)}
+                    >
+                      <FileText className="h-3 w-3 flex-shrink-0" />
+                      {refNumber}
+                    </span>
+                    <span className="font-semibold text-white line-clamp-1">
+                      {description}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span></span>
+                    <span className={cn(!isIndented ? "font-semibold" : "font-normal", "line-clamp-1 text-white")}>
+                      {text}
+                    </span>
+                  </>
+                )}
               </div>
             );
           })}
@@ -207,5 +269,16 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
       </div>
       </Card>
     </div>
+
+    {/* PDF Viewer Dialog */}
+    {pdfDocument && (
+      <PDFViewerDialog
+        open={pdfViewerOpen}
+        onOpenChange={setPdfViewerOpen}
+        documentNumber={pdfDocument}
+        initialPage={pdfPage}
+      />
+    )}
+    </>
   );
 }

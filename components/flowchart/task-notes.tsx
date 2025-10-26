@@ -75,12 +75,12 @@ export function TaskNotes({ taskId, notes, onAddNote, onEditNote, onDeleteNote }
             return (
               <div
                 key={note.id}
-                className="bg-amber-50 border border-amber-200 rounded p-2 text-xs"
+                className="bg-gray-50 border border-gray-200 rounded p-2 text-xs"
               >
                 {/* Header with timestamp and actions */}
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-amber-600 font-mono">
+                    <span className="text-[10px] text-gray-600 font-mono">
                       {new Date(note.timestamp).toLocaleString('sv-SE', {
                         year: 'numeric',
                         month: '2-digit',
@@ -90,7 +90,7 @@ export function TaskNotes({ taskId, notes, onAddNote, onEditNote, onDeleteNote }
                       })}
                     </span>
                     {latestVersion > 1 && (
-                      <span className="text-[9px] text-amber-700 bg-amber-100 px-1 rounded">
+                      <span className="text-[9px] text-gray-700 bg-gray-200 px-1 rounded">
                         v{latestVersion}
                       </span>
                     )}
@@ -100,10 +100,10 @@ export function TaskNotes({ taskId, notes, onAddNote, onEditNote, onDeleteNote }
                     <div className="flex gap-1">
                       <button
                         onClick={() => startEdit(note)}
-                        className="p-0.5 hover:bg-amber-100 rounded"
+                        className="p-0.5 hover:bg-gray-200 rounded"
                         title="Edit note"
                       >
-                        <Edit2 className="h-3 w-3 text-amber-700" />
+                        <Edit2 className="h-3 w-3 text-gray-700" />
                       </button>
                       <button
                         onClick={() => handleDelete(note.id)}
@@ -151,15 +151,15 @@ export function TaskNotes({ taskId, notes, onAddNote, onEditNote, onDeleteNote }
 
                     {/* Edit history */}
                     {note.edits && note.edits.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-amber-200">
-                        <details className="text-[10px] text-amber-600">
-                          <summary className="cursor-pointer hover:text-amber-800">
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <details className="text-[10px] text-gray-600">
+                          <summary className="cursor-pointer hover:text-gray-800">
                             Edit history ({note.edits.length})
                           </summary>
                           <div className="mt-1 space-y-1 pl-2">
                             {note.edits.map((edit) => (
                               <div key={edit.version} className="flex items-center gap-2">
-                                <span className="bg-amber-100 px-1 rounded">v{edit.version}</span>
+                                <span className="bg-gray-200 px-1 rounded">v{edit.version}</span>
                                 <span className="font-mono">
                                   {new Date(edit.timestamp).toLocaleString('sv-SE', {
                                     year: 'numeric',
@@ -190,13 +190,13 @@ export function TaskNotes({ taskId, notes, onAddNote, onEditNote, onDeleteNote }
           onChange={(e) => setNewNote(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Add note about deviations, improvements..."
-          className="text-xs h-8 border-amber-200 focus:border-amber-400 focus:ring-amber-400"
+          className="text-xs h-8"
         />
         <Button
           size="sm"
           onClick={handleAddNote}
           disabled={!newNote.trim()}
-          className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700"
+          className="h-8 px-3 text-xs"
         >
           Add
         </Button>

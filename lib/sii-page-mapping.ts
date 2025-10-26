@@ -118,7 +118,26 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
   7: {
     "5": 6,
     "6": 12,
-    "7": 18,
+    "6.5": 13,
+    "6.5.2": 14,
+    "6.5.2.2": 14,
+    "6.5.2.3": 15,
+    "6.5.2.4": 16,
+    "6.5.2.8": 17,
+    "6.5.2.9": 18,
+    "6.5.2.11": 19,
+    "6.5.2.12": 20,
+    "6.5.2.13": 21,
+    "6.5.3": 22,
+    "6.6": 23,
+    "6.6.2": 24,
+    "6.6.2.6": 24,
+    "6.6.2.7": 25,
+    "7": 26,
+    "9": 30,
+    "9.5": 31,
+    "9.5.3": 32,
+    "9.5.3.1": 32,
   },
 
   // Doc 8: Cooling and conditioning
@@ -170,13 +189,18 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
  * Falls back to page 1 if no mapping exists
  *
  * @param documentNumber - The SII document number (1-15)
- * @param section - The section reference (e.g., "5.1", "5.2.3")
+ * @param section - The section reference (e.g., "5.1", "5.2.3") or empty string for document title
  * @returns Page number to jump to
  */
 export function getSectionPage(documentNumber: number, section: string): number {
   const mapping = SII_PAGE_MAPPINGS[documentNumber];
   if (!mapping) {
     return 1; // Default to first page if no mapping
+  }
+
+  // If no section (e.g., "7. Generator"), return first page
+  if (!section || section.trim() === "") {
+    return 1;
   }
 
   // Clean section by removing special suffixes like "i2" from "5.2.7i2"

@@ -211,7 +211,8 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     if (!parsedData) return;
 
     // GRID-ALIGNED LAYOUT CONSTANTS
-    // Card dimensions: 300px wide (10 units) x 180px tall (6 units) at 30px grid
+    // Card dimensions: 370px wide (~12 units) x 350-450px tall (~12-15 units) at 30px grid
+    // Note: Actual dimensions are calculated in flowchart-editor.tsx (370px width, 350px or 450px height based on task count)
     const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing
     const ROW_SPACING = 8;  // 8 * 30px = 240px vertical spacing
     const BASELINE_Y = 5;   // Start 5 units from top (150px)
