@@ -15,6 +15,10 @@ import ReactFlow, {
   Handle,
   Position,
   MarkerType,
+  useUpdateNodeInternals,
+  useReactFlow,
+  ReactFlowProvider,
+  NodeResizer,
 } from 'reactflow';
 import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
@@ -123,109 +127,81 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
   };
 
   return (
-    <div className="group relative">
-      {/* Connection handles - always rendered but only visible in edit mode */}
+    <div className="group relative w-full h-full">
+      {/* Resize handles - only visible in edit mode */}
+      {isEditMode && (
+        <NodeResizer
+          color="#f59e0b"
+          isVisible={isEditMode}
+          minWidth={250}
+          minHeight={200}
+          maxWidth={600}
+          maxHeight={800}
+          handleStyle={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: '#f59e0b',
+            border: '2px solid white',
+          }}
+        />
+      )}
+
+      {/* Connection handles - centered in view mode, multiple in edit mode */}
       <>
-        {/* Top handles - both target and source */}
-        <Handle
-          type="target"
-          position={Position.Top}
-          id="top-target"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ top: '-21px' }}
-          isConnectable={isEditMode}
-        />
-        <Handle
-          type="source"
-          position={Position.Top}
-          id="top-source"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ top: '-21px' }}
-          isConnectable={isEditMode}
-        />
+        {isEditMode ? (
+          // EDIT MODE: Multiple handles for flexibility
+          <>
+            {/* Top handles */}
+            <Handle type="target" position={Position.Top} id="top-target"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
+              style={{ left: 'calc(50% - 20px)' }} isConnectable={true} />
+            <Handle type="source" position={Position.Top} id="top-source"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
+              style={{ left: 'calc(50% + 20px)' }} isConnectable={true} />
 
-        {/* Bottom handles - both target and source */}
-        <Handle
-          type="target"
-          position={Position.Bottom}
-          id="bottom-target"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ bottom: '-21px' }}
-          isConnectable={isEditMode}
-        />
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          id="bottom-source"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ bottom: '-21px' }}
-          isConnectable={isEditMode}
-        />
+            {/* Bottom handles */}
+            <Handle type="target" position={Position.Bottom} id="bottom-target"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
+              style={{ left: 'calc(50% - 20px)' }} isConnectable={true} />
+            <Handle type="source" position={Position.Bottom} id="bottom-source"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
+              style={{ left: 'calc(50% + 20px)' }} isConnectable={true} />
 
-        {/* Left handles - both target and source */}
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="left-target"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ left: '-21px' }}
-          isConnectable={isEditMode}
-        />
-        <Handle
-          type="source"
-          position={Position.Left}
-          id="left-source"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ left: '-21px' }}
-          isConnectable={isEditMode}
-        />
+            {/* Left handles */}
+            <Handle type="target" position={Position.Left} id="left-target"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
+              style={{ top: 'calc(50% - 20px)' }} isConnectable={true} />
+            <Handle type="source" position={Position.Left} id="left-source"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
+              style={{ top: 'calc(50% + 20px)' }} isConnectable={true} />
 
-        {/* Right handles - both target and source */}
-        <Handle
-          type="target"
-          position={Position.Right}
-          id="right-target"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ right: '-21px' }}
-          isConnectable={isEditMode}
-        />
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="right-source"
-          className={cn(
-            "!w-4 !h-4 !cursor-crosshair transition-all",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
-          )}
-          style={{ right: '-21px' }}
-          isConnectable={isEditMode}
-        />
+            {/* Right handles */}
+            <Handle type="target" position={Position.Right} id="right-target"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-blue-500 !border-2 !border-white !shadow-lg"
+              style={{ top: 'calc(50% - 20px)' }} isConnectable={true} />
+            <Handle type="source" position={Position.Right} id="right-source"
+              className="!w-4 !h-4 !cursor-crosshair transition-all hover:!scale-125 !bg-green-500 !border-2 !border-white !shadow-lg"
+              style={{ top: 'calc(50% + 20px)' }} isConnectable={true} />
+          </>
+        ) : (
+          // VIEW MODE: Single centered invisible handle per side (for clean centered lines)
+          <>
+            <Handle type="source" position={Position.Top} id="top"
+              className="!opacity-0 !pointer-events-none" isConnectable={false} />
+            <Handle type="source" position={Position.Bottom} id="bottom"
+              className="!opacity-0 !pointer-events-none" isConnectable={false} />
+            <Handle type="source" position={Position.Left} id="left"
+              className="!opacity-0 !pointer-events-none" isConnectable={false} />
+            <Handle type="source" position={Position.Right} id="right"
+              className="!opacity-0 !pointer-events-none" isConnectable={false} />
+          </>
+        )}
       </>
 
       <Card
         className={cn(
-          "relative p-4 w-[300px] hover:shadow-lg transition-all border-2 flex flex-col overflow-hidden",
+          "relative p-4 w-full h-full hover:shadow-lg transition-all border-2 flex flex-col overflow-auto",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : "border-gray-700/50",
@@ -233,7 +209,6 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
         )}
         style={{
           backgroundColor: `${step.color}15`,
-          height: `${cardHeight}px`
         }}
       >
         {/* Step Label - Inside card, top left */}
@@ -402,7 +377,8 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
   );
 }
 
-export function FlowchartEditor({
+// Inner component that uses React Flow hooks
+function FlowchartEditorInner({
   steps,
   onStepsChange,
   onEditStep,
@@ -447,35 +423,21 @@ export function FlowchartEditor({
   }, [steps, onStepsChange, setHasUnsavedChanges]);
 
   // Convert FlowchartStep[] to React Flow nodes
-  const initialNodes: Node<StepNodeData>[] = useMemo(() => steps.map(step => ({
-    id: step.id,
-    type: 'stepNode',
-    position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
-    data: {
-      step,
-      onEdit: onEditStep,
-      onDelete: handleDelete,
-      onDuplicate: handleDuplicate,
-      onClick: onStepClick,
-      onUpdateStep: handleUpdateStep,
-      isEditMode,
-      selectedServiceType,
-    },
-    draggable: isEditMode,
-  })), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
+  const initialNodes: Node<StepNodeData>[] = useMemo(() => steps.map(step => {
+    // Calculate initial height based on task count
+    const visibleTasks = step.tasks.filter(task =>
+      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+    );
+    const estimatedHeight = 100 + (visibleTasks.length * 24);
+    const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
+    const heightWithPadding = gridAlignedHeight + 60;
+    const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
 
-  // Initialize edges (connections) - load from props
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const hasLoadedInitialEdges = useRef(false);
-  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
-
-  // Update nodes when steps or selectedHandle change
-  useMemo(() => {
-    const newNodes: Node<StepNodeData>[] = steps.map(step => ({
+    return {
       id: step.id,
       type: 'stepNode',
       position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
+      style: { width: 300, height: initialHeight },
       data: {
         step,
         onEdit: onEditStep,
@@ -487,9 +449,91 @@ export function FlowchartEditor({
         selectedServiceType,
       },
       draggable: isEditMode,
-    }));
-    setNodes(newNodes);
-  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, setNodes]);
+    };
+  }), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
+
+  // Initialize edges (connections) - load from props
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const hasLoadedInitialEdges = useRef(false);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
+  // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
+  const updateNodeInternals = useUpdateNodeInternals();
+
+  // Update node DATA only (not positions) when steps/props change
+  // This prevents boxes from jumping when clicking edges
+  useEffect(() => {
+    setNodes((nds) => {
+      const existingNodeIds = new Set(nds.map(n => n.id));
+      const newStepIds = new Set(steps.map(s => s.id));
+
+      // Update existing nodes (keep their positions)
+      const updatedNodes = nds
+        .filter(node => newStepIds.has(node.id)) // Remove deleted steps
+        .map((node) => {
+          const step = steps.find((s) => s.id === node.id);
+          if (!step) return node;
+
+          // Only update data and draggable state, KEEP existing position
+          return {
+            ...node,
+            data: {
+              step,
+              onEdit: onEditStep,
+              onDelete: handleDelete,
+              onDuplicate: handleDuplicate,
+              onClick: onStepClick,
+              onUpdateStep: handleUpdateStep,
+              isEditMode,
+              selectedServiceType,
+            },
+            draggable: isEditMode,
+          };
+        });
+
+      // Add new nodes (with initial positions from steps)
+      const newNodes = steps
+        .filter(step => !existingNodeIds.has(step.id))
+        .map(step => {
+          // Calculate initial height based on task count
+          const visibleTasks = step.tasks.filter(task =>
+            /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+          );
+          const estimatedHeight = 100 + (visibleTasks.length * 24);
+          const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
+          const heightWithPadding = gridAlignedHeight + 60;
+          const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
+
+          return {
+            id: step.id,
+            type: 'stepNode',
+            position: { x: step.position.x * gridSize, y: step.position.y * gridSize },
+            style: { width: 300, height: initialHeight },
+            data: {
+              step,
+              onEdit: onEditStep,
+              onDelete: handleDelete,
+              onDuplicate: handleDuplicate,
+              onClick: onStepClick,
+              onUpdateStep: handleUpdateStep,
+              isEditMode,
+              selectedServiceType,
+            },
+            draggable: isEditMode,
+          };
+        });
+
+      return [...updatedNodes, ...newNodes];
+    });
+
+    // CRITICAL: Update node internals after DOM has rendered
+    // This is required when using multiple handles per node
+    setTimeout(() => {
+      steps.forEach((step) => {
+        updateNodeInternals(step.id);
+      });
+    }, 0);
+  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, updateNodeInternals, setNodes]);
 
   // Handle node drag end - update step positions
   const handleNodesChange = useCallback((changes: any) => {
@@ -710,7 +754,8 @@ export function FlowchartEditor({
         panOnScroll={true}
         zoomOnPinch={true}
         preventScrolling={true}
-        connectOnClick={isEditMode}
+        // Use drag-to-connect (default), not click-to-connect
+        // connectOnClick can cause conflicts with handle interactions
       >
         {isEditMode && (
           <>
@@ -720,10 +765,22 @@ export function FlowchartEditor({
         )}
       </ReactFlow>
 
-      {/* Debug info */}
+      {/* Debug info & Help text */}
       {isEditMode && (
-        <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-50">
-          Edges: {edges.length} | Nodes: {nodes.length}
+        <div className="absolute bottom-2 left-2 bg-black/90 text-white text-xs p-3 rounded-lg z-50 max-w-xs">
+          <div className="font-bold mb-2">Edit Mode Guide:</div>
+          <div className="space-y-1 mb-2">
+            <div className="font-semibold text-blue-300">Connections:</div>
+            <div>🔵 Blue = Target (incoming)</div>
+            <div>🟢 Green = Source (outgoing)</div>
+            <div>→ Drag from Green to Blue</div>
+            <div className="font-semibold text-amber-300 mt-2">Resize Box:</div>
+            <div>🟡 Orange handles = Drag to resize</div>
+            <div className="text-xs text-gray-400">4 corners + 4 sides</div>
+          </div>
+          <div className="pt-2 border-t border-white/30">
+            Edges: {edges.length} | Nodes: {nodes.length}
+          </div>
         </div>
       )}
 
@@ -928,5 +985,14 @@ export function FlowchartEditor({
         </div>
       )}
     </div>
+  );
+}
+
+// Wrapper component that provides React Flow context
+export function FlowchartEditor(props: FlowchartEditorProps) {
+  return (
+    <ReactFlowProvider>
+      <FlowchartEditorInner {...props} />
+    </ReactFlowProvider>
   );
 }
