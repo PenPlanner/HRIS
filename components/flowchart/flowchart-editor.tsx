@@ -41,6 +41,8 @@ interface FlowchartEditorProps {
   selectedServiceType?: string;
   initialEdges?: Edge[];
   onEdgesChange?: (edges: Edge[]) => void;
+  hideCompletedSteps?: boolean;
+  onRealignToGrid?: () => void;
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -76,14 +78,169 @@ interface StepNodeData {
   onUpdateStep: (step: FlowchartStep) => void;
   isEditMode: boolean;
   selectedServiceType?: string;
+  gridSize: number;
+}
+
+// Progress Line Component with Viewport Tracking
+// Uses useReactFlow to track viewport and transform coordinates
+function ProgressLineWithViewport({ nodes, steps }: { nodes: Node[], steps: FlowchartStep[] }) {
+  const { getViewport } = useReactFlow();
+  const [viewport, setViewport] = useState(getViewport());
+
+  // Update viewport state when it changes
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport(getViewport());
+    };
+
+    // Listen for viewport changes by polling (simple approach)
+    const interval = setInterval(updateViewport, 50); // 20fps update rate
+
+    return () => clearInterval(interval);
+  }, [getViewport]);
+
+  if (nodes.length === 0) return null;
+
+  // Calculate completion for each step
+  const stepsWithCompletion = nodes.map(node => {
+    const step = steps.find(s => s.id === node.id);
+    if (!step) return null;
+
+    const visibleTasks = step.tasks.filter(task =>
+      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+    );
+    const completedTasks = visibleTasks.filter(t => t.completed).length;
+    const totalTasks = visibleTasks.length;
+    const isComplete = completedTasks === totalTasks && totalTasks > 0;
+    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    return {
+      // Use viewport-transformed coordinates (what you see on screen)
+      x: node.position.x * viewport.zoom + viewport.x + (150 * viewport.zoom), // Center of box
+      y: node.position.y * viewport.zoom + viewport.y,
+      isComplete,
+      progress,
+      id: node.id
+    };
+  }).filter(Boolean).sort((a, b) => a!.x - b!.x);
+
+  if (stepsWithCompletion.length === 0) return null;
+
+  const first = stepsWithCompletion[0]!;
+  const last = stepsWithCompletion[stepsWithCompletion.length - 1]!;
+
+  // Find highest Y position (smallest Y value = highest on screen)
+  const highestY = Math.min(...stepsWithCompletion.map(s => s!.y));
+  const progressLineY = highestY - (80 * viewport.zoom); // 80px above highest box, scaled
+
+  const completedSteps = stepsWithCompletion.filter(s => s!.isComplete).length;
+  const overallProgress = (completedSteps / stepsWithCompletion.length) * 100;
+
+  return (
+    <svg
+      className="pointer-events-none"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'visible'
+      }}
+    >
+      {/* Gradient definition */}
+      <defs>
+        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#34d399" />
+        </linearGradient>
+      </defs>
+
+      {/* Background line */}
+      <line
+        x1={first.x}
+        y1={progressLineY}
+        x2={last.x}
+        y2={progressLineY}
+        stroke="rgba(75, 85, 99, 0.3)"
+        strokeWidth={6 * viewport.zoom}
+        strokeLinecap="round"
+      />
+
+      {/* Progress fill line */}
+      {completedSteps > 0 && (
+        <line
+          x1={first.x}
+          y1={progressLineY}
+          x2={first.x + ((last.x - first.x) * (overallProgress / 100))}
+          y2={progressLineY}
+          stroke="url(#progressGradient)"
+          strokeWidth={6 * viewport.zoom}
+          strokeLinecap="round"
+          className="transition-all duration-1000"
+        />
+      )}
+
+      {/* Checkpoints */}
+      {stepsWithCompletion.map((stepData) => (
+        <g key={stepData!.id}>
+          {/* Checkpoint circle */}
+          <circle
+            cx={stepData!.x}
+            cy={progressLineY}
+            r={8 * viewport.zoom}
+            fill={stepData!.isComplete ? "#10b981" : "#4b5563"}
+            stroke={stepData!.isComplete ? "white" : "#9ca3af"}
+            strokeWidth={2 * viewport.zoom}
+            className={cn(
+              "transition-all duration-500",
+              stepData!.isComplete && "drop-shadow-lg"
+            )}
+          />
+
+          {/* Checkmark */}
+          {stepData!.isComplete && (
+            <text
+              x={stepData!.x}
+              y={progressLineY + (1 * viewport.zoom)}
+              fill="white"
+              fontSize={10 * viewport.zoom}
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              ✓
+            </text>
+          )}
+
+          {/* Percentage label */}
+          <text
+            x={stepData!.x}
+            y={progressLineY + (28 * viewport.zoom)}
+            fill={stepData!.isComplete ? "#10b981" : "#9ca3af"}
+            fontSize={11 * viewport.zoom}
+            fontWeight="bold"
+            textAnchor="middle"
+          >
+            {Math.round(stepData!.progress)}%
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
 }
 
 // Custom node component for flowchart steps
-function StepNode({ data }: NodeProps<StepNodeData>) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType } = data;
+function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeData>) {
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize } = data;
 
-  const completedTasks = step.tasks.filter(t => t.completed).length;
-  const totalTasks = step.tasks.length;
+  // Only count tasks that will be displayed (with reference numbers)
+  const visibleTasksForCounting = step.tasks.filter(task =>
+    /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+  );
+
+  const completedTasks = visibleTasksForCounting.filter(t => t.completed).length;
+  const totalTasks = visibleTasksForCounting.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
   // Calculate total notes count from all tasks
@@ -243,15 +400,17 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           "relative p-4 w-full h-full hover:shadow-lg transition-all border-2 flex flex-col overflow-auto",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
-            : "border-gray-700/50",
-          isComplete && "ring-2 ring-green-500"
+            : isComplete
+              ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
+              : "border-gray-700/50"
         )}
         style={{
-          backgroundColor: `${step.color}15`,
+          backgroundColor: isComplete ? `rgba(34, 197, 94, 0.1)` : `${step.color}15`,
         }}
       >
-        {/* Step Label - Inside card, top left */}
-        <div className="absolute top-2 left-3 text-xs font-semibold text-muted-foreground">
+        {/* Step Label - Inside card, top left with checkmark if complete */}
+        <div className="absolute top-2 left-3 text-xs font-semibold text-muted-foreground flex items-center gap-1">
+          {isComplete && <span className="text-green-500 text-base">✓</span>}
           Step {getStepNumber(step.id)}
         </div>
 
@@ -409,6 +568,24 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
                 />
               </div>
             </div>
+
+            {/* Debug Info - Position and Size (Edit Mode Only) */}
+            {isEditMode && (
+              <div className="mt-2 pt-2 border-t border-gray-700/50 text-xs text-gray-400 font-mono space-y-0.5">
+                <div className="flex justify-between">
+                  <span>Position:</span>
+                  <span className="text-blue-400">X: {Math.round(xPos || step.position.x * gridSize)}, Y: {Math.round(yPos || step.position.y * gridSize)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Size:</span>
+                  <span className="text-amber-400">W: {Math.round(width || 300)}, H: {Math.round(height || cardHeight)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Grid:</span>
+                  <span className="text-green-400">X: {Math.round((xPos || step.position.x * gridSize) / gridSize)}, Y: {Math.round((yPos || step.position.y * gridSize) / gridSize)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Card>
@@ -429,8 +606,25 @@ function FlowchartEditorInner({
   setHasUnsavedChanges,
   selectedServiceType,
   initialEdges = [],
-  onEdgesChange: onEdgesChangeProp
+  onEdgesChange: onEdgesChangeProp,
+  hideCompletedSteps = false,
+  onRealignToGrid
 }: FlowchartEditorProps) {
+  // Filter steps based on hideCompletedSteps
+  const displayedSteps = useMemo(() => {
+    if (!hideCompletedSteps || isEditMode) return steps;
+
+    return steps.filter(step => {
+      const visibleTasks = step.tasks.filter(task =>
+        /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+      );
+      const completedTasks = visibleTasks.filter(t => t.completed).length;
+      const totalTasks = visibleTasks.length;
+      const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+      return !isComplete; // Only show incomplete steps
+    });
+  }, [steps, hideCompletedSteps, isEditMode]);
   // Define handlers first before using them in useMemo
   const handleDelete = useCallback((stepId: string) => {
     if (confirm("Are you sure you want to delete this step?")) {
@@ -462,7 +656,7 @@ function FlowchartEditorInner({
   }, [steps, onStepsChange, setHasUnsavedChanges]);
 
   // Convert FlowchartStep[] to React Flow nodes
-  const initialNodes: Node<StepNodeData>[] = useMemo(() => steps.map(step => {
+  const initialNodes: Node<StepNodeData>[] = useMemo(() => displayedSteps.map(step => {
     // Calculate initial height based on task count
     const visibleTasks = step.tasks.filter(task =>
       /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
@@ -486,10 +680,11 @@ function FlowchartEditorInner({
         onUpdateStep: handleUpdateStep,
         isEditMode,
         selectedServiceType,
+        gridSize,
       },
       draggable: isEditMode,
     };
-  }), [steps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
+  }), [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -499,18 +694,56 @@ function FlowchartEditorInner({
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
 
+  // Re-align all nodes to grid - snaps positions to nearest grid point
+  const handleRealignToGrid = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        // Round position to nearest grid point
+        const alignedX = Math.round(node.position.x / gridSize) * gridSize;
+        const alignedY = Math.round(node.position.y / gridSize) * gridSize;
+
+        return {
+          ...node,
+          position: { x: alignedX, y: alignedY }
+        };
+      })
+    );
+
+    // Update step positions in parent state
+    const alignedSteps = steps.map(step => ({
+      ...step,
+      position: {
+        x: Math.round((step.position.x * gridSize) / gridSize), // Grid units
+        y: Math.round((step.position.y * gridSize) / gridSize)  // Grid units
+      }
+    }));
+    onStepsChange(alignedSteps);
+    setHasUnsavedChanges(true);
+  }, [setNodes, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
+
+  // Expose realign function to parent
+  useEffect(() => {
+    if (onRealignToGrid) {
+      // Create a reference that can be called from parent
+      (window as any).__flowchartRealignToGrid = handleRealignToGrid;
+    }
+    return () => {
+      delete (window as any).__flowchartRealignToGrid;
+    };
+  }, [handleRealignToGrid, onRealignToGrid]);
+
   // Update node DATA only (not positions) when steps/props change
   // This prevents boxes from jumping when clicking edges
   useEffect(() => {
     setNodes((nds) => {
       const existingNodeIds = new Set(nds.map(n => n.id));
-      const newStepIds = new Set(steps.map(s => s.id));
+      const newStepIds = new Set(displayedSteps.map(s => s.id));
 
       // Update existing nodes (keep their positions)
       const updatedNodes = nds
-        .filter(node => newStepIds.has(node.id)) // Remove deleted steps
+        .filter(node => newStepIds.has(node.id)) // Remove deleted/hidden steps
         .map((node) => {
-          const step = steps.find((s) => s.id === node.id);
+          const step = displayedSteps.find((s) => s.id === node.id);
           if (!step) return node;
 
           // Only update data and draggable state, KEEP existing position
@@ -525,13 +758,14 @@ function FlowchartEditorInner({
               onUpdateStep: handleUpdateStep,
               isEditMode,
               selectedServiceType,
+              gridSize,
             },
             draggable: isEditMode,
           };
         });
 
       // Add new nodes (with initial positions from steps)
-      const newNodes = steps
+      const newNodes = displayedSteps
         .filter(step => !existingNodeIds.has(step.id))
         .map(step => {
           // Calculate initial height based on task count
@@ -557,6 +791,7 @@ function FlowchartEditorInner({
               onUpdateStep: handleUpdateStep,
               isEditMode,
               selectedServiceType,
+              gridSize,
             },
             draggable: isEditMode,
           };
@@ -568,11 +803,11 @@ function FlowchartEditorInner({
     // CRITICAL: Update node internals after DOM has rendered
     // This is required when using multiple handles per node
     setTimeout(() => {
-      steps.forEach((step) => {
+      displayedSteps.forEach((step) => {
         updateNodeInternals(step.id);
       });
     }, 0);
-  }, [steps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, updateNodeInternals, setNodes]);
+  }, [displayedSteps, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, gridSize, updateNodeInternals, setNodes]);
 
   // Handle node drag end - update step positions
   const handleNodesChange = useCallback((changes: any) => {
@@ -635,6 +870,43 @@ function FlowchartEditorInner({
       setHasUnsavedChanges(true);
     }
   }, [isEditMode, setHasUnsavedChanges]);
+
+  // Auto-update edge colors based on source step completion status
+  useEffect(() => {
+    setEdges((currentEdges) =>
+      currentEdges.map((edge) => {
+        const sourceStep = steps.find(s => s.id === edge.source);
+        if (!sourceStep) return edge;
+
+        // Only count visible tasks (with reference numbers)
+        const visibleTasks = sourceStep.tasks.filter(task =>
+          /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
+        );
+        const completedTasks = visibleTasks.filter(t => t.completed).length;
+        const totalTasks = visibleTasks.length;
+        const isSourceComplete = completedTasks === totalTasks && totalTasks > 0;
+
+        // Only auto-update if edge doesn't have custom color (still has default blue)
+        const isDefaultColor = !edge.style?.stroke || edge.style.stroke === '#6366f1';
+
+        if (isSourceComplete && isDefaultColor) {
+          return {
+            ...edge,
+            style: { ...(edge.style || {}), stroke: '#10b981', strokeWidth: edge.style?.strokeWidth || 2.5 },
+            markerEnd: edge.markerEnd ? { ...edge.markerEnd, color: '#10b981' } : undefined,
+            markerStart: edge.markerStart ? { ...edge.markerStart, color: '#10b981' } : undefined,
+            label: edge.label || '✓',
+            labelStyle: { fill: '#fff', fontWeight: 700, fontSize: 14 },
+            labelBgStyle: { fill: '#10b981', fillOpacity: 0.95 },
+            labelBgPadding: [6, 10] as [number, number],
+            labelBgBorderRadius: 6,
+          };
+        }
+
+        return edge;
+      })
+    );
+  }, [steps, setEdges]);
 
   // Handle edge changes (deletion, etc.)
   const handleEdgesChange = useCallback((changes: any) => {
@@ -850,6 +1122,19 @@ function FlowchartEditorInner({
           </>
         )}
       </ReactFlow>
+
+      {/* Progress Line - Shows overall completion across all steps - Outside ReactFlow but visually positioned correctly */}
+      {!isEditMode && nodes.length > 0 && (
+        <div
+          className="absolute inset-0 overflow-visible"
+          style={{
+            pointerEvents: 'none',
+            zIndex: 1
+          }}
+        >
+          <ProgressLineWithViewport nodes={nodes} steps={steps} />
+        </div>
+      )}
 
       {/* Debug info & Help text */}
       {isEditMode && (

@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -39,6 +39,7 @@ export default function FlowchartViewerPage() {
   const [gridSize, setGridSize] = useState(30);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [hideCompletedSteps, setHideCompletedSteps] = useState(false);
 
   // State for steps (used for both view and edit mode)
   const [steps, setSteps] = useState<FlowchartStep[]>([]);
@@ -981,6 +982,18 @@ defaultEdges: ${edgesCode}
     input.click();
   };
 
+  // Re-align all boxes to grid
+  const handleRealignToGrid = () => {
+    if ((window as any).__flowchartRealignToGrid) {
+      (window as any).__flowchartRealignToGrid();
+
+      // Show brief confirmation toast
+      setToastMessage("Boxes re-aligned to grid!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
   const toggleEditMode = () => {
     // Auto-save when leaving edit mode
     if (isEditMode && hasUnsavedChanges && flowchartData) {
@@ -1079,6 +1092,16 @@ defaultEdges: ${edgesCode}
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={handleRealignToGrid}
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
+                >
+                  <Grid3x3 className="h-4 w-4 mr-2" />
+                  Re-align to Grid
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={toggleEditMode}
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -1108,6 +1131,17 @@ defaultEdges: ${edgesCode}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Hide Completed Steps Toggle */}
+                <label className="flex items-center gap-2 border rounded-md px-3 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={hideCompletedSteps}
+                    onChange={(e) => setHideCompletedSteps(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">Hide Completed</span>
+                </label>
 
                 <Button
                   variant="outline"
@@ -1187,6 +1221,8 @@ defaultEdges: ${edgesCode}
             selectedServiceType={selectedServiceType}
             initialEdges={edges}
             onEdgesChange={setEdges}
+            hideCompletedSteps={hideCompletedSteps}
+            onRealignToGrid={handleRealignToGrid}
           />
         </div>
       </div>
