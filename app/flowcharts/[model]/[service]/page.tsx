@@ -61,6 +61,9 @@ export default function FlowchartViewerPage() {
   // State for service type filtering
   const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
 
+  // State for free positioning (disables grid snap)
+  const [freePositioning, setFreePositioning] = useState(false);
+
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
     if (isEditMode) {
@@ -227,6 +230,32 @@ export default function FlowchartViewerPage() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
+
+        // VERSION CHECK: Verify task counts match
+        // If saved data has different number of tasks, clear it and use fresh data
+        console.log('=== VERSION CHECK START ===');
+        console.log('Checking localStorage key:', storageKey);
+        let taskCountMismatch = false;
+        for (const originalStep of flowchartData.steps) {
+          const savedStep = parsed.steps?.find((s: FlowchartStep) => s.id === originalStep.id);
+          console.log(`Step ${originalStep.id}: saved=${savedStep?.tasks?.length || 'N/A'}, current=${originalStep.tasks.length}`);
+          if (savedStep && savedStep.tasks?.length !== originalStep.tasks.length) {
+            console.log(`❌ MISMATCH for ${originalStep.id}: saved=${savedStep.tasks?.length}, current=${originalStep.tasks.length}`);
+            taskCountMismatch = true;
+            break;
+          }
+        }
+
+        if (taskCountMismatch) {
+          console.log('🔥 Clearing outdated localStorage data due to task count mismatch');
+          localStorage.removeItem(storageKey);
+          setSteps(flowchartData.steps);
+          console.log('✅ Using fresh data from code');
+          return;
+        }
+        console.log('✅ Task counts match, using localStorage data');
+        console.log('=== VERSION CHECK END ===');
+
         // Merge task completion AND positions from localStorage
         const mergedSteps = flowchartData.steps.map((originalStep) => {
           const savedStep = parsed.steps?.find((s: FlowchartStep) => s.id === originalStep.id);
@@ -482,6 +511,66 @@ export default function FlowchartViewerPage() {
         tasks: prev.tasks.map(task =>
           task.id === taskId
             ? { ...task, serviceType }
+            : task
+        )
+      };
+    });
+
+    setHasUnsavedChanges(true);
+  };
+
+  // Handle task description change
+  const handleTaskDescriptionChange = (taskId: string, description: string) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, description }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, description }
+            : task
+        )
+      };
+    });
+
+    setHasUnsavedChanges(true);
+  };
+
+  // Handle task indent toggle
+  const handleTaskIndentToggle = (taskId: string, isIndented: boolean) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step => ({
+        ...step,
+        tasks: step.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, isIndented }
+            : task
+        )
+      }))
+    );
+
+    // Update selected step
+    setSelectedStep(prev => {
+      if (!prev) return prev;
+
+      return {
+        ...prev,
+        tasks: prev.tasks.map(task =>
+          task.id === taskId
+            ? { ...task, isIndented }
             : task
         )
       };
@@ -1099,6 +1188,17 @@ defaultEdges: ${edgesCode}
                   Re-align to Grid
                 </Button>
 
+                {/* Free Positioning Toggle */}
+                <label className="flex items-center gap-2 border rounded-md px-3 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={freePositioning}
+                    onChange={(e) => setFreePositioning(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">Free Position</span>
+                </label>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -1223,6 +1323,7 @@ defaultEdges: ${edgesCode}
             onEdgesChange={setEdges}
             hideCompletedSteps={hideCompletedSteps}
             onRealignToGrid={handleRealignToGrid}
+            freePositioning={freePositioning}
           />
         </div>
       </div>
@@ -1265,6 +1366,8 @@ defaultEdges: ${edgesCode}
         onTaskNoteEdit={handleTaskNoteEdit}
         onTaskNoteDelete={handleTaskNoteDelete}
         onTaskServiceTypeChange={handleTaskServiceTypeChange}
+        onTaskDescriptionChange={handleTaskDescriptionChange}
+        onTaskIndentToggle={handleTaskIndentToggle}
         isEditMode={isEditMode}
       />
 

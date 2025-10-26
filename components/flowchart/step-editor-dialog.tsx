@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { FlowchartStep, FlowchartTask, generateTaskId } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
-import { Plus, Trash2, Pencil, X } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Indent, Outdent } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepEditorDialogProps {
@@ -74,6 +74,15 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
       ...editedStep,
       tasks: editedStep.tasks.map(t =>
         t.id === taskId ? { ...t, serviceType } : t
+      )
+    });
+  };
+
+  const handleTaskIndentToggle = (taskId: string) => {
+    setEditedStep({
+      ...editedStep,
+      tasks: editedStep.tasks.map(t =>
+        t.id === taskId ? { ...t, isIndented: !t.isIndented } : t
       )
     });
   };
@@ -146,19 +155,20 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
                 // Check if task starts with reference number (e.g., "13.5.1", "2.7.2.3", "11.5.1.")
                 // Match 2 or more parts, allow optional trailing dot
                 const hasReferenceNumber = /^\d+(\.\d+)+\.?\s/.test(task.description);
+                const isIndented = task.isIndented || false;
 
                 return (
                   <Card
                     key={task.id}
                     className={cn(
-                      !hasReferenceNumber && "ml-8 border-l-4 border-l-blue-200"
+                      isIndented && "ml-8 border-l-4 border-l-blue-200"
                     )}
                   >
                     <CardContent className="pt-3 pb-3">
                       <div className="flex items-start gap-2">
                         <Badge
-                          variant={hasReferenceNumber ? "default" : "outline"}
-                          className={cn("mt-1", hasReferenceNumber && "bg-blue-600")}
+                          variant={isIndented ? "outline" : "default"}
+                          className={cn("mt-1", !isIndented && "bg-blue-600")}
                         >
                           {index + 1}
                         </Badge>
@@ -166,8 +176,8 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
                           <Input
                             value={task.description}
                             onChange={(e) => handleTaskChange(task.id, e.target.value)}
-                            placeholder={hasReferenceNumber ? "Main task (e.g., 13.5.1 Description...)" : "Sub-task description..."}
-                            className={cn(!hasReferenceNumber && "text-sm text-muted-foreground")}
+                            placeholder={isIndented ? "Sub-task description..." : "Main task (e.g., 13.5.1 Description...)"}
+                            className={cn(isIndented && "text-sm text-muted-foreground")}
                           />
                           {/* Service Type Selector - Only show for tasks with reference numbers */}
                           {hasReferenceNumber && (
@@ -199,6 +209,20 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
                             </div>
                           )}
                         </div>
+                        {/* Indent/Outdent Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTaskIndentToggle(task.id)}
+                          className="mt-1"
+                          title={isIndented ? "Make this a normal task" : "Make this a sub-task (indented)"}
+                        >
+                          {isIndented ? (
+                            <Outdent className="h-4 w-4" />
+                          ) : (
+                            <Indent className="h-4 w-4" />
+                          )}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

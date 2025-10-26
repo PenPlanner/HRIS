@@ -119,35 +119,37 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
       {/* Step Content - Compact task list */}
       <div className="mt-6">
         <div className="space-y-0.5 mb-3 pr-10">
-          {step.title.split('\n').map((line, index) => {
-            const { text } = formatTitleLine(line);
+          {step.tasks.map((task, index) => {
+            const text = task.description;
             if (!text) return null;
 
+            // Check if this task is indented (sub-task)
+            const isIndented = task.isIndented || false;
             // Check if this line has a reference number (e.g., "13.5.1", "11.5.1.")
             const hasRefNumber = /^\d+\.\d+(\.\d+)*\.?\s/.test(text);
 
             return (
               <div
-                key={index}
+                key={task.id}
                 className={cn(
                   "flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden",
-                  !hasRefNumber && "ml-6 text-muted-foreground"
+                  isIndented && "ml-6 text-muted-foreground"
                 )}
                 style={{
-                  backgroundColor: hasRefNumber ? `${step.color}10` : 'transparent'
+                  backgroundColor: !isIndented ? `${step.color}10` : 'transparent'
                 }}
               >
-                {hasRefNumber && (
+                {!isIndented && (
                   <div
                     style={{ backgroundColor: step.color }}
                     className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
                   >
                     <span className="text-[9px] font-mono font-bold text-white">
-                      {step.colorCode}
+                      {task.serviceType || "All"}
                     </span>
                   </div>
                 )}
-                <span className={cn(hasRefNumber ? "font-semibold" : "font-normal", "line-clamp-1 text-white")}>
+                <span className={cn(!isIndented ? "font-semibold" : "font-normal", "line-clamp-1 text-white")}>
                   {text}
                 </span>
               </div>

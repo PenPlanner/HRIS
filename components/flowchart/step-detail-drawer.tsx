@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent } from "lucide-react";
 import { BugReportDialog } from "../bug-report/bug-report-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect } from "react";
@@ -40,6 +41,8 @@ interface StepDetailDrawerProps {
   onTaskNoteEdit: (taskId: string, noteId: string, newText: string) => void;
   onTaskNoteDelete: (taskId: string, noteId: string) => void;
   onTaskServiceTypeChange?: (taskId: string, serviceType: string) => void;
+  onTaskDescriptionChange?: (taskId: string, description: string) => void;
+  onTaskIndentToggle?: (taskId: string, isIndented: boolean) => void;
   selectedServiceType?: string;
   isEditMode?: boolean;
 }
@@ -61,11 +64,17 @@ export function StepDetailDrawer({
   onTaskNoteEdit,
   onTaskNoteDelete,
   onTaskServiceTypeChange,
+  onTaskDescriptionChange,
+  onTaskIndentToggle,
   selectedServiceType = "all",
   isEditMode = false
 }: StepDetailDrawerProps) {
   // State for "Show All" toggle
   const [showAllTasks, setShowAllTasks] = useState(false);
+
+  // State for inline editing
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState<string>("");
 
   // Filter tasks based on selected service type
   const filteredTasks = useMemo(() => {
@@ -90,17 +99,18 @@ export function StepDetailDrawer({
   const siiReferences = useMemo(() => step ? extractSIIReferences(filteredTasks) : [], [filteredTasks, step]);
   const groupedReferences = useMemo(() => groupReferencesByDocument(siiReferences), [siiReferences]);
 
-  // Count only tasks that have SII references (the ones that are actually displayed/checkable)
+  // Count ALL filtered tasks, not just those with SII references
+  const completedTasks = filteredTasks.filter(t => t.completed).length;
+  const totalTasks = filteredTasks.length;
+  const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+  // Keep siiTasks for SII reference matching
   const siiTasks = useMemo(() => {
     if (!step) return [];
     return siiReferences.map(ref =>
       filteredTasks.find(task => task.description.trim().startsWith(ref.fullReference))
     ).filter(Boolean) as FlowchartTask[];
   }, [siiReferences, filteredTasks, step]);
-
-  const completedTasks = siiTasks.filter(t => t.completed).length;
-  const totalTasks = siiTasks.length;
-  const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
   // State for PDF metadata
   const [pdfMetadata, setPdfMetadata] = useState<Map<number, PDFMetadata>>(new Map());
@@ -216,29 +226,132 @@ export function StepDetailDrawer({
           <DialogTitle className="sr-only">
             Step {step.colorCode} Details
           </DialogTitle>
-          <div className="flex items-start justify-between gap-4">
-            {/* Left side - Main info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-3 flex-wrap">
-                {step.technician === "both" ? (
-                  <>
-                    <div className="bg-blue-500/90 px-3 py-1 rounded-md">
-                      <span className="text-xs font-bold text-white">T1</span>
-                    </div>
-                    <div className="bg-purple-500/90 px-3 py-1 rounded-md">
-                      <span className="text-xs font-bold text-white">T2</span>
-                    </div>
-                  </>
-                ) : step.technician === "T1" ? (
-                  <div className="bg-blue-500/90 px-3 py-1 rounded-md">
+
+          {/* Header Cards - Horizontal Layout */}
+          <div className="flex items-stretch gap-2 mb-4">
+            {/* Technician Badge Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-md px-3 py-2 flex items-center gap-2">
+              {step.technician === "both" ? (
+                <>
+                  <div className="bg-blue-500/90 px-3 py-1.5 rounded-md">
                     <span className="text-xs font-bold text-white">T1</span>
                   </div>
-                ) : (
-                  <div className="bg-purple-500/90 px-3 py-1 rounded-md">
+                  <div className="bg-purple-500/90 px-3 py-1.5 rounded-md">
                     <span className="text-xs font-bold text-white">T2</span>
                   </div>
-                )}
+                </>
+              ) : step.technician === "T1" ? (
+                <div className="bg-blue-500/90 px-3 py-1.5 rounded-md">
+                  <span className="text-xs font-bold text-white">T1</span>
+                </div>
+              ) : (
+                <div className="bg-purple-500/90 px-3 py-1.5 rounded-md">
+                  <span className="text-xs font-bold text-white">T2</span>
+                </div>
+              )}
+            </div>
+
+            {/* Duration Card */}
+            <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2 min-w-[140px]">
+              <div className="flex items-center gap-1 text-blue-700 mb-1">
+                <Clock className="h-3 w-3" />
+                <span className="text-[10px] font-medium uppercase tracking-wide">Duration (Target)</span>
               </div>
+              <p className="text-lg font-bold text-blue-900 mb-1.5">{formatDurationTarget(step.duration)}</p>
+
+              <div className="flex items-center gap-1 text-green-700 mt-2">
+                <ClockIcon className="h-3 w-3" />
+                <span className="text-[10px] font-medium uppercase tracking-wide">Actual Time</span>
+              </div>
+              <p className={cn(
+                "text-lg font-bold font-mono",
+                totalStepTimeMinutes === 0 ? "text-gray-500" : totalStepTimeMinutes <= step.durationMinutes ? "text-green-900" : "text-red-900"
+              )}>
+                {formatTime(totalStepTimeMinutes)}
+              </p>
+            </div>
+
+            {/* Progress Card */}
+            <div className={cn(
+              "border rounded-md px-3 py-2 flex items-center gap-3",
+              isComplete ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
+            )}>
+              <div className="relative w-16 h-16 flex-shrink-0">
+                {/* Background Circle */}
+                <svg className="w-16 h-16 transform -rotate-90">
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="26"
+                    stroke="currentColor"
+                    strokeWidth="5"
+                    fill="none"
+                    className={cn(
+                      isComplete ? "text-green-200" : "text-yellow-200"
+                    )}
+                  />
+                  {/* Progress Circle */}
+                  <circle
+                    cx="32"
+                    cy="32"
+                    r="26"
+                    stroke="currentColor"
+                    strokeWidth="5"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 26}`}
+                    strokeDashoffset={`${2 * Math.PI * 26 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
+                    className={cn(
+                      "transition-all duration-500",
+                      isComplete ? "text-green-500" : "text-yellow-500"
+                    )}
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                {/* Center Content */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  {isComplete ? (
+                    <CheckCircle2 className="h-7 w-7 text-green-600" />
+                  ) : (
+                    <>
+                      <p className="text-base font-bold leading-none text-yellow-700">
+                        {completedTasks}/{totalTasks}
+                      </p>
+                      <p className="text-[8px] font-medium uppercase tracking-wide mt-0.5 text-yellow-600">
+                        Tasks
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Completion Info */}
+              {isComplete && step.completedAt && (
+                <div>
+                  <p className="text-sm font-bold text-green-700 font-mono leading-tight">
+                    {new Date(step.completedAt).toLocaleDateString('sv-SE', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-sm font-bold text-green-700 font-mono">
+                    {new Date(step.completedAt).toLocaleTimeString('sv-SE', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-[9px] font-medium uppercase tracking-wide text-green-600 mt-0.5">
+                    Completed
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-start justify-between gap-4">
+            {/* Main info */}
+            <div className="flex-1 min-w-0">
 
               {/* Service Filter Toggle */}
               {selectedServiceType !== "all" && (
@@ -261,20 +374,18 @@ export function StepDetailDrawer({
               {/* Tasks as vertical list - separated by status */}
               <div className="space-y-3">
                 {(() => {
-                  const tasks = step.title.split('\n').map((task, idx) => {
-                    const taskMatch = task.match(/^([\d.]+)\s+(.+)$/);
-                    if (!taskMatch) return null;
-                    const [, ref, desc] = taskMatch;
-                    const taskObj = filteredTasks.find(t => t.description.startsWith(ref));
-
-                    // Skip this task if it's not in filteredTasks (means it was filtered out)
-                    if (!taskObj) return null;
+                  // Use filteredTasks array directly instead of parsing step.title
+                  const tasks = filteredTasks.map((taskObj, idx) => {
+                    // Try to extract reference number from description
+                    const taskMatch = taskObj.description.match(/^([\d.\-]+)\s+(.+)$/);
+                    const ref = taskMatch ? taskMatch[1] : `${idx + 1}`;
+                    const desc = taskMatch ? taskMatch[2] : taskObj.description;
 
                     const isCompleted = taskObj?.completed || false;
                     const siiRef = siiReferences.find(r => r.fullReference === ref || ref.startsWith(r.fullReference));
 
                     return { idx, ref, desc, taskObj, isCompleted, siiRef };
-                  }).filter((t): t is NonNullable<typeof t> => t !== null);
+                  });
 
                   const inProgressTasks = tasks.filter(t => !t.isCompleted);
                   const completedTasks = tasks.filter(t => t.isCompleted);
@@ -311,13 +422,14 @@ export function StepDetailDrawer({
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
+                                        const isIndented = taskObj?.isIndented || false;
 
                                         return (
                                           <div
                                             key={idx}
                                             className={cn(
                                               "flex items-center gap-2 text-sm py-1.5 pr-3 rounded-md overflow-hidden",
-                                              !hasReferenceNumber && "ml-6",
+                                              isIndented && "ml-6",
                                               (serviceType === '1Y' || serviceType === '12Y') ? "pl-2" : "pl-0"
                                             )}
                                             style={{
@@ -326,18 +438,49 @@ export function StepDetailDrawer({
                                                 : `${SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default}08`
                                             }}
                                           >
-                                            <div
-                                              style={{
-                                                backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
-                                                  ? '#6B7280'
-                                                  : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
-                                              }}
-                                              className="px-3 py-2 flex items-center justify-center flex-shrink-0 self-stretch"
-                                            >
-                                              <span className="text-[10px] font-mono font-bold text-white">
-                                                {serviceType}
-                                              </span>
-                                            </div>
+                                            {isEditMode && taskObj ? (
+                                              <Select
+                                                value={taskObj.serviceType || "1Y"}
+                                                onValueChange={(value) => {
+                                                  if (onTaskServiceTypeChange) {
+                                                    onTaskServiceTypeChange(taskObj.id, value);
+                                                  }
+                                                }}
+                                              >
+                                                <SelectTrigger
+                                                  className="h-full border-0 px-3 py-2 flex-shrink-0 self-stretch rounded-none"
+                                                  style={{
+                                                    backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
+                                                      ? '#6B7280'
+                                                      : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
+                                                  }}
+                                                >
+                                                  <span className="text-[10px] font-mono font-bold text-white">
+                                                    {serviceType}
+                                                  </span>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "10Y", "12Y"].map((type) => (
+                                                    <SelectItem key={type} value={type}>
+                                                      <span className="font-mono text-xs">{type}</span>
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <div
+                                                style={{
+                                                  backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
+                                                    ? '#6B7280'
+                                                    : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
+                                                }}
+                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 self-stretch"
+                                              >
+                                                <span className="text-[10px] font-mono font-bold text-white">
+                                                  {serviceType}
+                                                </span>
+                                              </div>
+                                            )}
                                             {siiRef ? (
                                               <button
                                                 onClick={() => openPdfViewer(siiRef)}
@@ -354,37 +497,58 @@ export function StepDetailDrawer({
                                                 {ref}
                                               </span>
                                             )}
-                                            <span className="flex-1">{desc}</span>
 
-                                            {/* Service Type Editor - Only in edit mode for tasks with reference numbers */}
-                                            {hasReferenceNumber && isEditMode && taskObj && (
-                                              <Popover>
-                                                <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-6 px-2 text-[10px] font-mono ml-2 flex-shrink-0"
-                                                    style={{
-                                                      backgroundColor: taskObj.serviceType ? (SERVICE_TYPE_COLORS[taskObj.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default) : 'white',
-                                                      color: taskObj.serviceType ? 'white' : 'black',
-                                                      borderColor: taskObj.serviceType ? 'transparent' : '#ccc'
-                                                    }}
-                                                  >
-                                                    {taskObj.serviceType || 'Set Type'}
-                                                    <Pencil className="h-2.5 w-2.5 ml-1" />
-                                                  </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-72" onClick={(e) => e.stopPropagation()}>
-                                                  <ServiceTypeSelector
-                                                    currentType={taskObj.serviceType}
-                                                    onSelect={(type) => {
-                                                      if (onTaskServiceTypeChange) {
-                                                        onTaskServiceTypeChange(taskObj.id, type);
-                                                      }
-                                                    }}
-                                                  />
-                                                </PopoverContent>
-                                              </Popover>
+                                            {/* Task Description - Inline editable in edit mode */}
+                                            {isEditMode && taskObj && editingTaskId === taskObj.id ? (
+                                              <Input
+                                                value={editingDescription}
+                                                onChange={(e) => setEditingDescription(e.target.value)}
+                                                onBlur={() => {
+                                                  if (onTaskDescriptionChange && editingDescription.trim()) {
+                                                    onTaskDescriptionChange(taskObj.id, editingDescription);
+                                                  }
+                                                  setEditingTaskId(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    if (onTaskDescriptionChange && editingDescription.trim()) {
+                                                      onTaskDescriptionChange(taskObj.id, editingDescription);
+                                                    }
+                                                    setEditingTaskId(null);
+                                                  } else if (e.key === 'Escape') {
+                                                    setEditingTaskId(null);
+                                                  }
+                                                }}
+                                                className="flex-1 h-7 text-sm"
+                                                autoFocus
+                                              />
+                                            ) : (
+                                              <span
+                                                className={cn("flex-1", isEditMode && taskObj && "cursor-text hover:bg-gray-100 rounded px-1 -mx-1")}
+                                                onClick={() => {
+                                                  if (isEditMode && taskObj) {
+                                                    setEditingTaskId(taskObj.id);
+                                                    setEditingDescription(desc);
+                                                  }
+                                                }}
+                                              >
+                                                {desc}
+                                              </span>
+                                            )}
+
+                                            {/* Indent/Outdent button - Only in edit mode */}
+                                            {isEditMode && taskObj && onTaskIndentToggle && (
+                                              <button
+                                                onClick={() => onTaskIndentToggle(taskObj.id, !isIndented)}
+                                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                                title={isIndented ? "Make this a normal task" : "Make this a sub-task (indented)"}
+                                              >
+                                                {isIndented ? (
+                                                  <Outdent className="h-4 w-4 text-gray-600" />
+                                                ) : (
+                                                  <Indent className="h-4 w-4 text-gray-600" />
+                                                )}
+                                              </button>
                                             )}
                                           </div>
                                         );
@@ -427,13 +591,14 @@ export function StepDetailDrawer({
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
+                                        const isIndented = taskObj?.isIndented || false;
 
                                         return (
                                           <div
                                             key={idx}
                                             className={cn(
                                               "flex items-center gap-2 text-sm py-1.5 pr-3 rounded-md overflow-hidden",
-                                              !hasReferenceNumber && "ml-6",
+                                              isIndented && "ml-6",
                                               (serviceType === '1Y' || serviceType === '12Y') ? "pl-2" : "pl-0"
                                             )}
                                             style={{
@@ -442,18 +607,49 @@ export function StepDetailDrawer({
                                                 : 'rgba(134, 239, 172, 0.15)'
                                             }}
                                           >
-                                            <div
-                                              style={{
-                                                backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
-                                                  ? '#6B7280'
-                                                  : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
-                                              }}
-                                              className="px-3 py-2 flex items-center justify-center flex-shrink-0 opacity-90 self-stretch"
-                                            >
-                                              <span className="text-[10px] font-mono font-bold text-white">
-                                                {serviceType}
-                                              </span>
-                                            </div>
+                                            {isEditMode && taskObj ? (
+                                              <Select
+                                                value={taskObj.serviceType || "1Y"}
+                                                onValueChange={(value) => {
+                                                  if (onTaskServiceTypeChange) {
+                                                    onTaskServiceTypeChange(taskObj.id, value);
+                                                  }
+                                                }}
+                                              >
+                                                <SelectTrigger
+                                                  className="h-full border-0 px-3 py-2 flex-shrink-0 self-stretch rounded-none opacity-90"
+                                                  style={{
+                                                    backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
+                                                      ? '#6B7280'
+                                                      : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
+                                                  }}
+                                                >
+                                                  <span className="text-[10px] font-mono font-bold text-white">
+                                                    {serviceType}
+                                                  </span>
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "10Y", "12Y"].map((type) => (
+                                                    <SelectItem key={type} value={type}>
+                                                      <span className="font-mono text-xs">{type}</span>
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                            ) : (
+                                              <div
+                                                style={{
+                                                  backgroundColor: (serviceType === '1Y' || serviceType === '12Y')
+                                                    ? '#6B7280'
+                                                    : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
+                                                }}
+                                                className="px-3 py-2 flex items-center justify-center flex-shrink-0 opacity-90 self-stretch"
+                                              >
+                                                <span className="text-[10px] font-mono font-bold text-white">
+                                                  {serviceType}
+                                                </span>
+                                              </div>
+                                            )}
                                             <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                                             {siiRef ? (
                                               <button
@@ -471,37 +667,42 @@ export function StepDetailDrawer({
                                                 {ref}
                                               </span>
                                             )}
-                                            <span className="line-through flex-1 text-white/80">{desc}</span>
-
-                                            {/* Service Type Editor - Only in edit mode for tasks with reference numbers */}
-                                            {hasReferenceNumber && isEditMode && taskObj && (
-                                              <Popover>
-                                                <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                  <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-6 px-2 text-[10px] font-mono ml-2 flex-shrink-0 opacity-70"
-                                                    style={{
-                                                      backgroundColor: taskObj.serviceType ? (SERVICE_TYPE_COLORS[taskObj.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default) : 'white',
-                                                      color: taskObj.serviceType ? 'white' : 'black',
-                                                      borderColor: taskObj.serviceType ? 'transparent' : '#ccc'
-                                                    }}
-                                                  >
-                                                    {taskObj.serviceType || 'Set Type'}
-                                                    <Pencil className="h-2.5 w-2.5 ml-1" />
-                                                  </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-72" onClick={(e) => e.stopPropagation()}>
-                                                  <ServiceTypeSelector
-                                                    currentType={taskObj.serviceType}
-                                                    onSelect={(type) => {
-                                                      if (onTaskServiceTypeChange) {
-                                                        onTaskServiceTypeChange(taskObj.id, type);
-                                                      }
-                                                    }}
-                                                  />
-                                                </PopoverContent>
-                                              </Popover>
+                                            {/* Task Description - Inline editable in edit mode */}
+                                            {isEditMode && taskObj && editingTaskId === taskObj.id ? (
+                                              <Input
+                                                value={editingDescription}
+                                                onChange={(e) => setEditingDescription(e.target.value)}
+                                                onBlur={() => {
+                                                  if (onTaskDescriptionChange && editingDescription.trim()) {
+                                                    onTaskDescriptionChange(taskObj.id, editingDescription);
+                                                  }
+                                                  setEditingTaskId(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === 'Enter') {
+                                                    if (onTaskDescriptionChange && editingDescription.trim()) {
+                                                      onTaskDescriptionChange(taskObj.id, editingDescription);
+                                                    }
+                                                    setEditingTaskId(null);
+                                                  } else if (e.key === 'Escape') {
+                                                    setEditingTaskId(null);
+                                                  }
+                                                }}
+                                                className="flex-1 h-7 text-sm"
+                                                autoFocus
+                                              />
+                                            ) : (
+                                              <span
+                                                className={cn("line-through flex-1 text-white/80", isEditMode && taskObj && "cursor-text hover:bg-white/10 rounded px-1 -mx-1")}
+                                                onClick={() => {
+                                                  if (isEditMode && taskObj) {
+                                                    setEditingTaskId(taskObj.id);
+                                                    setEditingDescription(desc);
+                                                  }
+                                                }}
+                                              >
+                                                {desc}
+                                              </span>
                                             )}
                                             {taskObj?.completedAt && (
                                               <span className="text-[10px] text-green-400 font-mono ml-2 flex-shrink-0">
@@ -529,106 +730,6 @@ export function StepDetailDrawer({
                     </>
                   );
                 })()}
-              </div>
-            </div>
-
-            {/* Right side - Compact stats */}
-            <div className="flex flex-col gap-1.5 flex-shrink-0 mr-8">
-              {/* Duration & Actual Time */}
-              <div className="bg-blue-50 border border-blue-200 rounded-md px-2.5 py-1.5 min-w-[110px]">
-                <div className="flex items-center gap-1 text-blue-700 mb-1">
-                  <Clock className="h-3 w-3" />
-                  <span className="text-[10px] font-medium uppercase tracking-wide">Duration (Target)</span>
-                </div>
-                <p className="text-base font-bold text-blue-900 mb-1">{formatDurationTarget(step.duration)}</p>
-
-                <div className="flex items-center gap-1 text-green-700 mt-2">
-                  <ClockIcon className="h-3 w-3" />
-                  <span className="text-[10px] font-medium uppercase tracking-wide">Actual Time</span>
-                </div>
-                <p className={cn(
-                  "text-base font-bold font-mono",
-                  totalStepTimeMinutes === 0 ? "text-gray-500" : totalStepTimeMinutes <= step.durationMinutes ? "text-green-900" : "text-red-900"
-                )}>
-                  {formatTime(totalStepTimeMinutes)}
-                </p>
-              </div>
-
-              {/* Circular Progress */}
-              <div className={cn(
-                "border rounded-md px-2.5 py-2 flex flex-col items-center",
-                isComplete ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"
-              )}>
-                <div className="relative w-20 h-20">
-                  {/* Background Circle */}
-                  <svg className="w-20 h-20 transform -rotate-90">
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="32"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      className={cn(
-                        isComplete ? "text-green-200" : "text-yellow-200"
-                      )}
-                    />
-                    {/* Progress Circle */}
-                    <circle
-                      cx="40"
-                      cy="40"
-                      r="32"
-                      stroke="currentColor"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 32}`}
-                      strokeDashoffset={`${2 * Math.PI * 32 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
-                      className={cn(
-                        "transition-all duration-500",
-                        isComplete ? "text-green-500" : "text-yellow-500"
-                      )}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-
-                  {/* Center Content */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    {isComplete ? (
-                      <CheckCircle2 className="h-8 w-8 text-green-600" />
-                    ) : (
-                      <>
-                        <p className="text-lg font-bold leading-none text-yellow-700">
-                          {completedTasks}/{totalTasks}
-                        </p>
-                        <p className="text-[9px] font-medium uppercase tracking-wide mt-0.5 text-yellow-600">
-                          Tasks
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Completion Timestamp */}
-                {isComplete && step.completedAt && (
-                  <div className="mt-2 text-center">
-                    <p className="text-xs font-bold text-green-700 font-mono leading-tight">
-                      {new Date(step.completedAt).toLocaleDateString('sv-SE', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
-                      })}
-                    </p>
-                    <p className="text-xs font-bold text-green-700 font-mono">
-                      {new Date(step.completedAt).toLocaleTimeString('sv-SE', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                    <p className="text-[9px] font-medium uppercase tracking-wide text-green-600 mt-0.5">
-                      Completed
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>

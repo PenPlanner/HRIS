@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FlowchartData, FlowchartStep, generateFlowchartId, generateStepId, generateTaskId } from "@/lib/flowchart-data";
-import { getServiceTypeColor, SERVICE_TYPE_COLORS, rgbToServiceType } from "@/lib/service-colors";
+import { FlowchartData, FlowchartStep, generateFlowchartId, generateStepId, generateTaskId, parseServiceTimes } from "@/lib/flowchart-data";
+import { getServiceTypeColor } from "@/lib/service-colors";
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
 interface PDFImportDialogProps {
@@ -28,7 +28,6 @@ interface ParsedData {
     tasks: Array<{
       description: string;
       serviceType?: string;
-      rgb?: { r: number; g: number; b: number };
     }>;
   }>;
 }
@@ -104,23 +103,6 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     // This is a basic parser - can be enhanced based on specific PDF format
     const lines = text.split("\n").filter(line => line.trim());
 
-    // Create a map of text to color information
-    const textColorMap = new Map<string, { r: number; g: number; b: number }>();
-    items.forEach((item: any) => {
-      if (item.str && item.str.trim()) {
-        // Extract RGB color from PDF.js color array
-        // PDF.js typically provides color in fillColor or strokeColor
-        const color = item.fillColor || item.strokeColor || [0, 0, 0]; // Default to black
-
-        // Convert to RGB (0-255 range)
-        const r = Math.round(color[0] * 255);
-        const g = Math.round(color[1] * 255);
-        const b = Math.round(color[2] * 255);
-
-        textColorMap.set(item.str.trim(), { r, g, b });
-      }
-    });
-
     // Try to find model and service type
     let detectedModel = model;
     let detectedServiceType = serviceType;
@@ -175,20 +157,10 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
         // Add as task if it's a sub-item
         if (line.length < 200 && (line.match(/^[\s-•\*]/) || line.match(/^\d+\.\d+/))) {
           const taskText = line.trim();
-          const rgb = textColorMap.get(taskText);
-          let serviceType = "1Y"; // Default to base service
-
-          if (rgb) {
-            const detectedType = rgbToServiceType(rgb.r, rgb.g, rgb.b);
-            if (detectedType) {
-              serviceType = detectedType;
-            }
-          }
 
           currentStep.tasks.push({
             description: taskText,
-            serviceType,
-            rgb
+            serviceType: "1Y" // All tasks default to 1Y, user updates manually
           });
         }
       }
@@ -313,13 +285,29 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
     const steps: FlowchartStep[] = arrangedSteps.map((arranged) => {
       const step = arranged.step;
       const color = getServiceTypeColor(arranged.colorCode);
-      const durationMinutes = parseInt(step.duration.replace(/\D/g, "")) || 60;
+
+      // Parse service-specific times from duration string
+      const serviceTimes = parseServiceTimes(step.duration);
+
+      // Get base time (1Y) from serviceTimes, fallback to parsing first number
+      let durationMinutes = serviceTimes["1Y"] || 60;
+
+      // If no 1Y time found, try to extract first time value (e.g., "180m", "2h 30m")
+      if (!serviceTimes["1Y"]) {
+        const firstTimeMatch = step.duration.match(/^(\d+)([hm])/);
+        if (firstTimeMatch) {
+          const value = parseInt(firstTimeMatch[1]);
+          const unit = firstTimeMatch[2];
+          durationMinutes = unit === 'h' ? value * 60 : value;
+        }
+      }
 
       return {
         id: generateStepId(),
         title: step.title,
         duration: step.duration,
         durationMinutes,
+        serviceTimes,
         color,
         colorCode: arranged.colorCode,
         technician: step.technician || "both",
@@ -328,8 +316,7 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
           id: generateTaskId(),
           description: task.description,
           completed: false,
-          serviceType: task.serviceType,
-          pdfRgb: task.rgb
+          serviceType: task.serviceType || "1Y"
         }))
       };
     });

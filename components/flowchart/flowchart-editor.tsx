@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import ReactFlow, {
+import {
+  ReactFlow,
   Node,
   Edge,
   Controls,
@@ -19,8 +20,12 @@ import ReactFlow, {
   useReactFlow,
   ReactFlowProvider,
   NodeResizer,
-} from 'reactflow';
-import { FlowchartStep, generateStepId } from "@/lib/flowchart-data";
+  ViewportPortal,
+  EdgeProps,
+  BaseEdge,
+  getStraightPath,
+} from '@xyflow/react';
+import { FlowchartStep, generateStepId, parseServiceTimes, getCumulativeServiceTime } from "@/lib/flowchart-data";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +48,7 @@ interface FlowchartEditorProps {
   onEdgesChange?: (edges: Edge[]) => void;
   hideCompletedSteps?: boolean;
   onRealignToGrid?: () => void;
+  freePositioning?: boolean;
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -81,60 +87,135 @@ interface StepNodeData {
   gridSize: number;
 }
 
-// Progress Line Component with Viewport Tracking
-// Uses useReactFlow to track viewport and transform coordinates
-function ProgressLineWithViewport({ nodes, steps }: { nodes: Node[], steps: FlowchartStep[] }) {
-  const { getViewport } = useReactFlow();
-  const [viewport, setViewport] = useState(getViewport());
+// Custom Horizontal Edge - Always draws a straight horizontal line
+function HorizontalEdge({ id, sourceX, sourceY, targetX, targetY, style, markerEnd, markerStart }: EdgeProps) {
+  // Force horizontal line by using the average Y position
+  const midY = (sourceY + targetY) / 2;
 
-  // Update viewport state when it changes
-  useEffect(() => {
-    const updateViewport = () => {
-      setViewport(getViewport());
-    };
+  // Create path data for a straight horizontal line
+  const [edgePath] = getStraightPath({
+    sourceX,
+    sourceY: midY,
+    targetX,
+    targetY: midY,
+  });
 
-    // Listen for viewport changes by polling (simple approach)
-    const interval = setInterval(updateViewport, 50); // 20fps update rate
+  return <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} markerStart={markerStart} />;
+}
 
-    return () => clearInterval(interval);
-  }, [getViewport]);
+// Custom Vertical Edge - Always draws a straight vertical line
+function VerticalEdge({ id, sourceX, sourceY, targetX, targetY, style, markerEnd, markerStart }: EdgeProps) {
+  // Force vertical line by using the average X position
+  const midX = (sourceX + targetX) / 2;
 
+  // Create path data for a straight vertical line
+  const [edgePath] = getStraightPath({
+    sourceX: midX,
+    sourceY,
+    targetX: midX,
+    targetY,
+  });
+
+  return <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} markerStart={markerStart} />;
+}
+
+// Progress Line Component - Renders in viewport coordinates using ViewportPortal
+function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Node[], steps: FlowchartStep[], selectedServiceType?: string }) {
   if (nodes.length === 0) return null;
 
-  // Calculate completion for each step
-  const stepsWithCompletion = nodes.map(node => {
+  // Helper to format minutes to readable format
+  const formatMinutes = (mins: number): string => {
+    if (mins === 0) return "0m";
+    const hours = Math.floor(mins / 60);
+    const minutes = mins % 60;
+    if (hours === 0) return `${minutes}m`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Calculate completion, time info for each step
+  const stepsWithData = nodes.map(node => {
     const step = steps.find(s => s.id === node.id);
     if (!step) return null;
 
-    const visibleTasks = step.tasks.filter(task =>
-      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-    );
-    const completedTasks = visibleTasks.filter(t => t.completed).length;
-    const totalTasks = visibleTasks.length;
+    // Count ALL tasks, not just those with reference numbers
+    const completedTasks = step.tasks.filter(t => t.completed).length;
+    const totalTasks = step.tasks.length;
     const isComplete = completedTasks === totalTasks && totalTasks > 0;
-    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    const completionPercent = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
+
+    // Calculate actual time (sum of all tasks' actualTimeMinutes)
+    const actualTime = step.tasks.reduce((sum, task) => sum + (task.actualTimeMinutes || 0), 0);
+
+    // Get planned time based on selected service type (cumulative)
+    // First, ensure serviceTimes are parsed if not already
+    if (!step.serviceTimes && step.duration) {
+      step.serviceTimes = parseServiceTimes(step.duration);
+    }
+
+    // Calculate cumulative time for selected service type
+    const plannedTime = getCumulativeServiceTime(step.serviceTimes, selectedServiceType) || step.durationMinutes || 0;
 
     return {
-      // Use viewport-transformed coordinates (what you see on screen)
-      x: node.position.x * viewport.zoom + viewport.x + (150 * viewport.zoom), // Center of box
-      y: node.position.y * viewport.zoom + viewport.y,
+      x: node.position.x + 150, // Center of box (300px width / 2)
+      y: node.position.y,
       isComplete,
-      progress,
+      completedTasks,
+      totalTasks,
+      completionPercent,
+      actualTime,
+      plannedTime,
+      step: step,
       id: node.id
     };
   }).filter(Boolean).sort((a, b) => a!.x - b!.x);
 
-  if (stepsWithCompletion.length === 0) return null;
+  if (stepsWithData.length === 0) return null;
 
-  const first = stepsWithCompletion[0]!;
-  const last = stepsWithCompletion[stepsWithCompletion.length - 1]!;
+  const first = stepsWithData[0]!;
+  const last = stepsWithData[stepsWithData.length - 1]!;
 
   // Find highest Y position (smallest Y value = highest on screen)
-  const highestY = Math.min(...stepsWithCompletion.map(s => s!.y));
-  const progressLineY = highestY - (80 * viewport.zoom); // 80px above highest box, scaled
+  const highestY = Math.min(...stepsWithData.map(s => s!.y));
+  const baseY = highestY - 120; // 120px above highest box for more space
 
-  const completedSteps = stepsWithCompletion.filter(s => s!.isComplete).length;
-  const overallProgress = (completedSteps / stepsWithCompletion.length) * 100;
+  // Calculate cumulative times for progress visualization
+  let cumulativeTargetTime = 0;
+  let cumulativeActualTime = 0;
+  const stepsWithProgress = stepsWithData.map(stepData => {
+    // Only add to target if step has been worked on (has actual time)
+    if (stepData!.actualTime > 0) {
+      cumulativeTargetTime += stepData!.plannedTime;
+    }
+    cumulativeActualTime += stepData!.actualTime;
+
+    return {
+      ...stepData!,
+      cumulativeTargetTime,
+      cumulativeActualTime
+    } as typeof stepData & {
+      cumulativeTargetTime: number;
+      cumulativeActualTime: number;
+    };
+  });
+
+  // Calculate totals
+  const totalPlannedTime = stepsWithData.reduce((sum, s) => sum + s!.plannedTime, 0);
+  const totalTargetTime = cumulativeTargetTime; // Only steps with actual time
+  const totalActualTime = cumulativeActualTime;
+
+  // Calculate total tasks from ALL steps
+  const allCompletedTasks = stepsWithData.reduce((sum, s) => sum + s!.completedTasks, 0);
+  const allTotalTasks = stepsWithData.reduce((sum, s) => sum + s!.totalTasks, 0);
+  const completedSteps = stepsWithData.filter(s => s!.isComplete).length;
+  const completionPercent = allTotalTasks > 0 ? (allCompletedTasks / allTotalTasks) * 100 : 0;
+
+  // Calculate X positions for time-based progress
+  const totalWidth = last.x - first.x;
+  const calculateXFromTime = (time: number) => {
+    if (totalPlannedTime === 0) return first.x;
+    return first.x + (time / totalPlannedTime) * totalWidth;
+  };
 
   return (
     <svg
@@ -148,99 +229,194 @@ function ProgressLineWithViewport({ nodes, steps }: { nodes: Node[], steps: Flow
         overflow: 'visible'
       }}
     >
-      {/* Gradient definition */}
       <defs>
-        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        {/* Gradients - unique IDs for progress tracker */}
+        <linearGradient id="progressTargetGradient" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#10b981" />
           <stop offset="100%" stopColor="#34d399" />
         </linearGradient>
+        <linearGradient id="progressActualGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#eab308" />
+          <stop offset="100%" stopColor="#fbbf24" />
+        </linearGradient>
+
+        {/* Filter for glow effect */}
+        <filter id="progressGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
       </defs>
 
-      {/* Background line */}
-      <line
-        x1={first.x}
-        y1={progressLineY}
-        x2={last.x}
-        y2={progressLineY}
-        stroke="rgba(75, 85, 99, 0.3)"
-        strokeWidth={6 * viewport.zoom}
-        strokeLinecap="round"
-      />
+      {/* Title and Legend */}
+      <g>
+        <text
+          x={first.x}
+          y={baseY - 45}
+          fill="#ffffff"
+          fontSize="14"
+          fontWeight="700"
+          fontFamily="system-ui, -apple-system, sans-serif"
+        >
+          Progress Tracker
+        </text>
 
-      {/* Progress fill line */}
-      {completedSteps > 0 && (
-        <line
-          x1={first.x}
-          y1={progressLineY}
-          x2={first.x + ((last.x - first.x) * (overallProgress / 100))}
-          y2={progressLineY}
-          stroke="url(#progressGradient)"
-          strokeWidth={6 * viewport.zoom}
-          strokeLinecap="round"
-          className="transition-all duration-1000"
-        />
-      )}
+        {/* Legend */}
+        <g transform={`translate(${first.x}, ${baseY - 22})`}>
+          {/* Target time legend */}
+          <line x1="0" y1="0" x2="20" y2="0" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+          <text x="25" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
+            Target
+          </text>
 
-      {/* Checkpoints */}
-      {stepsWithCompletion.map((stepData) => (
-        <g key={stepData!.id}>
-          {/* Checkpoint circle */}
-          <circle
-            cx={stepData!.x}
-            cy={progressLineY}
-            r={8 * viewport.zoom}
-            fill={stepData!.isComplete ? "#10b981" : "#4b5563"}
-            stroke={stepData!.isComplete ? "white" : "#9ca3af"}
-            strokeWidth={2 * viewport.zoom}
-            className={cn(
-              "transition-all duration-500",
-              stepData!.isComplete && "drop-shadow-lg"
-            )}
-          />
+          {/* Actual time legend */}
+          <line x1="100" y1="0" x2="120" y2="0" stroke="#eab308" strokeWidth="3" strokeLinecap="round" />
+          <text x="125" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
+            Actual
+          </text>
 
-          {/* Checkmark */}
-          {stepData!.isComplete && (
-            <text
-              x={stepData!.x}
-              y={progressLineY + (1 * viewport.zoom)}
-              fill="white"
-              fontSize={10 * viewport.zoom}
-              fontWeight="bold"
-              textAnchor="middle"
-              dominantBaseline="middle"
-            >
-              ✓
-            </text>
-          )}
+          {/* Over-target legend */}
+          <line x1="190" y1="0" x2="210" y2="0" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
+          <text x="215" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
+            Overtime
+          </text>
 
-          {/* Percentage label */}
-          <text
-            x={stepData!.x}
-            y={progressLineY + (28 * viewport.zoom)}
-            fill={stepData!.isComplete ? "#10b981" : "#9ca3af"}
-            fontSize={11 * viewport.zoom}
-            fontWeight="bold"
-            textAnchor="middle"
-          >
-            {Math.round(stepData!.progress)}%
+          {/* Completion status */}
+          <text x="300" y="0" fill="#6b7280" fontSize="10" fontWeight="600" dominantBaseline="middle">
+            {allCompletedTasks}/{allTotalTasks} Tasks ({Math.round(completionPercent)}%) · {completedSteps}/{stepsWithData.length} Steps
           </text>
         </g>
-      ))}
+      </g>
+
+      {/* TARGET TIME TRACK (Top line - Green) */}
+      <g>
+        {/* Background track */}
+        <line
+          x1={first.x}
+          y1={baseY}
+          x2={last.x}
+          y2={baseY}
+          stroke="#e5e7eb"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+
+        {/* Target time progress (cumulative for steps with actual time) */}
+        {totalTargetTime > 0 && (
+          <line
+            x1={first.x}
+            y1={baseY}
+            x2={calculateXFromTime(totalTargetTime)}
+            y2={baseY}
+            stroke="#10b981"
+            strokeWidth="8"
+            strokeLinecap="round"
+            opacity="0.9"
+            className="transition-all duration-500"
+          />
+        )}
+
+        {/* End label */}
+        <text
+          x={last.x + 15}
+          y={baseY}
+          fill="#10b981"
+          fontSize="10"
+          fontWeight="700"
+          dominantBaseline="middle"
+        >
+          {formatMinutes(totalTargetTime)}
+        </text>
+      </g>
+
+      {/* ACTUAL TIME TRACK (Bottom line - Yellow/Red) */}
+      <g>
+        {/* Background track */}
+        <line
+          x1={first.x}
+          y1={baseY + 20}
+          x2={last.x}
+          y2={baseY + 20}
+          stroke="#e5e7eb"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+
+        {/* Actual time progress */}
+        {totalActualTime > 0 && (
+          <>
+            {/* Yellow part (up to target) */}
+            <line
+              x1={first.x}
+              y1={baseY + 20}
+              x2={calculateXFromTime(Math.min(totalActualTime, totalTargetTime))}
+              y2={baseY + 20}
+              stroke="#eab308"
+              strokeWidth="8"
+              strokeLinecap="round"
+              opacity="0.9"
+              className="transition-all duration-500"
+            />
+
+            {/* Red part (over target) */}
+            {totalActualTime > totalTargetTime && (
+              <>
+                <line
+                  x1={calculateXFromTime(totalTargetTime)}
+                  y1={baseY + 20}
+                  x2={calculateXFromTime(totalActualTime)}
+                  y2={baseY + 20}
+                  stroke="#ef4444"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  opacity="0.9"
+                  className="transition-all duration-500"
+                />
+
+                {/* Overtime indicator */}
+                <text
+                  x={(calculateXFromTime(totalTargetTime) + calculateXFromTime(totalActualTime)) / 2}
+                  y={baseY + 38}
+                  fill="#ef4444"
+                  fontSize="9"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  +{formatMinutes(totalActualTime - totalTargetTime)}
+                </text>
+              </>
+            )}
+          </>
+        )}
+
+        {/* End label */}
+        <text
+          x={last.x + 15}
+          y={baseY + 20}
+          fill={totalActualTime > totalTargetTime ? "#ef4444" : "#eab308"}
+          fontSize="10"
+          fontWeight="700"
+          dominantBaseline="middle"
+        >
+          {formatMinutes(totalActualTime)}
+        </text>
+      </g>
+
     </svg>
   );
 }
 
 // Custom node component for flowchart steps
-function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeData>) {
+function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: NodeProps<StepNodeData>) {
   const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize } = data;
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingStepName, setEditingStepName] = useState(false);
 
-  // Only count tasks that will be displayed (with reference numbers)
-  const visibleTasksForCounting = step.tasks.filter(task =>
-    /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-  );
-
-  const completedTasks = visibleTasksForCounting.filter(t => t.completed).length;
-  const totalTasks = visibleTasksForCounting.length;
+  // Count ALL tasks
+  const completedTasks = step.tasks.filter(t => t.completed).length;
+  const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
   // Calculate total notes count from all tasks
@@ -250,14 +426,12 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
   // Each task row is ~24px, plus header/footer ~100px
   // Round UP to nearest 60px (2 grid units) + add 60px extra padding for breathing room
   const calculateGridHeight = () => {
-    // Filter tasks that will be displayed (with reference numbers)
-    const visibleTasks = step.tasks.filter(task =>
-      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-    );
+    // Count ALL tasks (including indented ones)
+    const totalTasks = step.tasks.length;
 
     // Base height: 100px for header + footer
     // Each task: ~24px
-    const estimatedHeight = 100 + (visibleTasks.length * 24);
+    const estimatedHeight = 100 + (totalTasks * 24);
 
     // Round UP to nearest 60px
     const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
@@ -409,9 +583,48 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
         }}
       >
         {/* Step Label - Inside card, top left with checkmark if complete */}
-        <div className="absolute top-2 left-3 text-xs font-semibold text-muted-foreground flex items-center gap-1">
+        <div className="absolute top-2 left-3 text-xs font-semibold flex items-center gap-1">
           {isComplete && <span className="text-green-500 text-base">✓</span>}
-          Step {getStepNumber(step.id)}
+          {isEditMode && editingStepName ? (
+            <input
+              type="text"
+              defaultValue={getStepNumber(step.id)}
+              autoFocus
+              onBlur={(e) => {
+                // Update step id based on new name
+                const newName = e.target.value.trim();
+                if (newName && newName !== getStepNumber(step.id)) {
+                  const newId = `step-${newName.toLowerCase().replace(/\./g, '-')}`;
+                  onUpdateStep({ ...step, id: newId });
+                }
+                setEditingStepName(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+                if (e.key === 'Escape') {
+                  setEditingStepName(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-blue-500 text-xs font-semibold text-foreground w-24"
+            />
+          ) : isEditMode ? (
+            <span
+              className="text-muted-foreground cursor-text hover:bg-blue-500/20 px-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingStepName(true);
+              }}
+            >
+              Step {getStepNumber(step.id)}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              Step {getStepNumber(step.id)}
+            </span>
+          )}
         </div>
 
         {/* Action Buttons - Inside card, top right - Only visible in edit mode */}
@@ -474,15 +687,12 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
           {/* Task list - compact format - scrollable if overflow */}
           <div className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2 scrollbar-thin">
             {step.tasks.map((task) => {
-              // Only show tasks with reference numbers (e.g., "1. Description" or "13.5.1 Description")
-              const hasRefNumber = /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description);
-
-              // Skip tasks without reference numbers
-              if (!hasRefNumber) return null;
+              // Check if task is indented (sub-task)
+              const isIndented = task.isIndented || false;
 
               // Filter by service type if a filter is selected (not in edit mode)
               if (!isEditMode && selectedServiceType && selectedServiceType !== "all") {
-                const taskServiceType = task.serviceType || "1Y";
+                const taskServiceType = task.serviceType || "All";
                 const includedTypes = getIncludedServiceTypes(selectedServiceType);
 
                 // Skip this task if its service type is not in the included types
@@ -491,34 +701,115 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
                 }
               }
 
-              // Get service type color, using gray for 1Y/12Y for visibility
-              const serviceType = task.serviceType || "1Y";
-              const badgeColor = (serviceType === '1Y' || serviceType === '12Y')
-                ? '#6B7280'
-                : SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
+              // Get service type color
+              const serviceType = task.serviceType || "All";
+              const badgeColor = SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
 
               return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden"
+                  className={cn(
+                    "flex items-center gap-1.5 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
+                    isIndented && "ml-6 text-muted-foreground"
+                  )}
                   style={{
-                    backgroundColor: `${badgeColor}10`
+                    backgroundColor: !isIndented ? `${badgeColor}10` : 'transparent'
                   }}
                 >
-                  <div
-                    style={{ backgroundColor: badgeColor }}
-                    className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
-                  >
-                    <span className="text-[9px] font-mono font-bold text-white">
-                      {serviceType}
+                  {!isIndented && (
+                    isEditMode ? (
+                      <select
+                        value={serviceType}
+                        onChange={(e) => {
+                          const updatedStep = {
+                            ...step,
+                            tasks: step.tasks.map(t =>
+                              t.id === task.id ? { ...t, serviceType: e.target.value } : t
+                            )
+                          };
+                          onUpdateStep(updatedStep);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ backgroundColor: badgeColor }}
+                        className="px-2 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0"
+                      >
+                        <option value="All" style={{ backgroundColor: SERVICE_TYPE_COLORS.All, color: 'white' }}>All</option>
+                        <option value="1Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["1Y"], color: 'white' }}>1Y</option>
+                        <option value="2Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["2Y"], color: 'white' }}>2Y</option>
+                        <option value="3Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["3Y"], color: 'white' }}>3Y</option>
+                        <option value="4Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["4Y"], color: 'white' }}>4Y</option>
+                        <option value="5Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["5Y"], color: 'white' }}>5Y</option>
+                        <option value="6Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["6Y"], color: 'white' }}>6Y</option>
+                        <option value="7Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["7Y"], color: 'black' }}>7Y</option>
+                        <option value="10Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["10Y"], color: 'black' }}>10Y</option>
+                        <option value="12Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["12Y"], color: 'white' }}>12Y</option>
+                      </select>
+                    ) : (
+                      <div
+                        style={{ backgroundColor: badgeColor }}
+                        className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch"
+                      >
+                        <span className="text-[9px] font-mono font-bold text-white">
+                          {serviceType}
+                        </span>
+                      </div>
+                    )
+                  )}
+                  {isEditMode && editingTaskId === task.id ? (
+                    <input
+                      type="text"
+                      defaultValue={task.description}
+                      autoFocus
+                      onBlur={(e) => {
+                        const newDesc = e.target.value.trim();
+                        if (newDesc && newDesc !== task.description) {
+                          const updatedStep = {
+                            ...step,
+                            tasks: step.tasks.map(t =>
+                              t.id === task.id ? { ...t, description: newDesc } : t
+                            )
+                          };
+                          onUpdateStep(updatedStep);
+                        }
+                        setEditingTaskId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.currentTarget.blur();
+                        }
+                        if (e.key === 'Escape') {
+                          setEditingTaskId(null);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-blue-500 text-xs text-foreground"
+                    />
+                  ) : isEditMode ? (
+                    <span
+                      className={cn(
+                        !isIndented ? "font-semibold" : "font-normal",
+                        "flex-1",
+                        task.completed ? "line-through text-gray-400" : "text-white",
+                        "cursor-text hover:bg-blue-500/20 px-1 rounded"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTaskId(task.id);
+                      }}
+                    >
+                      {task.description}
                     </span>
-                  </div>
-                  <span className={cn(
-                    "font-semibold line-clamp-1 flex-1",
-                    task.completed ? "line-through text-gray-400" : "text-white"
-                  )}>
-                    {task.description}
-                  </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        !isIndented ? "font-semibold" : "font-normal",
+                        "line-clamp-1 flex-1",
+                        task.completed ? "line-through text-gray-400" : "text-white"
+                      )}
+                    >
+                      {task.description}
+                    </span>
+                  )}
                   {task.completed && (
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-400 flex-shrink-0" />
                   )}
@@ -574,7 +865,7 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
               <div className="mt-2 pt-2 border-t border-gray-700/50 text-xs text-gray-400 font-mono space-y-0.5">
                 <div className="flex justify-between">
                   <span>Position:</span>
-                  <span className="text-blue-400">X: {Math.round(xPos || step.position.x * gridSize)}, Y: {Math.round(yPos || step.position.y * gridSize)}</span>
+                  <span className="text-blue-400">X: {Math.round(positionAbsoluteX || step.position.x * gridSize)}, Y: {Math.round(positionAbsoluteY || step.position.y * gridSize)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Size:</span>
@@ -582,7 +873,7 @@ function StepNode({ data, id, xPos, yPos, width, height }: NodeProps<StepNodeDat
                 </div>
                 <div className="flex justify-between">
                   <span>Grid:</span>
-                  <span className="text-green-400">X: {Math.round((xPos || step.position.x * gridSize) / gridSize)}, Y: {Math.round((yPos || step.position.y * gridSize) / gridSize)}</span>
+                  <span className="text-green-400">X: {Math.round((positionAbsoluteX || step.position.x * gridSize) / gridSize)}, Y: {Math.round((positionAbsoluteY || step.position.y * gridSize) / gridSize)}</span>
                 </div>
               </div>
             )}
@@ -608,23 +899,23 @@ function FlowchartEditorInner({
   initialEdges = [],
   onEdgesChange: onEdgesChangeProp,
   hideCompletedSteps = false,
-  onRealignToGrid
+  onRealignToGrid,
+  freePositioning = false
 }: FlowchartEditorProps) {
   // Filter steps based on hideCompletedSteps
   const displayedSteps = useMemo(() => {
     if (!hideCompletedSteps || isEditMode) return steps;
 
     return steps.filter(step => {
-      const visibleTasks = step.tasks.filter(task =>
-        /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-      );
-      const completedTasks = visibleTasks.filter(t => t.completed).length;
-      const totalTasks = visibleTasks.length;
+      // Count ALL tasks
+      const completedTasks = step.tasks.filter(t => t.completed).length;
+      const totalTasks = step.tasks.length;
       const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
       return !isComplete; // Only show incomplete steps
     });
   }, [steps, hideCompletedSteps, isEditMode]);
+
   // Define handlers first before using them in useMemo
   const handleDelete = useCallback((stepId: string) => {
     if (confirm("Are you sure you want to delete this step?")) {
@@ -657,11 +948,9 @@ function FlowchartEditorInner({
 
   // Convert FlowchartStep[] to React Flow nodes
   const initialNodes: Node<StepNodeData>[] = useMemo(() => displayedSteps.map(step => {
-    // Calculate initial height based on task count
-    const visibleTasks = step.tasks.filter(task =>
-      /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-    );
-    const estimatedHeight = 100 + (visibleTasks.length * 24);
+    // Calculate initial height based on ALL tasks
+    const totalTasks = step.tasks.length;
+    const estimatedHeight = 100 + (totalTasks * 24);
     const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
     const heightWithPadding = gridAlignedHeight + 60;
     const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
@@ -768,11 +1057,9 @@ function FlowchartEditorInner({
       const newNodes = displayedSteps
         .filter(step => !existingNodeIds.has(step.id))
         .map(step => {
-          // Calculate initial height based on task count
-          const visibleTasks = step.tasks.filter(task =>
-            /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-          );
-          const estimatedHeight = 100 + (visibleTasks.length * 24);
+          // Calculate initial height based on ALL tasks
+          const totalTasks = step.tasks.length;
+          const estimatedHeight = 100 + (totalTasks * 24);
           const gridAlignedHeight = Math.ceil(estimatedHeight / 60) * 60;
           const heightWithPadding = gridAlignedHeight + 60;
           const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
@@ -878,12 +1165,9 @@ function FlowchartEditorInner({
         const sourceStep = steps.find(s => s.id === edge.source);
         if (!sourceStep) return edge;
 
-        // Only count visible tasks (with reference numbers)
-        const visibleTasks = sourceStep.tasks.filter(task =>
-          /^\d+\.(\d+(\.\d+)*\.?)?\s/.test(task.description)
-        );
-        const completedTasks = visibleTasks.filter(t => t.completed).length;
-        const totalTasks = visibleTasks.length;
+        // Count ALL tasks
+        const completedTasks = sourceStep.tasks.filter(t => t.completed).length;
+        const totalTasks = sourceStep.tasks.length;
         const isSourceComplete = completedTasks === totalTasks && totalTasks > 0;
 
         // Only auto-update if edge doesn't have custom color (still has default blue)
@@ -919,18 +1203,11 @@ function FlowchartEditorInner({
   // Load initialEdges only once when data is loaded from localStorage
   useEffect(() => {
     if (initialEdges.length > 0 && !hasLoadedInitialEdges.current) {
-      console.log('FlowchartEditor: loading initialEdges:', initialEdges.length);
       // Filter out invalid edges (those with null/undefined source/target/handles)
       const validEdges = initialEdges.filter(edge => {
         const isValid = edge.source && edge.target && edge.sourceHandle && edge.targetHandle;
-        if (!isValid) {
-          console.warn('FlowchartEditor: invalid edge:', edge);
-        }
         return isValid;
       });
-      if (validEdges.length !== initialEdges.length) {
-        console.warn('FlowchartEditor: filtered out invalid edges:', initialEdges.length - validEdges.length);
-      }
       setEdges(validEdges);
       hasLoadedInitialEdges.current = true;
     }
@@ -938,7 +1215,6 @@ function FlowchartEditorInner({
 
   // Sync edges to parent component whenever they change
   useEffect(() => {
-    console.log('FlowchartEditor: edges changed:', edges.length);
     onEdgesChangeProp?.(edges);
   }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -957,7 +1233,7 @@ function FlowchartEditorInner({
   }, [isEditMode]);
 
   // Update edge style
-  const updateEdgeStyle = useCallback((edgeId: string, type: 'straight' | 'smoothstep' | 'step' | 'default' | 'simplebezier') => {
+  const updateEdgeStyle = useCallback((edgeId: string, type: 'straight' | 'smoothstep' | 'step' | 'default' | 'simplebezier' | 'horizontal' | 'vertical') => {
     setEdges((eds) => eds.map(edge => {
       if (edge.id === edgeId) {
         return {
@@ -1083,6 +1359,10 @@ function FlowchartEditorInner({
 
   // Define custom node types
   const nodeTypes = useMemo(() => ({ stepNode: StepNode }), []);
+  const edgeTypes = useMemo(() => ({
+    horizontal: HorizontalEdge,
+    vertical: VerticalEdge
+  }), []);
 
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
@@ -1095,15 +1375,14 @@ function FlowchartEditorInner({
         onNodeClick={handleNodeClick}
         onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         minZoom={0.5}
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
         nodesDraggable={isEditMode}
         nodesConnectable={isEditMode}
-        edgesUpdatable={isEditMode}
-        edgesFocusable={isEditMode}
-        elementsSelectable={isEditMode}
-        snapToGrid={isEditMode}
+        edgesReconnectable={isEditMode}
+        snapToGrid={isEditMode && !freePositioning}
         snapGrid={[gridSize, gridSize]}
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
@@ -1121,20 +1400,14 @@ function FlowchartEditorInner({
             <Controls />
           </>
         )}
-      </ReactFlow>
 
-      {/* Progress Line - Shows overall completion across all steps - Outside ReactFlow but visually positioned correctly */}
-      {!isEditMode && nodes.length > 0 && (
-        <div
-          className="absolute inset-0 overflow-visible"
-          style={{
-            pointerEvents: 'none',
-            zIndex: 1
-          }}
-        >
-          <ProgressLineWithViewport nodes={nodes} steps={steps} />
-        </div>
-      )}
+        {/* Progress Line - Shows overall completion across all steps */}
+        {!isEditMode && (
+          <ViewportPortal>
+            <ProgressLine nodes={nodes} steps={steps} selectedServiceType={selectedServiceType} />
+          </ViewportPortal>
+        )}
+      </ReactFlow>
 
       {/* Debug info & Help text */}
       {isEditMode && (
@@ -1200,6 +1473,24 @@ function FlowchartEditorInner({
               >
                 <Minus className="h-3 w-3" />
                 Straight
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'horizontal' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'horizontal')}
+                className="justify-start gap-2 text-xs"
+              >
+                <ArrowRight className="h-3 w-3" />
+                Horizontal
+              </Button>
+              <Button
+                variant={selectedEdge.type === 'vertical' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => updateEdgeStyle(selectedEdge.id, 'vertical')}
+                className="justify-start gap-2 text-xs"
+              >
+                <ArrowRight className="h-3 w-3 rotate-90" />
+                Vertical
               </Button>
               <Button
                 variant={selectedEdge.type === 'default' ? 'default' : 'outline'}

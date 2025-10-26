@@ -4,6 +4,7 @@
  */
 
 export const SERVICE_TYPE_COLORS = {
+  "All": "#6B7280", // Gray - Applies to all service intervals
   "1Y": "#000000", // Black - 1 Year Service
   "2Y": "#FF8C00", // Orange - 2 Year Service
   "3Y": "#4CAF50", // Green - 3 Year Service
@@ -104,6 +105,7 @@ export const PDF_RGB_TO_SERVICE_TYPE: { [key: string]: ServiceTypeCode } = {
  * Service type legend for display
  */
 export const SERVICE_TYPE_LEGEND = [
+  { code: "All", label: "All Service Intervals", color: SERVICE_TYPE_COLORS["All"] },
   { code: "1Y", label: "1 Year Service", color: SERVICE_TYPE_COLORS["1Y"] },
   { code: "2Y", label: "2 Year Service", color: SERVICE_TYPE_COLORS["2Y"] },
   { code: "3Y", label: "3 Year Service", color: SERVICE_TYPE_COLORS["3Y"] },
@@ -149,11 +151,14 @@ export function rgbToServiceType(r: number, g: number, b: number, tolerance: num
  * E.g., 4Y service includes 1Y, 2Y, and 4Y tasks
  */
 export function getIncludedServiceTypes(serviceType: string): string[] {
+  // "All" tasks are always shown regardless of filter
+  const included = ["All"];
+
   const yearMatch = serviceType.match(/(\d+)Y/);
-  if (!yearMatch) return ["1Y"];
+  if (!yearMatch) return ["All", "1Y"];
 
   const years = parseInt(yearMatch[1]);
-  const included = ["1Y"]; // Always include base service
+  included.push("1Y"); // Always include base service
 
   // Include all applicable intervals
   if (years >= 2) included.push("2Y");

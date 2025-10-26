@@ -5,7 +5,13 @@
       "Bash(git rm:*)",
       "WebFetch(domain:reactflow.dev)",
       "Bash(git stash:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node -e:*)",
+      "Bash(awk:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
