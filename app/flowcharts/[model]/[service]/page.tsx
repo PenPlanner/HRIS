@@ -980,15 +980,17 @@ defaultEdges: ${edgesCode}
   };
 
   const toggleEditMode = () => {
-    if (isEditMode && hasUnsavedChanges) {
-      if (!confirm("You have unsaved changes. Do you want to discard them?")) {
-        return;
-      }
-      // Reload steps from flowchartData
-      if (flowchartData) {
-        setSteps([...flowchartData.steps]);
-      }
+    // Auto-save when leaving edit mode
+    if (isEditMode && hasUnsavedChanges && flowchartData) {
+      const updatedFlowchart: FlowchartData = {
+        ...flowchartData,
+        steps
+      };
+      saveFlowchart(updatedFlowchart);
       setHasUnsavedChanges(false);
+
+      // Show brief confirmation
+      alert("Changes saved automatically!");
     }
     setIsEditMode(!isEditMode);
   };
@@ -1032,9 +1034,6 @@ defaultEdges: ${edgesCode}
                   {flowchartData.isCustom && (
                     <Badge variant="secondary">Custom</Badge>
                   )}
-                  {hasUnsavedChanges && isEditMode && (
-                    <Badge variant="destructive">Unsaved</Badge>
-                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">{flowchartData.serviceType}</p>
               </div>
@@ -1058,57 +1057,6 @@ defaultEdges: ${edgesCode}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleAutoLayout}
-                >
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Auto-Layout
-                </Button>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveAsDefaultLayout}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  title="Save current positions and connections as default layout"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save as Default
-                </Button>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleExportToCode}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  title="Export TypeScript code to paste into flowchart-data.ts for permanent storage"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export to Code
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportPositions}
-                  title="Export step positions to JSON file"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export Positions
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleImportPositions}
-                  title="Import step positions from JSON file"
-                >
-                  <FileUp className="h-4 w-4 mr-2" />
-                  Import Positions
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => setPdfImportOpen(true)}
                 >
                   <FileUp className="h-4 w-4 mr-2" />
@@ -1122,16 +1070,6 @@ defaultEdges: ${edgesCode}
                 >
                   <FileDown className="h-4 w-4 mr-2" />
                   Export
-                </Button>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleSaveFlowchart}
-                  disabled={!hasUnsavedChanges}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save
                 </Button>
 
                 <Button

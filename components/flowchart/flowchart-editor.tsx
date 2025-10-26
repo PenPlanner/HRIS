@@ -124,8 +124,7 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
 
   return (
     <div className="group relative">
-      {/* Connection handles - only render in edit mode */}
-      {isEditMode && (
+      {/* Connection handles - always rendered but only visible in edit mode */}
       <>
         {/* Top handles - both target and source */}
         <Handle
@@ -133,10 +132,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Top}
           id="top-target"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ top: '-10px' }}
+          style={{ top: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -144,10 +143,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Top}
           id="top-source"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ top: '-10px' }}
+          style={{ top: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -157,10 +156,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Bottom}
           id="bottom-target"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ bottom: '-10px' }}
+          style={{ bottom: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -168,10 +167,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Bottom}
           id="bottom-source"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ bottom: '-10px' }}
+          style={{ bottom: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -181,10 +180,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Left}
           id="left-target"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ left: '-10px' }}
+          style={{ left: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -192,10 +191,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Left}
           id="left-source"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ left: '-10px' }}
+          style={{ left: '-21px' }}
           isConnectable={isEditMode}
         />
 
@@ -205,10 +204,10 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Right}
           id="right-target"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ right: '-10px' }}
+          style={{ right: '-21px' }}
           isConnectable={isEditMode}
         />
         <Handle
@@ -216,14 +215,13 @@ function StepNode({ data }: NodeProps<StepNodeData>) {
           position={Position.Right}
           id="right-source"
           className={cn(
-            "!w-2 !h-2 !cursor-crosshair transition-all hover:!w-4 hover:!h-4",
-            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0 !pointer-events-none"
+            "!w-4 !h-4 !cursor-crosshair transition-all",
+            isEditMode ? "!bg-blue-500 !border-2 !border-white" : "!opacity-0"
           )}
-          style={{ right: '-10px' }}
+          style={{ right: '-21px' }}
           isConnectable={isEditMode}
         />
       </>
-      )}
 
       <Card
         className={cn(
@@ -497,36 +495,44 @@ export function FlowchartEditor({
   const handleNodesChange = useCallback((changes: any) => {
     onNodesChange(changes);
 
-    // Update step positions when drag ends
+    // Only update parent state when drag ENDS (not during drag)
     const dragEndChanges = changes.filter((c: any) => c.type === 'position' && c.dragging === false);
 
     if (dragEndChanges.length > 0 && isEditMode) {
-      // Extract position updates directly from the changes
-      const positionUpdates = new Map<string, { x: number; y: number }>();
+      // Use setTimeout to defer state update until after render cycle
+      setTimeout(() => {
+        // Extract position updates directly from the changes
+        const positionUpdates = new Map<string, { x: number; y: number }>();
 
-      dragEndChanges.forEach((change: any) => {
-        if (change.position) {
-          positionUpdates.set(change.id, {
-            x: Math.round(change.position.x / gridSize),
-            y: Math.round(change.position.y / gridSize)
-          });
+        dragEndChanges.forEach((change: any) => {
+          if (change.position) {
+            positionUpdates.set(change.id, {
+              x: Math.round(change.position.x / gridSize),
+              y: Math.round(change.position.y / gridSize)
+            });
+          }
+        });
+
+        // Update steps with new positions
+        const updatedSteps = steps.map(step => {
+          const newPosition = positionUpdates.get(step.id);
+          if (newPosition) {
+            return { ...step, position: newPosition };
+          }
+          return step;
+        });
+
+        // Check if any positions actually changed
+        const hasChanges = updatedSteps.some((step, i) =>
+          step.position.x !== steps[i].position.x ||
+          step.position.y !== steps[i].position.y
+        );
+
+        if (hasChanges) {
+          onStepsChange(updatedSteps);
+          setHasUnsavedChanges(true);
         }
-      });
-
-      // Update steps with new positions
-      const updatedSteps = steps.map(step => {
-        const newPosition = positionUpdates.get(step.id);
-        if (newPosition) {
-          return { ...step, position: newPosition };
-        }
-        return step;
-      });
-
-      // Update parent state after a delay to avoid render conflicts
-      requestAnimationFrame(() => {
-        onStepsChange(updatedSteps);
-        setHasUnsavedChanges(true);
-      });
+      }, 0);
     }
   }, [onNodesChange, isEditMode, steps, onStepsChange, setHasUnsavedChanges, gridSize]);
 
