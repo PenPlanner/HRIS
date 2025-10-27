@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
-import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts } from "@/lib/flowchart-data";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
+import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts, resetToDefaultLayout } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
 import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
@@ -42,7 +42,7 @@ export default function FlowchartViewerPage() {
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [gridSize, setGridSize] = useState(30);
+  const [gridSize, setGridSize] = useState(30); // Will be overridden by flowchartData.gridSize if available
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [hideCompletedSteps, setHideCompletedSteps] = useState(false);
@@ -90,6 +90,25 @@ export default function FlowchartViewerPage() {
     }
     const flowchart = model.flowcharts.find(f => f.id === serviceId);
     setFlowchartData(flowchart || null);
+
+    // DEBUG: Log what's in flowchartData
+    if (flowchart) {
+      console.log('\n=== FLOWCHART DATA LOADED ===');
+      console.log('Flowchart ID:', flowchart.id);
+      console.log('Steps count:', flowchart.steps.length);
+      console.log('Edges exist?', !!flowchart.edges);
+      console.log('Edges count:', flowchart.edges?.length || 0);
+      console.log('GridSize:', flowchart.gridSize);
+      console.log('LayoutMode:', flowchart.layoutMode);
+      console.log('First 3 step positions:', flowchart.steps.slice(0, 3).map(s => ({ id: s.id, pos: s.position })));
+      if (flowchart.edges && flowchart.edges.length > 0) {
+        console.log('First 3 edges:', flowchart.edges.slice(0, 3));
+      }
+      console.log('=========================\n');
+
+      if (flowchart.gridSize) setGridSize(flowchart.gridSize);
+      if (flowchart.layoutMode) setLayoutMode(flowchart.layoutMode);
+    }
   }, [modelId, serviceId]);
 
   // Calculate grid dimensions and connections
@@ -121,13 +140,43 @@ export default function FlowchartViewerPage() {
     if (!flowchartData) return;
 
     const storageKey = `flowchart_${modelId}_${serviceId}`;
+    const defaultLayoutKey = `default-layout-${serviceId}`;
     const savedData = localStorage.getItem(storageKey);
+    const defaultLayoutData = localStorage.getItem(defaultLayoutKey);
+
+    console.log('\n=== LOCALSTORAGE CHECK ===');
+    console.log('Storage key:', storageKey);
+    console.log('Default layout key:', defaultLayoutKey);
+    console.log('Has saved data?', !!savedData);
+    console.log('Has default layout?', !!defaultLayoutData);
+    console.log('========================\n');
 
     // If no saved data exists, use positions from flowchart-data.ts
     if (!savedData) {
-      console.log('No saved data found - using hardcoded positions from flowchart-data.ts');
+      console.log('✅ No saved data found - using hardcoded positions from flowchart-data.ts');
+      console.log('Setting steps count:', flowchartData.steps.length);
+      console.log('Setting edges count:', flowchartData.edges?.length || 0);
+
+      // Log ALL step positions in detail
+      console.log('\n=== ALL STEP POSITIONS (GRID COORDINATES) ===');
+      flowchartData.steps.forEach((step, index) => {
+        console.log(`${index + 1}. ${step.id}: { x: ${step.position.x}, y: ${step.position.y} } - ${step.title.split('\n')[0]}`);
+      });
+      console.log('==========================================\n');
+
+      // Log ALL edges in detail
+      console.log('\n=== ALL EDGES ===');
+      if (flowchartData.edges && flowchartData.edges.length > 0) {
+        flowchartData.edges.forEach((edge, index) => {
+          console.log(`${index + 1}. ${edge.id}: ${edge.source} → ${edge.target} (${edge.type})`);
+        });
+      } else {
+        console.log('⚠️ NO EDGES FOUND!');
+      }
+      console.log('=================\n');
+
       setSteps(flowchartData.steps);
-      setEdges([]);
+      setEdges(flowchartData.edges || []);
       return;
     }
 
@@ -208,13 +257,30 @@ export default function FlowchartViewerPage() {
           return originalStep;
         });
 
-        console.log("Loaded from localStorage with merged positions");
+        console.log('\n=== LOADING FROM LOCALSTORAGE ===');
+        console.log('Merged steps count:', mergedSteps.length);
+        console.log('Edges from localStorage:', parsed.edges?.length || 0);
+        console.log('Edges from flowchartData:', flowchartData.edges?.length || 0);
+
+        // IMPORTANT: Use edges from flowchartData if localStorage has empty or no edges
+        const finalEdges = (parsed.edges && parsed.edges.length > 0) ? parsed.edges : (flowchartData.edges || []);
+        console.log('Final edges count:', finalEdges.length);
+
+        console.log('\nFirst 3 merged step positions:');
+        mergedSteps.slice(0, 3).forEach((s, i) => {
+          console.log(`  ${i + 1}. ${s.id}: { x: ${s.position.x}, y: ${s.position.y} }`);
+        });
+
+        console.log('\n⚠️ IMPORTANT: Positions loaded from localStorage!');
+        console.log('If these don\'t match your expected layout, click "Clear Cache" button!');
+        console.log('================================\n');
+
         setSteps(mergedSteps);
-        setEdges(parsed.edges || []);
+        setEdges(finalEdges);
       } catch (e) {
         console.error("Failed to load progress:", e);
         setSteps(flowchartData.steps);
-        setEdges([]);
+        setEdges(flowchartData.edges || []);
       }
     } else {
       // No saved data, check if there's a default layout saved
@@ -238,16 +304,16 @@ export default function FlowchartViewerPage() {
           });
 
           setSteps(stepsWithDefaultPositions);
-          setEdges(defaultLayout.edges || []);
+          setEdges(defaultLayout.edges || flowchartData.edges || []);
         } catch (e) {
           console.error("Failed to load default layout:", e);
           setSteps(flowchartData.steps);
-          setEdges([]);
+          setEdges(flowchartData.edges || []);
         }
       } else {
         // No default layout either, use original data
         setSteps(flowchartData.steps);
-        setEdges([]);
+        setEdges(flowchartData.edges || []);
       }
     }
   }, [flowchartData, modelId, serviceId]);
@@ -735,14 +801,20 @@ export default function FlowchartViewerPage() {
       "This will:\n" +
       "- Remove all progress and time logs\n" +
       "- Reset all step positions\n" +
+      "- Remove saved default layout\n" +
       "- Reload the page to fresh state\n\n" +
       "This cannot be undone."
     );
     if (!confirmed) return;
 
-    // Clear localStorage for this flowchart
+    // Clear ALL localStorage keys for this flowchart
     const storageKey = `flowchart_${modelId}_${serviceId}`;
+    const defaultLayoutKey = `default-layout-${serviceId}`;
+
     localStorage.removeItem(storageKey);
+    localStorage.removeItem(defaultLayoutKey);
+
+    console.log(`Cleared cache keys: ${storageKey}, ${defaultLayoutKey}`);
 
     // Reload the page to fresh state
     window.location.reload();
@@ -1303,13 +1375,13 @@ ${fullLayoutData.map(step =>
                 </Button>
               )}
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold">{flowchartData.model}</h1>
+                <h1 className="text-2xl font-bold">{flowchartData.model}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm text-muted-foreground">Service Program</p>
                   {flowchartData.isCustom && (
-                    <Badge variant="secondary">Custom</Badge>
+                    <Badge variant="secondary" className="text-xs">Custom</Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">{flowchartData.serviceType}</p>
               </div>
             </div>
           </div>
@@ -1485,41 +1557,8 @@ ${fullLayoutData.map(step =>
               </>
             )}
 
-            {/* Clear Cache Button - Available in both modes */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearCache}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Cache
-            </Button>
-
-            {/* Zoom Controls */}
-            {!isEditMode && (
-            <div className="flex items-center gap-1 border rounded-md">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setZoom(Math.max(50, zoom - 10))}
-                disabled={zoom <= 50}
-                className="h-8 px-2"
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-xs font-mono px-2 min-w-[50px] text-center">{zoom}%</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setZoom(Math.min(150, zoom + 10))}
-                disabled={zoom >= 150}
-                className="h-8 px-2"
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </div>
-            )}
+            {/* Separator */}
+            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
 
             {/* Offline Status Indicator */}
             <OfflineStatusIndicator />
@@ -1530,6 +1569,17 @@ ${fullLayoutData.map(step =>
               onClick={() => setIsFullscreen(!isFullscreen)}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+
+            {/* Clear Cache Button - Available in both modes */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearCache}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear Cache
             </Button>
           </div>
         </div>

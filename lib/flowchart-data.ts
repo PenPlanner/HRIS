@@ -139,6 +139,9 @@ export interface FlowchartData {
   workHours: string;
   duration: string;
   steps: FlowchartStep[];
+  edges?: any[]; // React Flow edges (connections between steps)
+  gridSize?: number; // Grid size for layout (default: 30)
+  layoutMode?: 'topdown' | 'centered'; // Layout mode (default: 'centered')
   isCustom?: boolean; // True for user-created flowcharts
   createdAt?: string;
   updatedAt?: string;
@@ -151,6 +154,10 @@ export interface FlowchartData {
 // Parallel steps: 2, 5, 6, 8, 9
 // Sequential steps: 1, 3, 4, 7, 10
 // Standalone: 4Y bolts 17h
+//
+// IMPORTANT: These positions are the STANDARD/DEFAULT layout.
+// Any custom saved layouts are automatically cleared when this flowchart loads.
+// This ensures consistency across all users and sessions.
 export const ENVENTUS_MK0_1Y: FlowchartData = {
   id: "enventus-mk0-1y",
   model: "EnVentus Mk 0",
@@ -163,6 +170,8 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
   totalMinutes: 2280,
   workHours: "38:00h",
   duration: "19:00h",
+  gridSize: 30,
+  layoutMode: 'centered',
   steps: [
     // Step 1: PPE equipment on (Both technicians) - 2 tasks
     {
@@ -484,6 +493,144 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
         { id: "4y-4", description: "10.5.2.3,8,9 Yaw ring, Yaw gear, Yaw Claw (4h)", serviceType: "4Y" }
       ]
     }
+  ],
+  edges: [
+    {
+      id: "edge-step-1-step-2-1",
+      source: "step-1",
+      target: "step-2-1",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-1-step-2-2",
+      source: "step-1",
+      target: "step-2-2",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-2-1-step-3",
+      source: "step-2-1",
+      target: "step-3",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-2-2-step-3",
+      source: "step-2-2",
+      target: "step-3",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-3-step-4",
+      source: "step-3",
+      target: "step-4",
+      type: "horizontal",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-4-step-5-1",
+      source: "step-4",
+      target: "step-5-1",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-4-step-5-2",
+      source: "step-4",
+      target: "step-5-2",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-5-1-step-6",
+      source: "step-5-1",
+      target: "step-6",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-5-2-step-6",
+      source: "step-5-2",
+      target: "step-6",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-6-step-7",
+      source: "step-6",
+      target: "step-7",
+      type: "horizontal",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-7-step-8-1",
+      source: "step-7",
+      target: "step-8-1",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-7-step-8-2",
+      source: "step-7",
+      target: "step-8-2",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-8-1-step-9-1",
+      source: "step-8-1",
+      target: "step-9-1",
+      type: "horizontal",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-8-2-step-9-2",
+      source: "step-8-2",
+      target: "step-9-2",
+      type: "horizontal",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-9-1-step-10",
+      source: "step-9-1",
+      target: "step-10",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-9-2-step-10",
+      source: "step-9-2",
+      target: "step-10",
+      type: "smoothstep",
+      sourceHandle: "right-source",
+      targetHandle: "left-target"
+    },
+    {
+      id: "edge-step-10-4y-bolts",
+      source: "step-10",
+      target: "step-4y-bolts",
+      type: "straight",
+      sourceHandle: "bottom-source",
+      targetHandle: "top-target"
+    }
   ]
 };
 
@@ -576,6 +723,23 @@ export function deleteFlowchart(flowchartId: string): void {
   } catch (error) {
     console.error("Failed to delete flowchart:", error);
     throw error;
+  }
+}
+
+/**
+ * Reset a flowchart to its default layout by removing custom saved data
+ * This ensures the default positions and connections are always used
+ */
+export function resetToDefaultLayout(flowchartId: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    // Delete any custom saved version
+    deleteFlowchart(flowchartId);
+
+    console.log(`Reset flowchart ${flowchartId} to default layout`);
+  } catch (error) {
+    console.error("Failed to reset flowchart to default:", error);
   }
 }
 

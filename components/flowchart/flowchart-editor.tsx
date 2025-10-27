@@ -1094,6 +1094,9 @@ function FlowchartEditorInner({
   freePositioning = false,
   layoutMode = 'centered'
 }: FlowchartEditorProps) {
+  // Get React Flow instance to access fitView
+  const { fitView } = useReactFlow();
+
   // Filter steps based on hideCompletedSteps
   const displayedSteps = useMemo(() => {
     if (!hideCompletedSteps || isEditMode) return steps;
@@ -1183,9 +1186,13 @@ function FlowchartEditorInner({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const hasLoadedInitialEdges = useRef(false);
+  const hasFitViewOnMount = useRef(false);  // Track if fitView has been called
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
+
+  // Track if auto-layout has been triggered
+  const autoLayoutTriggered = useRef(false);
 
   // Re-align all nodes to grid - Auto-layout with intelligent positioning (TOP-DOWN)
   const handleRealignToGridTopDown = useCallback(() => {
@@ -2002,18 +2009,38 @@ function FlowchartEditorInner({
     }
   }, [onEdgesChange, isEditMode, setHasUnsavedChanges]);
 
-  // Load initialEdges only once when data is loaded from localStorage
+  // Load initialEdges
   useEffect(() => {
     if (initialEdges.length > 0 && !hasLoadedInitialEdges.current) {
-      // Filter out invalid edges (those with null/undefined source/target/handles)
       const validEdges = initialEdges.filter(edge => {
         const isValid = edge.source && edge.target && edge.sourceHandle && edge.targetHandle;
         return isValid;
       });
       setEdges(validEdges);
       hasLoadedInitialEdges.current = true;
+      console.log(`✅ Loaded ${validEdges.length} edges from initialEdges`);
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // SIMPLE: Auto-run centered layout on mount (once)
+  useEffect(() => {
+    if (layoutMode === 'centered' && !autoLayoutTriggered.current && steps.length > 0) {
+      autoLayoutTriggered.current = true;
+
+      console.log('🎯 Auto-running centered layout on mount...');
+
+      setTimeout(() => {
+        console.log('   Running handleRealignToGridCentered()...');
+        handleRealignToGridCentered();
+
+        setTimeout(() => {
+          console.log('   Fitting view...');
+          fitView({ padding: 0.15, duration: 800, maxZoom: 0.85, minZoom: 0.5 });
+          console.log('✅ Auto-layout done!');
+        }, 500);
+      }, 1000);
+    }
+  }, [layoutMode, steps.length, handleRealignToGridCentered, fitView]);
 
   // Sync edges to parent component whenever they change
   useEffect(() => {
@@ -2184,7 +2211,8 @@ function FlowchartEditorInner({
         edgeTypes={edgeTypes}
         minZoom={0.5}
         maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: zoom / 100 }}
+        // Don't set defaultViewport for centered layout - let fitView handle it
+        defaultViewport={layoutMode === 'centered' ? undefined : { x: 0, y: 0, zoom: zoom / 100 }}
         nodesDraggable={isEditMode}
         nodesConnectable={isEditMode}
         edgesReconnectable={isEditMode}
