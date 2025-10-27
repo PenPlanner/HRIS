@@ -24,8 +24,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react";
-import { Bot, Package, GripVertical } from "lucide-react";
+import { Bot, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -42,99 +41,11 @@ interface FloatingIconGroupProps {
   position?: 'bottom-left' | 'bottom-right';
 }
 
-export function FloatingIconGroup({ icons, position = 'bottom-right' }: FloatingIconGroupProps) {
-  const [currentPosition, setCurrentPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
-  // Initialize position from localStorage or defaults
-  useEffect(() => {
-    const saved = localStorage.getItem('floating-icon-group-position');
-    if (saved) {
-      try {
-        setCurrentPosition(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to load icon group position:', e);
-        // Set default position based on position prop
-        setDefaultPosition();
-      }
-    } else {
-      setDefaultPosition();
-    }
-  }, []);
-
-  const setDefaultPosition = () => {
-    const defaultX = position === 'bottom-right' ? window.innerWidth - 90 : 24;
-    const defaultY = window.innerHeight - 180;
-    setCurrentPosition({ x: defaultX, y: defaultY });
-  };
-
-  // Save position to localStorage when dragging stops
-  useEffect(() => {
-    if (isDragging) return;
-    if (currentPosition.x !== 0 || currentPosition.y !== 0) {
-      localStorage.setItem('floating-icon-group-position', JSON.stringify(currentPosition));
-    }
-  }, [currentPosition, isDragging]);
-
-  // Drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragOffset({
-      x: e.clientX - currentPosition.x,
-      y: e.clientY - currentPosition.y
-    });
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        setCurrentPosition({
-          x: Math.max(0, Math.min(window.innerWidth - 90, e.clientX - dragOffset.x)),
-          y: Math.max(0, Math.min(window.innerHeight - 200, e.clientY - dragOffset.y))
-        });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, dragOffset]);
-
-  // Check if we're on right side based on current position
-  const isRightSide = currentPosition.x > window.innerWidth / 2;
-
+export function FloatingIconGroup({ icons }: FloatingIconGroupProps) {
   return (
-    <div
-      className="fixed z-50"
-      style={{
-        left: `${currentPosition.x}px`,
-        top: `${currentPosition.y}px`
-      }}
-    >
+    <div className="fixed bottom-4 right-4 z-50">
       {/* Container with glass morphism effect */}
       <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200 dark:border-gray-700 rounded-xl p-1 shadow-lg transition-all duration-300 hover:shadow-xl select-none">
-        {/* Drag Handle */}
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "flex items-center justify-center py-0.5 px-2 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 rounded-t-lg transition-colors mb-0.5",
-            isDragging ? "cursor-grabbing bg-gray-200/50 dark:bg-gray-700/50" : "cursor-grab"
-          )}
-          title="Drag to move"
-        >
-          <GripVertical className="h-2.5 w-2.5 text-gray-400" />
-        </div>
 
         <div className="flex flex-col gap-1">
           {icons.map((iconData, index) => (
@@ -154,19 +65,12 @@ export function FloatingIconGroup({ icons, position = 'bottom-right' }: Floating
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-sm bg-white/30" />
                 </div>
 
-                {/* Tooltip on hover */}
-                <div className={cn(
-                  "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none",
-                  isRightSide ? "right-full mr-2" : "left-full ml-2"
-                )}>
+                {/* Tooltip on hover - always to the left since we're on the right side */}
+                <div className="absolute top-1/2 -translate-y-1/2 right-full mr-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
                   <div className="bg-gray-900 dark:bg-gray-800 text-white text-[10px] px-2 py-1 rounded-md whitespace-nowrap shadow-xl border border-gray-700">
                     {iconData.label}
                     {/* Arrow pointing to button */}
-                    {isRightSide ? (
-                      <div className="absolute left-full top-1/2 -translate-y-1/2 border-[4px] border-transparent border-l-gray-900 dark:border-l-gray-800" />
-                    ) : (
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-[4px] border-transparent border-r-gray-900 dark:border-r-gray-800" />
-                    )}
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 border-[4px] border-transparent border-l-gray-900 dark:border-l-gray-800" />
                   </div>
                 </div>
               </Button>

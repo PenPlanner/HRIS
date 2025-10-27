@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { FlowchartData } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
-import { getActiveTechnicians, getSelectedTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
+import { getSelectedTechnicians } from "@/lib/technicians-data";
 import { Users, Clock, Timer, ChevronDown, ChevronUp, Pin, X, GripVertical, FileText, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TechnicianSelectModal } from "@/components/technician-select-modal";
 
 interface FlowchartInfoDropdownProps {
   flowchart: FlowchartData;
@@ -21,12 +20,11 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down');
-  const [selectedT1, setSelectedT1] = useState<Technician | null>(null);
-  const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
-  const [technicianModalOpen, setTechnicianModalOpen] = useState(false);
-  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2'>('T1');
   const timerRef = useRef<NodeJS.Timeout>();
   const buttonRef = useRef<HTMLDivElement>(null);
+
+  // Get selected technicians from global state
+  const { t1, t2 } = getSelectedTechnicians();
 
   // Calculate progress metrics
   const totalTasks = steps.reduce((sum, step) => sum + (step.tasks?.length || 0), 0);
@@ -96,7 +94,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     };
   }, [isOpen, isPinned, isHovering]);
 
-  // Load saved position and technicians from localStorage
+  // Load saved position from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('flowchart-info-position-v4');
     if (saved) {
@@ -106,34 +104,27 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
         console.error('Failed to load position:', e);
       }
     }
-
-    // Load selected technicians
-    const { t1, t2 } = getSelectedTechnicians();
-    setSelectedT1(t1);
-    setSelectedT2(t2);
   }, []);
 
-  // Listen for auto-open event from flowchart animation
+  // Check if info panel has been used before
+  const [hasBeenOpened, setHasBeenOpened] = useState(true); // Default to true (no pulse)
+
   useEffect(() => {
-    const handleAutoOpen = () => {
-      console.log('Info dropdown: Received auto-open event, opening in 0.5s...');
-      setTimeout(() => {
-        setIsOpen(true);
-        setIsPinned(false); // Not pinned by default
-        console.log('Info dropdown: Opened!');
-
-        // After dropdown opens, dispatch event to open tutorial
-        setTimeout(() => {
-          console.log('Info dropdown: Dispatching tutorial-auto-open event...');
-          window.dispatchEvent(new CustomEvent('tutorial-auto-open'));
-        }, 2000); // 2.0s after dropdown opens (gives time for user to see info panel)
-      }, 500); // 0.5s delay after zoom completes
-    };
-
-    window.addEventListener('info-dropdown-auto-open', handleAutoOpen);
-    return () => window.removeEventListener('info-dropdown-auto-open', handleAutoOpen);
+    const opened = localStorage.getItem('info-panel-opened');
+    setHasBeenOpened(!!opened);
   }, []);
 
+  // Mark as opened when user clicks
+  const handleToggleWithTracking = () => {
+    if (!hasBeenOpened) {
+      localStorage.setItem('info-panel-opened', 'true');
+      setHasBeenOpened(true);
+    }
+    setIsOpen(!isOpen);
+    if (!isOpen) {
+      setIsPinned(false);
+    }
+  };
 
   // Save position to localStorage when dragging stops
   useEffect(() => {
@@ -152,41 +143,9 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     }
   }, [position, isOpen]);
 
-  const handleToggle = () => {
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      setIsPinned(false);
-    }
-  };
-
   const handlePin = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsPinned(!isPinned);
-  };
-
-  const handleSelectTechnician = (technician: any) => {
-    // Convert from API format to local format
-    const localTech: Technician = {
-      id: technician.id,
-      firstName: technician.first_name,
-      lastName: technician.last_name,
-      initials: technician.initials,
-      email: technician.email,
-      isActive: true
-    };
-
-    if (technicianModalRole === 'T1') {
-      setSelectedT1(localTech);
-      saveSelectedTechnician('T1', localTech.id);
-    } else {
-      setSelectedT2(localTech);
-      saveSelectedTechnician('T2', localTech.id);
-    }
-  };
-
-  const openTechnicianModal = (role: 'T1' | 'T2') => {
-    setTechnicianModalRole(role);
-    setTechnicianModalOpen(true);
   };
 
   // Drag handlers
@@ -239,7 +198,10 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
       data-tutorial="info-panel"
     >
       {/* Info Button */}
-      <div className="bg-blue-600/50 hover:bg-blue-700/75 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm">
+      <div className={cn(
+        "bg-blue-600/50 hover:bg-blue-700/75 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm",
+        !hasBeenOpened && "animate-pulse"
+      )}>
         <div className="flex items-center">
           <div
             onMouseDown={handleMouseDown}
@@ -252,7 +214,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
             <GripVertical className="h-3 w-3" />
           </div>
           <button
-            onClick={handleToggle}
+            onClick={handleToggleWithTracking}
             className="px-3 py-1.5 flex items-center gap-2 text-xs font-medium"
           >
             <span>Info & Progress</span>
@@ -304,21 +266,15 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
             <div className="flex items-center gap-1.5">
               {flowchart.technicians === 2 ? (
                 <>
-                  {/* T1 Button */}
-                  <button
-                    onClick={() => openTechnicianModal('T1')}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    T1{selectedT1 ? `: ${selectedT1.initials}` : ''}
-                  </button>
+                  {/* T1 Badge */}
+                  <div className="bg-blue-500 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                    T1{t1 ? `: ${t1.initials}` : ''}
+                  </div>
 
-                  {/* T2 Button */}
-                  <button
-                    onClick={() => openTechnicianModal('T2')}
-                    className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    T2{selectedT2 ? `: ${selectedT2.initials}` : ''}
-                  </button>
+                  {/* T2 Badge */}
+                  <div className="bg-purple-500 text-white px-2 py-0.5 rounded text-[10px] font-bold">
+                    T2{t2 ? `: ${t2.initials}` : ''}
+                  </div>
                 </>
               ) : (
                 <span className="text-xs font-semibold">{flowchart.technicians} Technicians</span>
@@ -504,15 +460,6 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
           </div>
         </div>
       </div>
-
-      {/* Technician Selection Modal */}
-      <TechnicianSelectModal
-        open={technicianModalOpen}
-        onOpenChange={setTechnicianModalOpen}
-        onSelect={handleSelectTechnician}
-        title={technicianModalRole === 'T1' ? "Select Technician 1" : "Select Technician 2"}
-        currentSelection={technicianModalRole === 'T1' ? selectedT1 : selectedT2}
-      />
     </div>
   );
 }

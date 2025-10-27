@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users, GraduationCap } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts, resetToDefaultLayout } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -25,6 +25,11 @@ import { TutorialGuide } from "@/components/tutorial-guide";
 import { saveCompletedFlowchart, isFlowchartFullyCompleted, getEarliestStartTime } from "@/lib/completed-flowcharts";
 import { getSelectedTechnicians, getTechnicianById, getActiveTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
 import { TechnicianSelectModal } from "@/components/technician-select-modal";
+import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
+import { FlowchartSearch } from "@/components/flowchart/flowchart-search";
+import { RevisionHistoryDialog } from "@/components/flowchart/revision-history-dialog";
+import { ServiceTypeSelectionModal } from "@/components/flowchart/service-type-selection-modal";
+import { ServiceStartAnimation } from "@/components/service-start-animation";
 
 // Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
 const PDFImportDialog = dynamic(
@@ -84,8 +89,48 @@ export default function FlowchartViewerPage() {
   // State for technician assignment
   const [selectedT1, setSelectedT1] = useState<Technician | null>(null);
   const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
+  const [selectedT3, setSelectedT3] = useState<Technician | null>(null); // Trainee
   const [technicianModalOpen, setTechnicianModalOpen] = useState(false);
-  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2'>('T1');
+  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2' | 'T3'>('T1');
+
+  // State for revision history dialog
+  const [revisionHistoryOpen, setRevisionHistoryOpen] = useState(false);
+
+  // State for job tracking
+  const [jobStarted, setJobStarted] = useState<string | null>(null);
+  const [jobFinished, setJobFinished] = useState<string | null>(null);
+
+  // Check if all steps are completed
+  useEffect(() => {
+    if (!jobStarted || jobFinished) return;
+
+    const allStepsCompleted = steps.every(step => {
+      const completedTasks = step.tasks.filter(t => t.completed).length;
+      const totalTasks = step.tasks.length;
+      return totalTasks > 0 && completedTasks === totalTasks;
+    });
+
+    if (allStepsCompleted && steps.length > 0) {
+      console.log('[Job Tracking] All steps completed! Marking job as finished.');
+      const finishTime = new Date().toISOString();
+      setJobFinished(finishTime);
+      setToastMessage('🎉 Service Complete! All steps finished.');
+      setShowToast(true);
+    }
+  }, [steps, jobStarted, jobFinished]);
+
+  // State for service type selection modal
+  const [serviceTypeModalOpen, setServiceTypeModalOpen] = useState(false);
+
+  // State for technician pair selection modal
+  const [technicianPairModalOpen, setTechnicianPairModalOpen] = useState(false);
+
+  // State for service start animation
+  const [serviceStartAnimationOpen, setServiceStartAnimationOpen] = useState(false);
+  const [selectedServiceTypeForAnimation, setSelectedServiceTypeForAnimation] = useState<string>("");
+
+  // State for active/current steps (steps being worked on)
+  const [activeStepIds, setActiveStepIds] = useState<string[]>([]);
 
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
@@ -134,6 +179,13 @@ export default function FlowchartViewerPage() {
     const { t1, t2 } = getSelectedTechnicians();
     setSelectedT1(t1);
     setSelectedT2(t2);
+
+    // Load T3 (trainee) from localStorage
+    const t3Id = localStorage.getItem('flowchart-technician-t3');
+    if (t3Id) {
+      const t3 = getTechnicianById(t3Id);
+      setSelectedT3(t3);
+    }
   }, []);
 
   // Load flowchart data
@@ -492,8 +544,11 @@ export default function FlowchartViewerPage() {
   const performTaskToggle = (taskId: string) => {
     if (!selectedStep) return;
 
-    setSteps(prevSteps =>
-      prevSteps.map(step => {
+    let stepJustCompleted = false;
+    let completedStepIndex = -1;
+
+    setSteps(prevSteps => {
+      const newSteps = prevSteps.map((step, index) => {
         if (step.id !== selectedStep.id) return step;
 
         const updatedTasks = step.tasks.map(task => {
@@ -541,6 +596,12 @@ export default function FlowchartViewerPage() {
           }
         }
 
+        // Check if step just became completed
+        if (allSIITasksCompleted && siiTaskIds.length > 0 && !step.completedAt) {
+          stepJustCompleted = true;
+          completedStepIndex = index;
+        }
+
         return {
           ...step,
           tasks: updatedTasks,
@@ -548,8 +609,29 @@ export default function FlowchartViewerPage() {
           completedBy,
           completedByInitials
         };
-      })
-    );
+      });
+
+      // If a step was just completed, activate next step(s)
+      if (stepJustCompleted && completedStepIndex >= 0) {
+        const nextStepIds = findNextActiveSteps(newSteps, completedStepIndex);
+        if (nextStepIds.length > 0) {
+          setActiveStepIds(nextStepIds);
+        } else {
+          // No more steps - check if all steps are completed
+          const allStepsCompleted = newSteps.every(s => s.completedAt);
+          if (allStepsCompleted && !jobFinished) {
+            const finishTime = new Date().toISOString();
+            setJobFinished(finishTime);
+            setActiveStepIds([]);
+            setToastMessage('🎉 Service completed! All steps finished.');
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 5000);
+          }
+        }
+      }
+
+      return newSteps;
+    });
 
     // Update selected step
     setSelectedStep(prev => {
@@ -641,15 +723,151 @@ export default function FlowchartViewerPage() {
     if (technicianModalRole === 'T1') {
       setSelectedT1(localTech);
       saveSelectedTechnician('T1', localTech.id);
-    } else {
+    } else if (technicianModalRole === 'T2') {
       setSelectedT2(localTech);
       saveSelectedTechnician('T2', localTech.id);
+    } else if (technicianModalRole === 'T3') {
+      setSelectedT3(localTech);
+      localStorage.setItem('flowchart-technician-t3', localTech.id);
     }
   };
 
-  const openTechnicianModal = (role: 'T1' | 'T2') => {
+  const openTechnicianModal = (role: 'T1' | 'T2' | 'T3') => {
     setTechnicianModalRole(role);
     setTechnicianModalOpen(true);
+  };
+
+  // Find next active steps after completing a step
+  const findNextActiveSteps = (allSteps: FlowchartStep[], completedIndex: number): string[] => {
+    // If this is the last step, no next steps
+    if (completedIndex >= allSteps.length - 1) {
+      return [];
+    }
+
+    const nextSteps: string[] = [];
+    let nextIndex = completedIndex + 1;
+
+    // Get the next step
+    const nextStep = allSteps[nextIndex];
+    if (!nextStep) return [];
+
+    // Check if already completed, if so skip to next
+    if (nextStep.completedAt) {
+      return findNextActiveSteps(allSteps, nextIndex);
+    }
+
+    nextSteps.push(nextStep.id);
+
+    // Check if there are parallel steps (next step has same position.y or adjacent)
+    // Look ahead to see if next step is parallel
+    if (nextIndex + 1 < allSteps.length) {
+      const potentialParallel = allSteps[nextIndex + 1];
+      // If next two steps are at similar Y positions, they're parallel
+      const yDiff = Math.abs(nextStep.position.y - potentialParallel.position.y);
+      if (yDiff <= 2 && !potentialParallel.completedAt) {
+        nextSteps.push(potentialParallel.id);
+      }
+    }
+
+    return nextSteps;
+  };
+
+  // Handle Start Service button click
+  const handleStartService = () => {
+    // Check if both technicians are assigned
+    if (!selectedT1 || !selectedT2) {
+      // Open technician pair selection modal
+      setTechnicianPairModalOpen(true);
+      return;
+    }
+
+    // Both technicians assigned - open service type selection modal
+    setServiceTypeModalOpen(true);
+  };
+
+  // Handle technician pair selection
+  const handleTechnicianPairSelect = (t1: any, t2: any) => {
+    // Convert from API format to local format
+    const localT1: Technician = {
+      id: t1.id,
+      firstName: t1.first_name,
+      lastName: t1.last_name,
+      initials: t1.initials,
+      email: t1.email,
+      isActive: true
+    };
+
+    const localT2: Technician = {
+      id: t2.id,
+      firstName: t2.first_name,
+      lastName: t2.last_name,
+      initials: t2.initials,
+      email: t2.email,
+      isActive: true
+    };
+
+    // Save selections
+    setSelectedT1(localT1);
+    setSelectedT2(localT2);
+    saveSelectedTechnician('T1', localT1.id);
+    saveSelectedTechnician('T2', localT2.id);
+
+    // Open service type selection modal
+    setServiceTypeModalOpen(true);
+  };
+
+  // Handle service type selection and start job
+  const handleServiceTypeStart = (serviceType: string) => {
+    // Store service type and show animation
+    setSelectedServiceTypeForAnimation(serviceType);
+    setServiceStartAnimationOpen(true);
+  };
+
+  // Handle animation complete - actually start the service
+  const handleAnimationComplete = () => {
+    // Close animation
+    setServiceStartAnimationOpen(false);
+
+    // Start the job
+    const startTime = new Date().toISOString();
+    setJobStarted(startTime);
+
+    // Set the selected service type for filtering
+    setSelectedServiceType(selectedServiceTypeForAnimation);
+
+    // Find Step 1 (first step) - look for the step with the lowest position
+    // Sort steps by position.x to find the leftmost (first) step
+    const sortedSteps = [...steps].sort((a, b) => {
+      if (a.position.x !== b.position.x) {
+        return a.position.x - b.position.x;
+      }
+      return a.position.y - b.position.y;
+    });
+
+    const firstStep = sortedSteps[0];
+
+    if (firstStep) {
+      console.log('[handleAnimationComplete] Setting first step as active:', firstStep.id, 'Position:', firstStep.position);
+      console.log('[handleAnimationComplete] All steps:', steps.map(s => ({ id: s.id, pos: s.position })));
+      // Set first step as active (highlight it)
+      setActiveStepIds([firstStep.id]);
+
+      // Small delay to ensure state updates before zooming
+      setTimeout(() => {
+        console.log('[handleAnimationComplete] Zooming to first step');
+        // Zoom camera to Step 1
+        if ((window as any).__flowchartZoomToStep) {
+          (window as any).__flowchartZoomToStep(firstStep.id);
+        }
+      }, 100);
+    } else {
+      console.warn('[handleAnimationComplete] No first step found! Steps:', steps.length);
+    }
+
+    // Show success message
+    setToastMessage(`🚀 Service started! ${selectedServiceTypeForAnimation} Program`);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   // Handle task service type change
@@ -868,6 +1086,19 @@ export default function FlowchartViewerPage() {
     const updatedStep = steps.find(s => s.id === step.id) || step;
     setSelectedStep(updatedStep);
     setDrawerOpen(true);
+  };
+
+  // Handle search selection - navigate to step
+  const handleSearchSelectStep = (stepId: string) => {
+    const step = steps.find(s => s.id === stepId);
+    if (step) {
+      handleStepClick(step);
+
+      // Zoom to step in React Flow (if available)
+      if ((window as any).__flowchartZoomToStep) {
+        (window as any).__flowchartZoomToStep(stepId);
+      }
+    }
   };
 
   // Handle reset progress
@@ -1440,12 +1671,12 @@ ${fullLayoutData.map(step =>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Modern Minimal Layout */}
+        {/* Header - Two Row Layout */}
         {!isFullscreen && (
         <div className="border-b px-4 py-2 bg-background/95 backdrop-blur-sm">
-          {/* Single compact row */}
+          {/* Row 1: Main controls */}
           <div className="flex items-center justify-between gap-3">
-            {/* Left: Back button + Title */}
+            {/* Left: Back button + Title + All fields */}
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
@@ -1455,15 +1686,31 @@ ${fullLayoutData.map(step =>
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <h1 className="text-lg font-bold">{flowchartData.model}</h1>
-                <span className="text-sm text-muted-foreground">· Service Program</span>
-                <span className="text-xs text-muted-foreground">· Rev. {flowchartData.revisionDate}</span>
                 {flowchartData.isCustom && (
                   <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
                 )}
+
+                {/* Service Program and Revision on same line */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Service Program ·</span>
+                  <button
+                    onClick={() => setRevisionHistoryOpen(true)}
+                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                  >
+                    Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider - minimal space */}
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5" />
+
+              {/* Right group: WTG, Year, Assign, Search */}
+              <div className="flex items-center gap-3">
                 {/* WTG Number Input */}
-                <div className="flex items-center gap-1.5 ml-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground font-medium">WTG:</span>
                   <input
                     type="text"
@@ -1477,9 +1724,10 @@ ${fullLayoutData.map(step =>
                     className="w-16 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   />
                 </div>
-                {/* Make Year Input */}
-                <div className="flex items-center gap-1.5 ml-2">
-                  <span className="text-xs text-muted-foreground font-medium">Make Year:</span>
+
+                {/* Year Input */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground font-medium">Year:</span>
                   <input
                     type="text"
                     value={makeYear}
@@ -1492,32 +1740,54 @@ ${fullLayoutData.map(step =>
                     className="w-14 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   />
                 </div>
+
                 {/* Technician Assignment */}
-                <div className="flex items-center gap-1 ml-2">
+                <div className="flex items-center gap-1">
                   <Users className="h-3 w-3 text-muted-foreground" />
                   <button
                     onClick={() => openTechnicianModal('T1')}
                     className={cn(
-                      "h-6 px-2 text-xs font-bold rounded border transition-colors",
+                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap",
                       selectedT1
                         ? "bg-blue-50 dark:bg-blue-950 text-blue-600 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
                         : "bg-background border-border hover:bg-accent"
                     )}
                   >
-                    T1{selectedT1 ? `: ${selectedT1.initials}` : ''}
+                    {selectedT1 ? `T1: ${selectedT1.initials}` : 'T1'}
                   </button>
                   <span className="text-muted-foreground">/</span>
                   <button
                     onClick={() => openTechnicianModal('T2')}
                     className={cn(
-                      "h-6 px-2 text-xs font-bold rounded border transition-colors",
+                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap",
                       selectedT2
                         ? "bg-purple-50 dark:bg-purple-950 text-purple-600 border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900"
                         : "bg-background border-border hover:bg-accent"
                     )}
                   >
-                    T2{selectedT2 ? `: ${selectedT2.initials}` : ''}
+                    {selectedT2 ? `T2: ${selectedT2.initials}` : 'T2'}
                   </button>
+                  <span className="text-muted-foreground">/</span>
+                  <button
+                    onClick={() => openTechnicianModal('T3')}
+                    className={cn(
+                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap flex items-center gap-1",
+                      selectedT3
+                        ? "bg-orange-50 dark:bg-orange-950 text-orange-600 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900"
+                        : "bg-background border-border hover:bg-accent"
+                    )}
+                  >
+                    <GraduationCap className="h-3 w-3" />
+                    {selectedT3 ? `T3: ${selectedT3.initials}` : 'T3'}
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="w-64">
+                  <FlowchartSearch
+                    steps={steps}
+                    onSelectStep={handleSearchSelectStep}
+                  />
                 </div>
               </div>
             </div>
@@ -1525,7 +1795,7 @@ ${fullLayoutData.map(step =>
             {/* Right: Controls */}
             <div className="flex items-center gap-1.5">
               {/* Edit Mode Controls */}
-              {isEditMode ? (
+              {isEditMode && (
                 <>
                   <Button variant="outline" size="sm" onClick={handleAddStep} className="h-8">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
@@ -1608,24 +1878,6 @@ ${fullLayoutData.map(step =>
                     <span className="text-xs">View</span>
                   </Button>
                 </>
-              ) : (
-                <>
-                  {/* Hide Completed Steps Toggle */}
-                  <label className="flex items-center gap-1.5 border rounded-md px-2 py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors h-8">
-                    <input
-                      type="checkbox"
-                      checked={hideCompletedSteps}
-                      onChange={(e) => setHideCompletedSteps(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                    />
-                    <span className="text-xs font-medium text-muted-foreground">Hide Done</span>
-                  </label>
-
-                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
-                    <Edit className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">Edit</span>
-                  </Button>
-                </>
               )}
 
               {/* Divider */}
@@ -1634,23 +1886,117 @@ ${fullLayoutData.map(step =>
               {/* Offline Status */}
               <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
 
+              {/* Edit button in view mode */}
+              {!isEditMode && (
+                <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
+                  <Edit className="h-3.5 w-3.5 mr-1.5" />
+                  <span className="text-xs">Edit</span>
+                </Button>
+              )}
+
               {/* Fullscreen */}
               <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="h-8 w-8 p-0">
                 {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </Button>
-
-              {/* Clear Cache */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleClearCache}
-                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
-                title="Clear Cache"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
             </div>
           </div>
+
+          {/* Row 2: Start Service button or Job Tracking Display + Controls */}
+          {!isEditMode && (
+            <div className="flex items-center gap-3 ml-1 mt-1">
+              {!jobStarted ? (
+                /* Before Service Start */
+                <Button
+                  onClick={handleStartService}
+                  size="sm"
+                  className="h-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
+                >
+                  <span className="text-xs font-semibold">Start Service</span>
+                </Button>
+              ) : !jobFinished ? (
+                /* Service In Progress */
+                <>
+                  <Button
+                    size="sm"
+                    disabled
+                    className="h-6 bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-md cursor-default opacity-100"
+                  >
+                    <span className="text-xs font-semibold">In Progress</span>
+                  </Button>
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
+                    <span className="text-xs text-muted-foreground">Started:</span>
+                    <span className="text-xs font-mono font-semibold">
+                      {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {' '}
+                      {new Date(jobStarted).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {selectedServiceType && selectedServiceType !== 'all' && (
+                    <div className="px-2 py-1 bg-purple-50 dark:bg-purple-950 border border-purple-300 dark:border-purple-700 rounded-md">
+                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{selectedServiceType}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Service Completed */
+                <>
+                  <Button
+                    size="sm"
+                    disabled
+                    className="h-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100"
+                  >
+                    <span className="text-xs font-semibold">✓ Completed</span>
+                  </Button>
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
+                    <span className="text-xs text-muted-foreground">Started:</span>
+                    <span className="text-xs font-mono font-semibold">
+                      {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {' '}
+                      {new Date(jobStarted).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700 rounded-md">
+                    <span className="text-xs text-green-700 dark:text-green-300">Finished:</span>
+                    <span className="text-xs font-mono font-semibold text-green-700 dark:text-green-300">
+                      {new Date(jobFinished).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {' '}
+                      {new Date(jobFinished).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {selectedServiceType && selectedServiceType !== 'all' && (
+                    <div className="px-2 py-1 bg-purple-50 dark:bg-purple-950 border border-purple-300 dark:border-purple-700 rounded-md">
+                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{selectedServiceType}</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Push controls to the right */}
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Hide Completed Steps Toggle */}
+                <label className="flex items-center gap-1.5 border rounded-md px-2 py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors h-6">
+                  <input
+                    type="checkbox"
+                    checked={hideCompletedSteps}
+                    onChange={(e) => setHideCompletedSteps(e.target.checked)}
+                    className="w-3 h-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">Hide Done</span>
+                </label>
+
+                {/* Clear Cache */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearCache}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
+                  title="Clear Cache"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         )}
 
@@ -1692,6 +2038,7 @@ ${fullLayoutData.map(step =>
             onRealignToGrid={handleRealignToGrid}
             freePositioning={freePositioning}
             layoutMode={layoutMode}
+            activeStepIds={activeStepIds}
           />
         </div>
       </div>
@@ -1915,13 +2262,52 @@ ${fullLayoutData.map(step =>
       {/* Tutorial Guide */}
       <TutorialGuide />
 
-      {/* Technician Selection Modal */}
+      {/* Technician Selection Modal (for individual selection from header) */}
       <TechnicianSelectModal
         open={technicianModalOpen}
         onOpenChange={setTechnicianModalOpen}
         onSelect={handleSelectTechnician}
-        title={technicianModalRole === 'T1' ? "Select Technician 1" : "Select Technician 2"}
-        currentSelection={technicianModalRole === 'T1' ? selectedT1 : selectedT2}
+        title={technicianModalRole === 'T1' ? "Select Technician 1" : technicianModalRole === 'T2' ? "Select Technician 2" : "Select Trainee (T3)"}
+        currentSelection={technicianModalRole === 'T1' ? selectedT1 : technicianModalRole === 'T2' ? selectedT2 : selectedT3}
+      />
+
+      {/* Technician Pair Selection Modal (for Start Service) */}
+      <TechnicianPairSelectModal
+        open={technicianPairModalOpen}
+        onOpenChange={setTechnicianPairModalOpen}
+        onSelect={handleTechnicianPairSelect}
+        currentT1={selectedT1}
+        currentT2={selectedT2}
+      />
+
+      {/* Revision History Dialog */}
+      {flowchartData && (
+        <RevisionHistoryDialog
+          open={revisionHistoryOpen}
+          onOpenChange={setRevisionHistoryOpen}
+          currentRevision={flowchartData.revisionDate}
+          modelName={flowchartData.model}
+        />
+      )}
+
+      {/* Service Type Selection Modal */}
+      <ServiceTypeSelectionModal
+        open={serviceTypeModalOpen}
+        onOpenChange={setServiceTypeModalOpen}
+        onStart={handleServiceTypeStart}
+        steps={steps}
+        makeYear={makeYear}
+        flowchartData={flowchartData}
+      />
+
+      {/* Service Start Animation */}
+      <ServiceStartAnimation
+        open={serviceStartAnimationOpen}
+        onComplete={handleAnimationComplete}
+        serviceType={selectedServiceTypeForAnimation}
+        wtgNumber={wtgNumber}
+        t1Name={selectedT1 ? selectedT1.initials : "T1"}
+        t2Name={selectedT2 ? selectedT2.initials : "T2"}
       />
 
       <style jsx>{`

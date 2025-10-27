@@ -5,7 +5,6 @@ import {
   ReactFlow,
   Node,
   Edge,
-  Controls,
   Background,
   BackgroundVariant,
   Connection,
@@ -29,7 +28,7 @@ import { FlowchartStep, FlowchartData, generateStepId, parseServiceTimes, getCum
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -55,6 +54,7 @@ interface FlowchartEditorProps {
   onRealignToGrid?: () => void;
   freePositioning?: boolean;
   layoutMode?: 'topdown' | 'centered';
+  activeStepIds?: string[];
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -91,6 +91,7 @@ interface StepNodeData {
   isEditMode: boolean;
   selectedServiceType?: string;
   gridSize: number;
+  isActive?: boolean;
   [key: string]: unknown; // Index signature for React Flow compatibility
 }
 
@@ -132,7 +133,7 @@ interface StepNodeProps extends NodeProps {
 }
 
 function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: StepNodeProps) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize } = data;
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
   const [showTechnicianDropdown, setShowTechnicianDropdown] = useState(false);
@@ -336,15 +337,22 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
 
       <Card
         className={cn(
-          "relative p-4 w-full h-full hover:shadow-lg transition-all border-2 flex flex-col overflow-auto",
+          "relative p-4 w-full h-full hover:shadow-lg transition-all flex flex-col overflow-auto",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
             : isComplete
               ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
-              : "border-gray-700/50"
+              : isActive
+                ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50"
+                : "border-gray-700/50 border-2"
         )}
         style={{
-          backgroundColor: isComplete ? `rgba(34, 197, 94, 0.1)` : `${step.color}15`,
+          backgroundColor: isComplete ? `rgba(34, 197, 94, 0.1)` : isActive ? `rgba(59, 130, 246, 0.05)` : `${step.color}15`,
+          ...(isActive ? {
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: '4px',
+            animation: 'activeStepPulse 2s ease-in-out infinite, activeBorderGlow 2s ease-in-out infinite',
+          } : {})
         }}
       >
         {/* Step Label - Inside card, top left with checkmark if complete */}
@@ -1092,10 +1100,11 @@ function FlowchartEditorInner({
   hideCompletedSteps = false,
   onRealignToGrid,
   freePositioning = false,
-  layoutMode = 'centered'
+  layoutMode = 'centered',
+  activeStepIds = []
 }: FlowchartEditorProps) {
-  // Get React Flow instance to access fitView
-  const { fitView } = useReactFlow();
+  // Get React Flow instance to access fitView and zoom functions
+  const { fitView, zoomIn, zoomOut } = useReactFlow();
 
   // Filter steps based on hideCompletedSteps
   const displayedSteps = useMemo(() => {
@@ -1158,6 +1167,8 @@ function FlowchartEditorInner({
       const initialHeight = CUSTOM_STEP_HEIGHTS[step.id] ?? (totalTasks > 4 ? 450 : 350);
       const initialWidth = 370;
 
+      const isActive = activeStepIds.includes(step.id);
+
       return {
         id: step.id,
         type: 'stepNode',
@@ -1173,6 +1184,7 @@ function FlowchartEditorInner({
           isEditMode,
           selectedServiceType,
           gridSize,
+          isActive,
         },
         draggable: isEditMode,
       };
@@ -1180,7 +1192,7 @@ function FlowchartEditorInner({
 
     // Info card is now a dropdown at the top - no longer a node in the flowchart
     return stepNodes;
-  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart]);
+  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -1190,6 +1202,36 @@ function FlowchartEditorInner({
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
+
+  // Update nodes when activeStepIds changes
+  useEffect(() => {
+    console.log('[FlowchartEditor useEffect] activeStepIds changed:', activeStepIds);
+
+    setNodes((currentNodes) => {
+      const updated = currentNodes.map((node) => {
+        if (node.type === 'stepNode') {
+          const isActive = activeStepIds.includes(node.id);
+          if (isActive !== node.data.isActive) {
+            console.log('[FlowchartEditor useEffect] Updating node:', node.id, 'isActive:', isActive);
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isActive
+              }
+            };
+          }
+        }
+        return node;
+      });
+      return updated;
+    });
+
+    // Force React Flow to re-render the updated nodes
+    activeStepIds.forEach((nodeId) => {
+      updateNodeInternals(nodeId);
+    });
+  }, [activeStepIds, setNodes, updateNodeInternals]);
 
   // Track if auto-layout has been triggered
   const autoLayoutTriggered = useRef(false);
@@ -1206,13 +1248,70 @@ function FlowchartEditorInner({
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
 
+  // Viewport lock state
+  const [isViewportLocked, setIsViewportLocked] = useState(false);
+
+  // Fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Handle fullscreen toggle
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+      }).catch((err) => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+      }).catch((err) => {
+        console.error('Error attempting to exit fullscreen:', err);
+      });
+    }
+  }, []);
+
+  // Listen for fullscreen changes (e.g., user pressing ESC)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const loadingSteps = [
-    { icon: '📦', text: 'Loading flowchart data...', subtext: `${steps.length} steps found` },
-    { icon: '🔗', text: 'Building connections...', subtext: `${initialEdges.length} edges to connect` },
-    { icon: '⚡', text: 'Applying centered layout...', subtext: 'Calculating positions' },
-    { icon: '🎯', text: 'Centering viewport...', subtext: 'Optimizing view' },
-    { icon: '🌬️', text: 'Zooming to overview...', subtext: 'Preparing workspace' },
-    { icon: '✨', text: 'Ready!', subtext: 'Flowchart loaded successfully' }
+    {
+      code: `> Initializing flowchart engine...`,
+      detail: `Found ${steps.length} steps`,
+      status: 'OK'
+    },
+    {
+      code: `> Parsing step dependencies...`,
+      detail: `Connected ${initialEdges.length} edges`,
+      status: 'OK'
+    },
+    {
+      code: `> Calculating layout positions...`,
+      detail: `Grid: ${gridSize}px | Mode: ${layoutMode}`,
+      status: 'OK'
+    },
+    {
+      code: `> Optimizing viewport...`,
+      detail: `Zoom: fit | Center: auto`,
+      status: 'OK'
+    },
+    {
+      code: `> Loading service data...`,
+      detail: `Ready for interaction`,
+      status: 'OK'
+    },
+    {
+      code: `> System ready`,
+      detail: `Flowchart loaded successfully`,
+      status: 'DONE'
+    }
   ];
 
   // Enter fullscreen when loading overlay shows
@@ -1854,6 +1953,17 @@ function FlowchartEditorInner({
     }
   }, [layoutMode, handleRealignToGridCentered, handleRealignToGridTopDown]);
 
+  // Zoom to specific step function
+  const handleZoomToStep = (stepId: string) => {
+    fitView({
+      nodes: [{ id: stepId }],
+      duration: 800,
+      maxZoom: 1.0,
+      minZoom: 0.6,
+      padding: 0.3
+    });
+  };
+
   // Expose realign functions to parent
   useEffect(() => {
     if (onRealignToGrid) {
@@ -1862,12 +1972,16 @@ function FlowchartEditorInner({
       (window as any).__flowchartRealignToGridTopDown = handleRealignToGridTopDown;
       (window as any).__flowchartRealignToGridCentered = handleRealignToGridCentered;
     }
+    // Always expose zoom to step function
+    (window as any).__flowchartZoomToStep = handleZoomToStep;
+
     return () => {
       delete (window as any).__flowchartRealignToGrid;
       delete (window as any).__flowchartRealignToGridTopDown;
       delete (window as any).__flowchartRealignToGridCentered;
+      delete (window as any).__flowchartZoomToStep;
     };
-  }, [handleRealignToGrid, handleRealignToGridTopDown, handleRealignToGridCentered, onRealignToGrid]);
+  }, [handleRealignToGrid, handleRealignToGridTopDown, handleRealignToGridCentered, onRealignToGrid, fitView]);
 
   // Update node DATA only (not positions) when steps/props change
   // This prevents boxes from jumping when clicking edges
@@ -2072,39 +2186,39 @@ function FlowchartEditorInner({
         console.log('🎯 Starting auto-layout with animation (first visit)...');
         setShowLoadingOverlay(true);
 
-        // Step 0: Loading data (700ms)
+        // Step 0: Loading data (1200ms)
         setLoadingStep(0);
 
-        // Step 1: Building connections (700ms)
-        setTimeout(() => setLoadingStep(1), 700);
+        // Step 1: Building connections (1200ms)
+        setTimeout(() => setLoadingStep(1), 1200);
 
-        // Step 2: Applying layout (900ms) - RUN ACTUAL LAYOUT FUNCTION
+        // Step 2: Applying layout (1300ms) - RUN ACTUAL LAYOUT FUNCTION
         setTimeout(() => {
           setLoadingStep(2);
           console.log('   Running handleRealignToGridCentered()...');
           handleRealignToGridCentered();
-        }, 1400);
+        }, 2400);
 
-        // Step 3: Centering viewport (900ms) - RUN FIT VIEW
+        // Step 3: Centering viewport (1300ms) - RUN FIT VIEW
         setTimeout(() => {
           setLoadingStep(3);
           console.log('   Fitting view...');
           fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
-        }, 2300);
+        }, 3700);
 
-        // Step 4: Zoom to overview (800ms)
+        // Step 4: Zoom to overview (1200ms)
         setTimeout(() => {
           setLoadingStep(4);
           console.log('   Zooming to overview...');
           fitView({ padding: 0.2, duration: 800, maxZoom: 0.7, minZoom: 0.3 });
-        }, 3100);
+        }, 4900);
 
-        // Step 5: Ready! (700ms)
+        // Step 5: Ready! (1200ms)
         setTimeout(() => {
           setLoadingStep(5);
-        }, 3900);
+        }, 6100);
 
-        // Hide overlay after total 5 seconds
+        // Hide overlay after total 7.5 seconds (increased from 5)
         setTimeout(() => {
           setShowLoadingOverlay(false);
           console.log('✅ Auto-layout complete!');
@@ -2133,7 +2247,7 @@ function FlowchartEditorInner({
 
           // Mark animation as shown in localStorage
           localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
-        }, 5000);
+        }, 7500);
       } else {
         // No animation, just run layout
         console.log('🎯 Running auto-layout without animation (already visited)...');
@@ -2305,179 +2419,79 @@ function FlowchartEditorInner({
       {/* Animated Loading Overlay - Fullscreen */}
       {showLoadingOverlay && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-blue-900/90 to-gray-900/95 backdrop-blur-md"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 backdrop-blur-xl"
           style={{
             animation: 'fadeIn 0.3s ease-in-out'
           }}
         >
-          {/* Wind Turbine Animation - Left Side */}
-          <div className="absolute left-12 top-1/2 -translate-y-1/2">
-            <div className="relative">
-              {/* Wind Turbine SVG */}
-              <svg width="180" height="340" viewBox="0 0 180 340" className="opacity-90">
-                {/* Tower - taller and centered */}
-                <rect x="85" y="140" width="10" height="170" fill="#cbd5e1" opacity="0.9" />
-
-                {/* Tower base - wider at bottom */}
-                <polygon points="85,310 95,310 98,320 82,320" fill="#94a3b8" />
-
-                {/* Nacelle (hub housing) */}
-                <ellipse cx="90" cy="135" rx="18" ry="12" fill="#94a3b8" />
-                <ellipse cx="90" cy="133" rx="16" ry="10" fill="#64748b" />
-
-                {/* Rotating Blades - larger and more visible */}
-                <g
-                  style={{
-                    transformOrigin: '90px 135px',
-                    animation: loadingStep === 0 ? 'none' : `windTurbineSpin ${Math.max(3 - loadingStep * 0.4, 0.8)}s linear infinite`
-                  }}
-                >
-                  {/* Blade 1 - pointing up */}
-                  <g transform="translate(90, 135) rotate(0)">
-                    <path
-                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
-                      fill="#f1f5f9"
-                      stroke="#cbd5e1"
-                      strokeWidth="2"
-                      opacity="0.95"
-                    />
-                    <path
-                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
-                      fill="#e2e8f0"
-                      opacity="0.8"
-                    />
-                  </g>
-
-                  {/* Blade 2 - 120 degrees */}
-                  <g transform="translate(90, 135) rotate(120)">
-                    <path
-                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
-                      fill="#f1f5f9"
-                      stroke="#cbd5e1"
-                      strokeWidth="2"
-                      opacity="0.95"
-                    />
-                    <path
-                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
-                      fill="#e2e8f0"
-                      opacity="0.8"
-                    />
-                  </g>
-
-                  {/* Blade 3 - 240 degrees */}
-                  <g transform="translate(90, 135) rotate(240)">
-                    <path
-                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
-                      fill="#f1f5f9"
-                      stroke="#cbd5e1"
-                      strokeWidth="2"
-                      opacity="0.95"
-                    />
-                    <path
-                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
-                      fill="#e2e8f0"
-                      opacity="0.8"
-                    />
-                  </g>
-
-                  {/* Center hub - on top of blades */}
-                  <circle cx="90" cy="135" r="6" fill="#475569" />
-                  <circle cx="90" cy="135" r="3" fill="#1e293b" />
-                </g>
-
-                {/* Ground line */}
-                <line x1="40" y1="320" x2="140" y2="320" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
-                <line x1="50" y1="325" x2="130" y2="325" stroke="#334155" strokeWidth="2" opacity="0.5" />
-              </svg>
-
-              {/* Wind lines animation */}
-              {loadingStep > 0 && (
-                <div className="absolute top-16 -right-20 flex flex-col gap-4">
-                  <div
-                    className="h-1 bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent rounded-full"
-                    style={{
-                      width: '70px',
-                      animation: 'windFlow 1.5s ease-in-out infinite'
-                    }}
-                  />
-                  <div
-                    className="h-1 bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent rounded-full"
-                    style={{
-                      width: '60px',
-                      animation: 'windFlow 1.5s ease-in-out infinite 0.3s'
-                    }}
-                  />
-                  <div
-                    className="h-1 bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent rounded-full"
-                    style={{
-                      width: '55px',
-                      animation: 'windFlow 1.5s ease-in-out infinite 0.6s'
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center gap-6 max-w-md w-full px-6 relative z-10">
-            {/* Main Icon with Pulse Animation */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse"></div>
-              <div className="relative text-7xl animate-bounce">
-                {loadingSteps[loadingStep]?.icon}
+          {/* Terminal-style console */}
+          <div className="max-w-2xl w-full mx-6">
+            {/* Terminal Header */}
+            <div className="bg-gray-800/90 border border-gray-700/50 rounded-t-lg px-4 py-2 flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+              </div>
+              <div className="flex-1 text-center">
+                <span className="text-xs text-gray-400 font-mono">flowchart-engine@1.0.0</span>
               </div>
             </div>
 
-            {/* Progress Steps */}
-            <div className="w-full bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-blue-500/30 shadow-2xl">
-              {/* Current Step */}
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-white mb-2">
-                  {loadingSteps[loadingStep]?.text}
-                </h3>
-                <p className="text-blue-300 text-sm">
-                  {loadingSteps[loadingStep]?.subtext}
-                </p>
-              </div>
+            {/* Terminal Body */}
+            <div className="bg-gray-900/95 border-x border-b border-gray-700/50 rounded-b-lg p-6 font-mono text-sm">
+              {/* Command Lines */}
+              <div className="space-y-2">
+                {loadingSteps.map((step, idx) => {
+                  if (idx > loadingStep) return null;
 
-              {/* Progress Bar */}
-              <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden mb-4">
-                <div
-                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${((loadingStep + 1) / loadingSteps.length) * 100}%` }}
-                >
-                  <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
-                </div>
-              </div>
+                  return (
+                    <div key={idx} className="space-y-1">
+                      {/* Command line */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400">$</span>
+                        <span className="text-gray-300">{step.code}</span>
+                      </div>
 
-              {/* Step Indicators */}
-              <div className="flex justify-between items-center gap-2">
-                {loadingSteps.map((step, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1 flex-1">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                        idx <= loadingStep
-                          ? 'bg-gradient-to-br from-blue-500 to-cyan-400 text-white scale-110 shadow-lg shadow-blue-500/50'
-                          : 'bg-gray-700 text-gray-500 scale-90'
-                      }`}
-                    >
-                      {idx < loadingStep ? '✓' : idx + 1}
+                      {/* Output line */}
+                      <div className="flex items-center gap-2 pl-4">
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          step.status === 'DONE'
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        }`}>
+                          {step.status}
+                        </span>
+                        <span className="text-gray-500 text-xs">{step.detail}</span>
+                      </div>
                     </div>
-                    <div className={`text-[10px] text-center transition-opacity ${
-                      idx <= loadingStep ? 'text-blue-300 opacity-100' : 'text-gray-600 opacity-50'
-                    }`}>
-                      {step.icon}
-                    </div>
+                  );
+                })}
+
+                {/* Current loading cursor */}
+                {loadingStep < loadingSteps.length && (
+                  <div className="flex items-center gap-2 pt-2">
+                    <span className="text-green-400">$</span>
+                    <span className="text-gray-400 animate-pulse">_</span>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
 
-            {/* Loading Spinner Dots */}
-            <div className="flex gap-2">
-              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-3 h-3 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              {/* Progress bar at bottom */}
+              <div className="mt-6 pt-4 border-t border-gray-800">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-500">Progress</span>
+                  <span className="text-xs text-gray-400 font-semibold">
+                    {Math.round(((loadingStep + 1) / loadingSteps.length) * 100)}%
+                  </span>
+                </div>
+                <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500"
+                    style={{ width: `${((loadingStep + 1) / loadingSteps.length) * 100}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2505,10 +2519,12 @@ function FlowchartEditorInner({
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
         onPaneClick={() => setSelectedEdge(null)}
         proOptions={{ hideAttribution: true }}
-        // Touch device support
-        panOnDrag={!isEditMode ? [1, 2] : [1, 2]}
-        panOnScroll={true}
-        zoomOnPinch={true}
+        // Touch device support with viewport lock
+        panOnDrag={isViewportLocked ? false : (!isEditMode ? [1, 2] : [1, 2])}
+        panOnScroll={isViewportLocked ? false : true}
+        zoomOnPinch={isViewportLocked ? false : true}
+        zoomOnScroll={isViewportLocked ? false : true}
+        zoomOnDoubleClick={isViewportLocked ? false : true}
         preventScrolling={true}
         // Use drag-to-connect (default), not click-to-connect
         // connectOnClick can cause conflicts with handle interactions
@@ -2516,11 +2532,67 @@ function FlowchartEditorInner({
         {isEditMode && (
           <Background variant={BackgroundVariant.Dots} gap={gridSize} size={1} color="#6366f1" />
         )}
-        <Controls
-          className="!bg-gray-800 !border-gray-600 [&_button]:!bg-gray-700 [&_button]:!border-gray-600 [&_button]:!text-white [&_button:hover]:!bg-gray-600 [&_button]:!shadow-lg"
-          position="bottom-left"
-          style={{ bottom: '65px' }}
-        />
+
+        {/* Custom horizontal zoom controls at bottom */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-gray-800/90 backdrop-blur-md border border-gray-600 rounded-lg p-1 shadow-lg">
+          <button
+            onClick={() => zoomIn({ duration: 200 })}
+            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            title="Zoom In"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+
+          <button
+            onClick={() => zoomOut({ duration: 200 })}
+            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            title="Zoom Out"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+
+          <button
+            onClick={() => fitView({ padding: 0.15, duration: 400 })}
+            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            title="Fit View"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+
+          <button
+            onClick={toggleFullscreen}
+            className={cn(
+              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600",
+              isFullscreen
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-gray-700 hover:bg-gray-600 text-white"
+            )}
+            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            <Expand className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+
+          <button
+            onClick={() => setIsViewportLocked(!isViewportLocked)}
+            className={cn(
+              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600",
+              isViewportLocked
+                ? "bg-orange-600 hover:bg-orange-700 text-white"
+                : "bg-gray-700 hover:bg-gray-600 text-white"
+            )}
+            title={isViewportLocked ? "Unlock Viewport" : "Lock Viewport"}
+          >
+            {isViewportLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+          </button>
+        </div>
 
       </ReactFlow>
 
