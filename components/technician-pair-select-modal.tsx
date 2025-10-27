@@ -5,8 +5,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, User } from "lucide-react";
+import { Search, Users, User, History } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TechnicianWorkHistoryDialog } from "./technician-work-history-dialog";
 
 interface Technician {
   id: string;
@@ -39,6 +40,8 @@ export function TechnicianPairSelectModal({
   const [selectedT1, setSelectedT1] = useState<Technician | null>(null);
   const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showWorkHistory, setShowWorkHistory] = useState(false);
+  const [selectedTechForHistory, setSelectedTechForHistory] = useState<Technician | null>(null);
 
   // Filter states
   const [selectedVestasLevel, setSelectedVestasLevel] = useState<string>("all");
@@ -293,23 +296,37 @@ export function TechnicianPairSelectModal({
                       <div className="flex gap-2">
                         <Button
                           size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedTechForHistory(tech);
+                            setShowWorkHistory(true);
+                          }}
+                          className="h-8 px-2 gap-1 text-xs"
+                          title="View work history"
+                        >
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
                           variant={isSelectedT1 ? "default" : "outline"}
-                          onClick={() => setSelectedT1(tech)}
+                          onClick={() => setSelectedT1(isSelectedT1 ? null : tech)}
                           className={cn(
                             "h-8 text-xs",
                             isSelectedT1 && "bg-blue-600 hover:bg-blue-700"
                           )}
+                          title={isSelectedT1 ? "Click to deselect T1" : "Set as T1"}
                         >
                           {isSelectedT1 ? "✓ T1" : "Set as T1"}
                         </Button>
                         <Button
                           size="sm"
                           variant={isSelectedT2 ? "default" : "outline"}
-                          onClick={() => setSelectedT2(tech)}
+                          onClick={() => setSelectedT2(isSelectedT2 ? null : tech)}
                           className={cn(
                             "h-8 text-xs",
                             isSelectedT2 && "bg-purple-600 hover:bg-purple-700"
                           )}
+                          title={isSelectedT2 ? "Click to deselect T2" : "Set as T2"}
                         >
                           {isSelectedT2 ? "✓ T2" : "Set as T2"}
                         </Button>
@@ -339,6 +356,13 @@ export function TechnicianPairSelectModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Work History Dialog */}
+      <TechnicianWorkHistoryDialog
+        open={showWorkHistory}
+        onOpenChange={setShowWorkHistory}
+        technician={selectedTechForHistory}
+      />
     </Dialog>
   );
 }

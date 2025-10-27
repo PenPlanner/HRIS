@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VestasLevel, Technician } from "@/lib/mock-data";
+import { TechnicianWorkHistoryDialog } from "./technician-work-history-dialog";
 
 interface TechnicianSelectModalProps {
   open: boolean;
@@ -57,6 +58,8 @@ export function TechnicianSelectModal({
   const [selectedVestasLevel, setSelectedVestasLevel] = useState<VestasLevel | "all">("all");
   const [selectedCompetencyLevel, setSelectedCompetencyLevel] = useState<number | "all">("all");
   const [loading, setLoading] = useState(true);
+  const [showWorkHistory, setShowWorkHistory] = useState(false);
+  const [selectedTechForHistory, setSelectedTechForHistory] = useState<Technician | null>(null);
 
   // Fetch technicians from API
   useEffect(() => {
@@ -113,6 +116,13 @@ export function TechnicianSelectModal({
   };
 
   const handleSelect = (tech: Technician) => {
+    // If clicking the same technician, deselect (pass null)
+    if (currentSelection?.id === tech.id) {
+      onSelect(null as any); // Deselect
+      onOpenChange(false);
+      return;
+    }
+
     onSelect(tech);
     onOpenChange(false);
   };
@@ -242,10 +252,11 @@ export function TechnicianSelectModal({
                   key={tech.id}
                   onClick={() => handleSelect(tech)}
                   className={cn(
-                    "w-full text-left p-3 rounded-lg border hover:bg-accent transition-colors",
+                    "w-full text-left p-3 rounded-lg border hover:bg-accent transition-colors relative",
                     currentSelection?.id === tech.id && "bg-accent border-primary ring-2 ring-primary"
                   )}
                   style={{ borderLeft: `3px solid ${tech.team_color}` }}
+                  title={currentSelection?.id === tech.id ? "Click again to deselect" : "Click to select"}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -289,6 +300,20 @@ export function TechnicianSelectModal({
                         )}
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTechForHistory(tech);
+                        setShowWorkHistory(true);
+                      }}
+                      className="h-7 px-2 gap-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="View work history"
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      History
+                    </Button>
                   </div>
                 </button>
               ))}
@@ -296,6 +321,13 @@ export function TechnicianSelectModal({
           )}
         </div>
       </DialogContent>
+
+      {/* Work History Dialog */}
+      <TechnicianWorkHistoryDialog
+        open={showWorkHistory}
+        onOpenChange={setShowWorkHistory}
+        technician={selectedTechForHistory}
+      />
     </Dialog>
   );
 }

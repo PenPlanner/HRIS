@@ -28,7 +28,8 @@ import { FlowchartStep, FlowchartData, generateStepId, parseServiceTimes, getCum
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -47,6 +48,7 @@ interface FlowchartEditorProps {
   zoom: number;
   gridSize?: number;
   isEditMode: boolean;
+  onToggleEditMode?: () => void;
   setHasUnsavedChanges: (value: boolean) => void;
   selectedServiceType?: string;
   onServiceTypeChange?: (serviceType: string) => void;
@@ -98,6 +100,8 @@ interface StepNodeData {
   gridSize: number;
   isActive?: boolean;
   onOpenTechnicianPairModal?: () => void;
+  selectedT1?: Technician | null;
+  selectedT2?: Technician | null;
   [key: string]: unknown; // Index signature for React Flow compatibility
 }
 
@@ -139,9 +143,10 @@ interface StepNodeProps extends NodeProps {
 }
 
 function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: StepNodeProps) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, onOpenTechnicianPairModal } = data;
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, onOpenTechnicianPairModal, selectedT1, selectedT2 } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
+  const [showT3Modal, setShowT3Modal] = useState(false);
 
   // Debug: Log when isActive changes
   useEffect(() => {
@@ -150,8 +155,29 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
     }
   }, [isActive, step.id]);
 
-  // Get selected technicians for displaying (synced from header/Start Service)
-  const { t1, t2 } = getSelectedTechnicians();
+  // Use technicians passed from parent (synced from header/Start Service)
+  const t1 = selectedT1;
+  const t2 = selectedT2;
+
+  // Handle T3 selection
+  const handleT3Select = (tech: Technician | null) => {
+    if (tech) {
+      onUpdateStep({
+        ...step,
+        hasT3: true,
+        t3Id: tech.id,
+        t3Initials: tech.initials,
+      });
+    } else {
+      // Remove T3
+      onUpdateStep({
+        ...step,
+        hasT3: false,
+        t3Id: undefined,
+        t3Initials: undefined,
+      });
+    }
+  };
 
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
@@ -427,7 +453,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
 
         {/* Technician Badge - Centered below Step label - Click to assign T1/T2 for job */}
         <div className="flex justify-center mb-2 mt-5 flex-shrink-0">
-          <div className="flex gap-1 relative">
+          <div className="flex gap-1 items-center relative">
             {step.technician === "both" ? (
               <>
                 <Badge
@@ -437,7 +463,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T1{t1 ? `: ${t1.firstName} ${t1.lastName}` : ''}
+                  T1{t1 ? `: ${t1.initials}` : ''}
                 </Badge>
                 <Badge
                   variant="secondary"
@@ -446,7 +472,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T2{t2 ? `: ${t2.firstName} ${t2.lastName}` : ''}
+                  T2{t2 ? `: ${t2.initials}` : ''}
                 </Badge>
               </>
             ) : (
@@ -460,11 +486,41 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                 title="Click to assign T1 and T2 for the job"
               >
                 <User className="h-3 w-3" />
-                {step.technician === "T1" ? (t1 ? `T1: ${t1.firstName} ${t1.lastName}` : 'T1') : (t2 ? `T2: ${t2.firstName} ${t2.lastName}` : 'T2')}
+                {step.technician === "T1" ? (t1 ? `T1: ${t1.initials}` : 'T1') : (t2 ? `T2: ${t2.initials}` : 'T2')}
               </Badge>
+            )}
+
+            {/* T3 (Trainee) Badge and Add Button */}
+            {step.hasT3 && step.t3Initials ? (
+              <Badge
+                variant="secondary"
+                className="text-xs bg-amber-500/90 hover:bg-amber-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
+                onClick={() => setShowT3Modal(true)}
+                title="T3 (Trainee) - Click to change or remove"
+              >
+                <User className="h-3 w-3" />
+                T3: {step.t3Initials}
+              </Badge>
+            ) : (
+              <button
+                onClick={() => setShowT3Modal(true)}
+                className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 hover:border-amber-500 transition-colors"
+                title="Add T3 (Trainee) to this step"
+              >
+                <Plus className="h-3.5 w-3.5 text-amber-600" />
+              </button>
             )}
           </div>
         </div>
+
+        {/* T3 Selection Modal */}
+        <TechnicianSelectModal
+          open={showT3Modal}
+          onOpenChange={setShowT3Modal}
+          onSelect={handleT3Select}
+          title="Select T3 (Trainee)"
+          currentSelection={step.t3Id ? { id: step.t3Id, initials: step.t3Initials || '', first_name: '', last_name: '', email: '', team_name: '', team_color: '#000000' } as any : null}
+        />
 
         {/* Step Content - Task list with scroll if needed */}
         <div className="flex-1 flex flex-col min-h-0 mt-2">
@@ -481,19 +537,18 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
               // Check if task is indented (sub-task)
               const isIndented = task.isIndented || false;
 
-              // Filter by service type if a filter is selected (not in edit mode)
-              if (!isEditMode && selectedServiceType && selectedServiceType !== "all") {
-                const taskServiceType = task.serviceType || "All";
-                const includedTypes = getIncludedServiceTypes(selectedServiceType);
+              // Check if task matches service type filter (for strike-through styling)
+              const serviceType = task.serviceType || "All";
+              const taskServiceType = task.serviceType || "All";
+              let isTaskIrrelevant = false;
 
-                // Skip this task if its service type is not in the included types
-                if (!includedTypes.includes(taskServiceType)) {
-                  return null;
-                }
+              if (!isEditMode && selectedServiceType && selectedServiceType !== "all") {
+                const includedTypes = getIncludedServiceTypes(selectedServiceType);
+                // Mark as irrelevant if it doesn't match the selected service type
+                isTaskIrrelevant = !includedTypes.includes(taskServiceType);
               }
 
               // Get service type color
-              const serviceType = task.serviceType || "All";
               const badgeColor = SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
 
               // Split reference number and description
@@ -529,32 +584,88 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                 >
                   {!isIndented && (
                     isEditMode ? (
-                      <select
+                      <Select
                         value={serviceType}
-                        onChange={(e) => {
+                        onValueChange={(value) => {
                           const updatedStep = {
                             ...step,
                             tasks: step.tasks.map(t =>
-                              t.id === task.id ? { ...t, serviceType: e.target.value } : t
+                              t.id === task.id ? { ...t, serviceType: value } : t
                             )
                           };
                           onUpdateStep(updatedStep);
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ backgroundColor: badgeColor }}
-                        className="px-1.5 py-1 text-[9px] font-mono font-bold text-white border-0 cursor-pointer hover:opacity-80 flex-shrink-0 w-[50px]"
                       >
-                        <option value="1Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["1Y"], color: 'white' }}>1Y</option>
-                        <option value="2Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["2Y"], color: 'white' }}>2Y</option>
-                        <option value="3Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["3Y"], color: 'white' }}>3Y</option>
-                        <option value="4Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["4Y"], color: 'white' }}>4Y</option>
-                        <option value="5Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["5Y"], color: 'white' }}>5Y</option>
-                        <option value="6Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["6Y"], color: 'white' }}>6Y</option>
-                        <option value="7Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["7Y"], color: 'black' }}>7Y</option>
-                        <option value="10Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["10Y"], color: 'black' }}>10Y</option>
-                        <option value="12Y" style={{ backgroundColor: SERVICE_TYPE_COLORS["12Y"], color: 'white' }}>12Y</option>
-                        <option value="All" style={{ backgroundColor: SERVICE_TYPE_COLORS.All, color: 'white' }}>Ext</option>
-                      </select>
+                        <SelectTrigger
+                          className="h-6 w-[50px] px-1.5 py-0 text-[9px] font-mono font-bold text-white border-0 flex-shrink-0"
+                          style={{ backgroundColor: badgeColor }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="min-w-[100px]">
+                          <SelectItem value="1Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["1Y"] }}></div>
+                              <span>1Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="2Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["2Y"] }}></div>
+                              <span>2Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="3Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["3Y"] }}></div>
+                              <span>3Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="4Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["4Y"] }}></div>
+                              <span>4Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="5Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["5Y"] }}></div>
+                              <span>5Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="6Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["6Y"] }}></div>
+                              <span>6Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="7Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["7Y"] }}></div>
+                              <span>7Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="10Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["10Y"] }}></div>
+                              <span>10Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="12Y" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS["12Y"] }}></div>
+                              <span>12Y</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="All" className="text-xs font-mono font-bold">
+                            <div className="flex items-center gap-2">
+                              <div className="w-10 h-5 rounded" style={{ backgroundColor: SERVICE_TYPE_COLORS.All }}></div>
+                              <span>Ext</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <div
                         style={{ backgroundColor: badgeColor }}
@@ -604,7 +715,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         }}>
                           {refNumber}
                         </span>
-                        <span className={cn("font-semibold text-white cursor-text hover:bg-blue-500/20 rounded", task.completed && "line-through text-gray-400")} onClick={(e) => {
+                        <span className={cn("font-semibold text-white cursor-text hover:bg-blue-500/20 rounded", (task.completed || isTaskIrrelevant) && "line-through text-gray-400")} onClick={(e) => {
                           e.stopPropagation();
                           setEditingTaskId(task.id);
                         }}>
@@ -617,7 +728,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         <span
                           className={cn(
                             !isIndented ? "font-semibold" : "font-normal",
-                            task.completed ? "line-through text-gray-400" : "text-white",
+                            (task.completed || isTaskIrrelevant) ? "line-through text-gray-400" : "text-white",
                             "cursor-text hover:bg-blue-500/20 rounded"
                           )}
                           onClick={(e) => {
@@ -635,7 +746,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                         <span className="font-semibold text-white font-mono">
                           {refNumber}
                         </span>
-                        <span className={cn("font-semibold text-white line-clamp-1", task.completed && "line-through text-gray-400")}>
+                        <span className={cn("font-semibold text-white line-clamp-1", (task.completed || isTaskIrrelevant) && "line-through text-gray-400")}>
                           {description}
                         </span>
                       </>
@@ -646,7 +757,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                           className={cn(
                             !isIndented ? "font-semibold" : "font-normal",
                             "line-clamp-1",
-                            task.completed ? "line-through text-gray-400" : "text-white"
+                            (task.completed || isTaskIrrelevant) ? "line-through text-gray-400" : "text-white"
                           )}
                         >
                           {task.description}
@@ -919,12 +1030,58 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
               )}
             </div>
 
-            <div>
+            <div className="border-b pb-2">
               <div className="flex items-center gap-2 font-semibold mb-1">
                 <Clock className="h-4 w-4 text-orange-600" />
                 <span className="text-xs">Total downtime of turbine</span>
               </div>
               <div className="font-bold ml-6 text-sm">{downtimeFormatted}</div>
+            </div>
+
+            {/* Actual Time Tracking */}
+            <div>
+              <div className="flex items-center gap-2 font-semibold mb-1">
+                <Zap className="h-4 w-4 text-yellow-600" />
+                <span className="text-xs">Actual Time Logged</span>
+              </div>
+              <div className="ml-6">
+                <div className="font-bold text-sm">
+                  {(() => {
+                    // Calculate total actual time from all tasks
+                    const totalActualMinutes = steps.reduce((sum, step) => {
+                      return sum + step.tasks.reduce((taskSum, task) =>
+                        taskSum + (task.actualTimeMinutes || 0), 0
+                      );
+                    }, 0);
+
+                    // Calculate difference from target
+                    const targetMinutes = flowchart.totalMinutes;
+                    const differenceMinutes = totalActualMinutes - targetMinutes;
+                    const isAhead = differenceMinutes < 0; // Negative means ahead (under target)
+                    const absDifferenceMinutes = Math.abs(differenceMinutes);
+
+                    return (
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          totalActualMinutes > 0 && targetMinutes > 0
+                            ? (isAhead ? "text-green-600" : "text-red-600")
+                            : "text-gray-600"
+                        )}>
+                          {formatTimeWithMinutes(totalActualMinutes)}
+                        </span>
+                        {totalActualMinutes > 0 && targetMinutes > 0 && differenceMinutes !== 0 && (
+                          <span className={cn(
+                            "text-xs font-bold",
+                            isAhead ? "text-green-600" : "text-red-600"
+                          )}>
+                            ({isAhead ? "-" : "+"}{Math.floor(absDifferenceMinutes / 60)}h {absDifferenceMinutes % 60}m)
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1045,6 +1202,7 @@ function FlowchartEditorInner({
   zoom,
   gridSize = GRID_SIZE,
   isEditMode,
+  onToggleEditMode,
   setHasUnsavedChanges,
   selectedServiceType,
   onServiceTypeChange,
@@ -1060,26 +1218,14 @@ function FlowchartEditorInner({
   selectedT2
 }: FlowchartEditorProps) {
   // Get React Flow instance to access fitView and zoom functions
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
 
   // Filter steps based on hideCompletedSteps and selectedServiceType
   const displayedSteps = useMemo(() => {
     let filteredSteps = steps;
 
-    // Filter by service type (always apply, even in edit mode)
-    if (selectedServiceType && selectedServiceType !== "all") {
-      const includedTypes = getIncludedServiceTypes(selectedServiceType);
-
-      filteredSteps = filteredSteps.filter(step => {
-        // Check if step has at least one visible task for this service type
-        const hasVisibleTasks = step.tasks.some(task => {
-          const taskServiceType = task.serviceType || "All";
-          return includedTypes.includes(taskServiceType);
-        });
-
-        return hasVisibleTasks;
-      });
-    }
+    // Note: We no longer filter steps by service type - instead we use strike-through styling
+    // on irrelevant tasks within the step rendering
 
     // Filter by completion status
     if (hideCompletedSteps && !isEditMode) {
@@ -1162,6 +1308,8 @@ function FlowchartEditorInner({
           gridSize,
           isActive,
           onOpenTechnicianPairModal,
+          selectedT1,
+          selectedT2,
         },
         draggable: isEditMode,
       };
@@ -1169,7 +1317,7 @@ function FlowchartEditorInner({
 
     // Info card is now a dropdown at the top - no longer a node in the flowchart
     return stepNodes;
-  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds]);
+  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds, onOpenTechnicianPairModal, selectedT1, selectedT2]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -1230,6 +1378,20 @@ function FlowchartEditorInner({
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Step navigation dropdown state
+  const [selectedStepForNav, setSelectedStepForNav] = useState<string>("");
+
+  // Auto-reset dropdown after 5 seconds
+  useEffect(() => {
+    if (selectedStepForNav) {
+      const timer = setTimeout(() => {
+        setSelectedStepForNav("");
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedStepForNav]);
+
   // Handle fullscreen toggle
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -1258,24 +1420,24 @@ function FlowchartEditorInner({
   }, []);
 
 
-  // Enter fullscreen when loading overlay shows
-  useEffect(() => {
-    if (showLoadingOverlay) {
-      // Request fullscreen
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch((err) => {
-          console.log('Fullscreen request denied:', err);
-        });
-      }
-    } else {
-      // Exit fullscreen when overlay closes
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch((err) => {
-          console.log('Exit fullscreen failed:', err);
-        });
-      }
-    }
-  }, [showLoadingOverlay]);
+  // TEMPORARILY DISABLED: Enter fullscreen when loading overlay shows
+  // useEffect(() => {
+  //   if (showLoadingOverlay) {
+  //     // Request fullscreen
+  //     if (document.documentElement.requestFullscreen) {
+  //       document.documentElement.requestFullscreen().catch((err) => {
+  //         console.log('Fullscreen request denied:', err);
+  //       });
+  //     }
+  //   } else {
+  //     // Exit fullscreen when overlay closes
+  //     if (document.fullscreenElement && document.exitFullscreen) {
+  //       document.exitFullscreen().catch((err) => {
+  //         console.log('Exit fullscreen failed:', err);
+  //       });
+  //     }
+  //   }
+  // }, [showLoadingOverlay]);
 
   // Re-align all nodes to grid - Auto-layout with intelligent positioning (TOP-DOWN)
   const handleRealignToGridTopDown = useCallback(() => {
@@ -1897,16 +2059,28 @@ function FlowchartEditorInner({
     }
   }, [layoutMode, handleRealignToGridCentered, handleRealignToGridTopDown]);
 
-  // Zoom to specific step function
-  const handleZoomToStep = (stepId: string) => {
-    fitView({
-      nodes: [{ id: stepId }],
-      duration: 800,
-      maxZoom: 1.0,
-      minZoom: 0.6,
-      padding: 0.3
-    });
-  };
+  // Zoom to specific step function with smart zoom based on node size
+  const handleZoomToStep = useCallback((stepId: string) => {
+    const node = getNode(stepId);
+    if (!node) return;
+
+    // Get node dimensions
+    const nodeWidth = node.width || 300;
+    const nodeHeight = node.height || 200;
+
+    // Calculate zoom level based on node size
+    // Smaller nodes get higher zoom, larger nodes get lower zoom
+    const maxDimension = Math.max(nodeWidth, nodeHeight);
+    let targetZoom = 1.2;
+    if (maxDimension > 600) {
+      targetZoom = 0.8;
+    } else if (maxDimension > 400) {
+      targetZoom = 1.0;
+    }
+
+    // Center on the node with calculated zoom
+    setCenter(node.position.x + nodeWidth / 2, node.position.y + nodeHeight / 2, { zoom: targetZoom, duration: 600 });
+  }, [getNode, setCenter]);
 
   // Expose realign functions to parent
   useEffect(() => {
@@ -1925,7 +2099,7 @@ function FlowchartEditorInner({
       delete (window as any).__flowchartRealignToGridCentered;
       delete (window as any).__flowchartZoomToStep;
     };
-  }, [handleRealignToGrid, handleRealignToGridTopDown, handleRealignToGridCentered, onRealignToGrid, fitView]);
+  }, [handleRealignToGrid, handleRealignToGridTopDown, handleRealignToGridCentered, handleZoomToStep, onRealignToGrid]);
 
   // Update node DATA only (not positions) when steps/props change
   // This prevents boxes from jumping when clicking edges
@@ -1989,6 +2163,8 @@ function FlowchartEditorInner({
               gridSize,
               isActive,
               onOpenTechnicianPairModal,
+              selectedT1,
+              selectedT2,
             },
             draggable: isEditMode,
           };
@@ -2135,55 +2311,46 @@ function FlowchartEditorInner({
       // Only show animation on first visit
       if (isFirstVisit.current) {
         console.log('🎯 Starting auto-layout with animation (first visit)...');
-        setShowLoadingOverlay(true);
+        // TEMPORARILY DISABLED: Loading overlay animation
+        // setShowLoadingOverlay(true);
 
         // Run layout immediately
         console.log('   Running handleRealignToGridCentered()...');
         handleRealignToGridCentered();
 
-        // Fit view after layout
+        // TESTING: Disable all camera movements to see if layout is correct from start
+        // // Fit view after layout
+        // setTimeout(() => {
+        //   console.log('   Fitting view...');
+        //   fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
+        // }, 100);
+
+        // Zoom to first step after layout
         setTimeout(() => {
-          console.log('   Fitting view...');
-          fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
-        }, 100);
+          const firstStep = steps.find(s => s.id.includes('step-1') || s.position.x === 0);
+          if (firstStep) {
+            console.log('   Zooming to first step:', firstStep.id);
+            const nodeId = firstStep.id;
+            fitView({
+              nodes: [{ id: nodeId }],
+              duration: 2000,
+              maxZoom: 0.9,
+              minZoom: 0.6,
+              padding: 0.4
+            });
+          }
+        }, 500);
 
-        // Hide overlay after 2 seconds
-        setTimeout(() => {
-          setShowLoadingOverlay(false);
-          console.log('✅ Auto-layout complete!');
-
-          // Zoom to first step after overlay disappears
-          setTimeout(() => {
-            const firstStep = steps.find(s => s.id.includes('step-1') || s.position.x === 0);
-            if (firstStep) {
-              console.log('   Zooming to first step:', firstStep.id);
-              const nodeId = firstStep.id;
-              fitView({
-                nodes: [{ id: nodeId }],
-                duration: 2000,
-                maxZoom: 0.9,
-                minZoom: 0.6,
-                padding: 0.4
-              });
-
-              // After zoom completes, dispatch event to open info dropdown
-              setTimeout(() => {
-                console.log('   Dispatching info-dropdown-auto-open event...');
-                window.dispatchEvent(new CustomEvent('info-dropdown-auto-open'));
-              }, 2000);
-            }
-          }, 500);
-
-          // Mark animation as shown in localStorage
-          localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
-        }, 2000);
+        // Mark animation as shown immediately
+        localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
       } else {
         // No animation, just run layout
         console.log('🎯 Running auto-layout without animation (already visited)...');
         handleRealignToGridCentered();
-        setTimeout(() => {
-          fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
-        }, 100);
+        // TESTING: Also disable for non-first-visit
+        // setTimeout(() => {
+        //   fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
+        // }, 100);
       }
     }
   }, [layoutMode, steps.length, handleRealignToGridCentered, fitView, flowchart.id, steps]);
@@ -2345,18 +2512,16 @@ function FlowchartEditorInner({
 
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
-      {/* Animated Loading Overlay - Fullscreen */}
-      {showLoadingOverlay && (
+      {/* TEMPORARILY DISABLED: Animated Loading Overlay - Fullscreen */}
+      {/* {showLoadingOverlay && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/80 backdrop-blur-md">
           <div className="bg-white/95 dark:bg-gray-900/95 rounded-lg p-8 shadow-2xl">
             <div className="flex flex-col items-center justify-center space-y-6">
-              {/* Loading spinner */}
               <div className="relative">
                 <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
                 <div className="absolute inset-0 h-16 w-16 rounded-full border-4 border-blue-200 dark:border-blue-800" />
               </div>
 
-              {/* Loading text */}
               <div className="text-center space-y-2">
                 <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   Loading...
@@ -2368,7 +2533,7 @@ function FlowchartEditorInner({
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       <ReactFlow
         nodes={nodes as any}
@@ -2465,6 +2630,65 @@ function FlowchartEditorInner({
           >
             {isViewportLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
           </button>
+
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+
+          <button
+            onClick={onToggleEditMode}
+            className={cn(
+              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
+              isEditMode
+                ? "bg-green-600/80 hover:bg-green-700/80 text-white"
+                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
+            )}
+            title={isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+
+          {/* Step Navigation Dropdown */}
+          <Select
+            value={selectedStepForNav}
+            onValueChange={(value) => {
+              setSelectedStepForNav(value);
+              handleZoomToStep(value);
+            }}
+          >
+            <SelectTrigger className="h-8 w-40 bg-gray-700/70 hover:bg-gray-600/70 border-gray-600/50 text-white text-xs">
+              <SelectValue placeholder="Jump to step..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {displayedSteps.map((step) => {
+                // Extract step number from id (e.g. "step-1" -> "1", "step-2-1" -> "2.1")
+                const stepNumber = step.id.replace('step-', '').replace(/-/g, '.');
+
+                return (
+                  <SelectItem key={step.id} value={step.id} className="text-xs">
+                    <div className="grid grid-cols-[80px_auto] gap-3 w-full items-center">
+                      <span className="font-medium text-left">Step {stepNumber}</span>
+                      <div className="flex items-center gap-1 justify-self-start">
+                        {step.technician === "both" ? (
+                          <>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white bg-blue-500">T1</span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white bg-purple-500">T2</span>
+                          </>
+                        ) : (
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-bold text-white",
+                            step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
+                          )}>
+                            {step.technician}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
         </div>
 
       </ReactFlow>

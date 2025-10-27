@@ -64,6 +64,16 @@ export interface FlowchartStep {
   assignedTechnicianId?: string; // ID of technician assigned to this specific step
   assignedTechnicianInitials?: string; // Initials of assigned technician for display
   displaySettings?: StepDisplaySettings; // Custom display settings for this step
+  // T3 (trainee) support
+  hasT3?: boolean; // Whether T3 is assigned to this step
+  t3Id?: string; // ID of T3 technician
+  t3Initials?: string; // Initials of T3 for display
+  // Additional/extra technicians that can be added flexibly to any step
+  additionalTechnicians?: Array<{
+    id: string;
+    initials: string;
+    role: 'T1' | 'T2' | 'T3';
+  }>;
 }
 
 /**
@@ -257,7 +267,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     // Step 4: Generator (T1) - 13 tasks
     {
       id: "step-4",
-      title: "7. Generator\n6.5.2.11 Visual inspection for leakages in hoses\n6.5.2.2 Replace 50 um filter\n6.5.2.3 Replace inline filter\n6.5.2.4 Replace offline filter\n6.6.2.6 Replace the Value actuators\n6.6.2.7 Replace the oil pumpmotor and clutch\n6.5.2.8 Replace the VFD\n6.5.2.9 Validate pressure transmitters\n6.5.2.12 Visual inspec. leakages in lubrication hoses\n6.5.3 Visual inspection and replace filter mat AVC system\n9.5.3.1 Inspect brushes for wear\n6.5.2.13 Repair and replace oil debris monitor system",
+      title: "7. Generator\n6.5.2.11 Visual inspection for leakages in hoses\n6.5.2.2 Replace 50 µm filter\n6.5.2.3 Replace inline filter\n6.5.2.4 Replace offline filter\n6.6.2.6 Replace the Valve actuators\n6.6.2.7 Replace the oil pumpmotor and clutch\n6.5.2.8 Replace the VFD\n6.5.2.9 Validate pressure transmitters\n6.5.2.12 Visual inspec. leakages in lubrication hoses\n6.5.3 Visual inspection and replace filter mat AVC system\n9.5.3.1 Inspect brushes for wear\n6.5.2.13 Repair and replace oil debris monitor system",
       duration: "2h + (2Y)2h + (4Y)5m + (5Y)3h 15m + (6Y)6h + (10Y)3h",
       durationMinutes: 120,
       color: getServiceTypeColor("Multi"),
@@ -268,16 +278,16 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       tasks: [
         { id: "4-1", description: "7. Generator", serviceType: "1Y" },
         { id: "4-2", description: "6.5.2.11 Visual inspection for leakages in hoses", serviceType: "1Y" },
-        { id: "4-3", description: "6.5.2.2 Replace 50 um filter", serviceType: "2Y" },
+        { id: "4-3", description: "6.5.2.2 Replace 50 µm filter", serviceType: "4Y" },
         { id: "4-4", description: "6.5.2.3 Replace inline filter", serviceType: "2Y" },
         { id: "4-5", description: "6.5.2.4 Replace offline filter", serviceType: "2Y" },
-        { id: "4-6", description: "6.6.2.6 Replace the Value actuators", serviceType: "5Y" },
-        { id: "4-7", description: "6.6.2.7 Replace the oil pumpmotor and clutch", serviceType: "5Y" },
-        { id: "4-8", description: "6.5.2.8 Replace the VFD", serviceType: "4Y" },
+        { id: "4-6", description: "6.6.2.6 Replace the Valve actuators", serviceType: "6Y" },
+        { id: "4-7", description: "6.6.2.7 Replace the oil pumpmotor and clutch", serviceType: "6Y" },
+        { id: "4-8", description: "6.5.2.8 Replace the VFD", serviceType: "10Y" },
         { id: "4-9", description: "6.5.2.9 Validate pressure transmitters", serviceType: "5Y" },
-        { id: "4-10", description: "6.5.2.12 Visual inspec. leakages in lubrication hoses", serviceType: "5Y" },
-        { id: "4-11", description: "6.5.3 Visual inspection and replace filter mat AVC system", serviceType: "6Y" },
-        { id: "4-12", description: "9.5.3.1 Inspect brushes for wear", serviceType: "10Y" },
+        { id: "4-10", description: "6.5.2.12 Visual inspec. leakages in lubrication hoses", serviceType: "2Y" },
+        { id: "4-11", description: "6.5.3 Visual inspection and replace filter mat AVC system", serviceType: "2Y" },
+        { id: "4-12", description: "9.5.3.1 Inspect brushes for wear", serviceType: "2Y" },
         { id: "4-13", description: "6.5.2.13 Repair and replace oil debris monitor system", serviceType: "5Y" }
       ]
     },
@@ -293,16 +303,16 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       technician: "T1",
       position: { x: 65, y: -11 },
       tasks: [
-        { id: "5-1-1", description: "8.5.2 Replace CubePower air filters", serviceType: "2Y" },
+        { id: "5-1-1", description: "8.5.2 Replace CubePower air filters", serviceType: "1Y" },
         { id: "5-1-2", description: "10.5.1 Yaw control panel ++68", serviceType: "1Y" },
         { id: "5-1-3", description: "10.5.2.1-5.2.4 Yaw system", serviceType: "1Y" },
         { id: "5-1-4", description: "10.5.2.5 Spring packs", serviceType: "1Y" },
         { id: "5-1-5", description: "10.5.2.6-5.2.7 Lubrication pumps", serviceType: "1Y" },
         { id: "5-1-6", description: "6.5.1.1 Battery Inspection", serviceType: "1Y" },
-        { id: "5-1-7", description: "4. 5.2.7.12 M6 bolts rotation transfer", serviceType: "4Y" },
+        { id: "5-1-7", description: "4. 5.2.7.12 M6 bolts rotation transfer", serviceType: "5Y" },
         { id: "5-1-8", description: "6.5.1.2 Replace backup batteries", serviceType: "3Y" },
         { id: "5-1-9", description: "6.5.1.3 Check heater", serviceType: "1Y" },
-        { id: "5-1-10", description: "10.5.2.1.1 Clean yaw grease", serviceType: "3Y" }
+        { id: "5-1-10", description: "10.5.2.1.1 Clean yaw grease", serviceType: "4Y" }
       ]
     },
 
@@ -328,13 +338,13 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
         { id: "5-2-9", description: "2.7.3.3 Emergency buttons Hub", serviceType: "1Y" },
         { id: "5-2-10", description: "2.7.3.4 Warning sounder & lamp Hub", serviceType: "1Y" },
         { id: "5-2-11", description: "4.5.2.7.8-5.2.7.9 Visual/Audio axial", serviceType: "1Y" },
-        { id: "5-2-12", description: "4.5.2.7.10 Lubricate the pitch encoder", serviceType: "2Y" },
-        { id: "5-2-13", description: "4.5.2.2-5.2.5 Blades External", serviceType: "1Y" },
+        { id: "5-2-12", description: "4.5.2.7.10 Lubricate the pitch encoder", serviceType: "4Y" },
+        { id: "5-2-13", description: "4.5.2.2-5.2.5 Blades External", serviceType: "Ext" },
         { id: "5-2-14", description: "4.5.2.7.5 Pre-tension pitch suspension", serviceType: "1Y" },
         { id: "5-2-15", description: "4.5.1.5 Examine grease hoses & connecting parts", serviceType: "1Y" },
         { id: "5-2-16", description: "4.5.2.7.11 Bolts automatic blade lock", serviceType: "1Y" },
         { id: "5-2-17", description: "4.5.2.7.2 Accumulator pressure", serviceType: "2Y" },
-        { id: "5-2-18", description: "5.2.7.3-4 Check all bolts pitch manifold and accumulator support", serviceType: "2Y" },
+        { id: "5-2-18", description: "5.2.7.3-4 Check all bolts pitch manifold and accumulator support", serviceType: "4Y" },
         { id: "5-2-19", description: "4.5.1.2.4 Check every 10 bolt hub cover", serviceType: "4Y" }
       ]
     },
@@ -392,7 +402,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
         { id: "8-1-2", description: "4.5.1.8 Retighten the blade lock.", serviceType: "1Y" },
         { id: "8-1-3", description: "4.5.1.6 Grease collecting cans", serviceType: "1Y" },
         { id: "8-1-4", description: "4.5.2.5 LCTU", serviceType: "1Y" },
-        { id: "8-1-5", description: "4.5.2.1 Blades Internal", serviceType: "1Y" },
+        { id: "8-1-5", description: "4.5.2.1 Blades Internal", serviceType: "Ext" },
         { id: "8-1-6", description: "6.5.2.5 Replace air filters", serviceType: "1Y" }
       ]
     },
@@ -411,9 +421,9 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
         { id: "8-2-1", description: "9.5.1 Nacelle control panel ++03", serviceType: "1Y" },
         { id: "8-2-2", description: "9.5.1.4 Replace UPS batteries", serviceType: "3Y" },
         { id: "8-2-3", description: "9.5.2 AMC panel", serviceType: "1Y" },
-        { id: "8-2-4", description: "9.5.2.3 Check and replace the fan", serviceType: "5Y" },
+        { id: "8-2-4", description: "9.5.2.3 Check and replace the fan", serviceType: "7Y" },
         { id: "8-2-5", description: "9.5.4 Nacelle Cover", serviceType: "1Y" },
-        { id: "8-2-6", description: "9.5.5.1 Replace control side fan", serviceType: "7Y" },
+        { id: "8-2-6", description: "9.5.5.1 Replace control side fan", serviceType: "5Y" },
         { id: "8-2-7", description: "Cleaning and hoisting preparation", serviceType: "1Y" }
       ]
     },
@@ -451,8 +461,8 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
         { id: "9-2-2", description: "14.5.4 LDST", serviceType: "1Y" },
         { id: "9-2-3", description: "14.5.5 Check ladders and platforms", serviceType: "1Y" },
         { id: "9-2-4", description: "3.5.4.3-5.4.4 Hatch/swin assembly", serviceType: "1Y" },
-        { id: "9-2-5", description: "14.5.6 Visual check of the platform hanger assembly", serviceType: "1Y" },
-        { id: "9-2-6", description: "14.5.7 Check Tower top senction", serviceType: "4Y" }
+        { id: "9-2-5", description: "14.5.6 Visual check of the platform hanger assembly", serviceType: "4Y" },
+        { id: "9-2-6", description: "14.5.7 Check Tower top senction", serviceType: "1Y" }
       ]
     },
 

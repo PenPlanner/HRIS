@@ -26,6 +26,7 @@ import { saveCompletedFlowchart, isFlowchartFullyCompleted, getEarliestStartTime
 import { getSelectedTechnicians, getTechnicianById, getActiveTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
 import { TechnicianSelectModal } from "@/components/technician-select-modal";
 import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
+import { logTechnicianActivity, updateTechnicianActivity } from "@/lib/technician-activity";
 import { FlowchartSearch } from "@/components/flowchart/flowchart-search";
 import { RevisionHistoryDialog } from "@/components/flowchart/revision-history-dialog";
 import { ServiceTypeSelectionModal } from "@/components/flowchart/service-type-selection-modal";
@@ -45,6 +46,7 @@ export default function FlowchartViewerPage() {
 
   // All state declarations first
   const [flowchartData, setFlowchartData] = useState<FlowchartData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showProgressTracker, setShowProgressTracker] = useState(true);
   const [zoom, setZoom] = useState(100);
@@ -190,14 +192,17 @@ export default function FlowchartViewerPage() {
 
   // Load flowchart data
   useEffect(() => {
+    setIsLoading(true);
     const allModels = getAllFlowcharts();
     const model = allModels.find(m => m.id === modelId);
     if (!model) {
       setFlowchartData(null);
+      setIsLoading(false);
       return;
     }
     const flowchart = model.flowcharts.find(f => f.id === serviceId);
     setFlowchartData(flowchart || null);
+    setIsLoading(false);
 
     // DEBUG: Log what's in flowchartData
     if (flowchart) {
@@ -667,15 +672,87 @@ export default function FlowchartViewerPage() {
 
   // Handle task time change
   const handleTaskTimeChange = (taskId: string, minutes: number | undefined) => {
+    // Get current technicians
+    const { t1, t2 } = getSelectedTechnicians();
+
     setSteps(prevSteps =>
-      prevSteps.map(step => ({
-        ...step,
-        tasks: step.tasks.map(task =>
-          task.id === taskId
-            ? { ...task, actualTimeMinutes: minutes }
-            : task
-        )
-      }))
+      prevSteps.map(step => {
+        const updatedStep = {
+          ...step,
+          tasks: step.tasks.map(task => {
+            if (task.id === taskId) {
+              // Log technician activity when time is logged
+              if (minutes && minutes > 0 && flowchartData) {
+                const now = new Date().toISOString();
+
+                // Log activity for T1 if step is for T1 or both
+                if ((step.technician === 'T1' || step.technician === 'both') && t1) {
+                  logTechnicianActivity({
+                    technicianId: t1.id,
+                    technicianInitials: t1.initials,
+                    technicianName: `${t1.first_name} ${t1.last_name}`,
+                    technicianRole: 'T1',
+                    turbineModel: flowchartData.model,
+                    serviceType: flowchartData.serviceType,
+                    stepId: step.id,
+                    stepTitle: step.title,
+                    taskId: task.id,
+                    taskDescription: task.description,
+                    checkInTime: now,
+                    checkOutTime: now,
+                    durationMinutes: minutes,
+                  });
+                }
+
+                // Log activity for T2 if step is for T2 or both
+                if ((step.technician === 'T2' || step.technician === 'both') && t2) {
+                  logTechnicianActivity({
+                    technicianId: t2.id,
+                    technicianInitials: t2.initials,
+                    technicianName: `${t2.first_name} ${t2.last_name}`,
+                    technicianRole: 'T2',
+                    turbineModel: flowchartData.model,
+                    serviceType: flowchartData.serviceType,
+                    stepId: step.id,
+                    stepTitle: step.title,
+                    taskId: task.id,
+                    taskDescription: task.description,
+                    checkInTime: now,
+                    checkOutTime: now,
+                    durationMinutes: minutes,
+                  });
+                }
+
+                // Log activity for T3 if assigned
+                if (step.hasT3 && step.t3Id && step.t3Initials) {
+                  const t3 = getTechnicianById(step.t3Id);
+                  if (t3) {
+                    logTechnicianActivity({
+                      technicianId: t3.id,
+                      technicianInitials: t3.initials,
+                      technicianName: `${t3.first_name} ${t3.last_name}`,
+                      technicianRole: 'T3',
+                      turbineModel: flowchartData.model,
+                      serviceType: flowchartData.serviceType,
+                      stepId: step.id,
+                      stepTitle: step.title,
+                      taskId: task.id,
+                      taskDescription: task.description,
+                      checkInTime: now,
+                      checkOutTime: now,
+                      durationMinutes: minutes,
+                    });
+                  }
+                }
+              }
+
+              return { ...task, actualTimeMinutes: minutes };
+            }
+            return task;
+          })
+        };
+        return updatedStep;
+      })
     );
 
     // Update selected step
@@ -706,6 +783,44 @@ export default function FlowchartViewerPage() {
 
     // Mark as having unsaved changes
     setHasUnsavedChanges(true);
+  };
+
+  // Handle adding additional technician to step
+  const handleAddAdditionalTechnician = (technicianId: string, role: 'T1' | 'T2' | 'T3') => {
+    if (!selectedStep) return;
+
+    const technician = getTechnicianById(technicianId);
+    if (!technician) return;
+
+    const additionalTech = {
+      id: technician.id,
+      initials: technician.initials,
+      role: role
+    };
+
+    const updatedStep: FlowchartStep = {
+      ...selectedStep,
+      additionalTechnicians: [
+        ...(selectedStep.additionalTechnicians || []),
+        additionalTech
+      ]
+    };
+
+    handleStepUpdate(updatedStep);
+  };
+
+  // Handle removing additional technician from step
+  const handleRemoveAdditionalTechnician = (technicianId: string) => {
+    if (!selectedStep) return;
+
+    const updatedStep: FlowchartStep = {
+      ...selectedStep,
+      additionalTechnicians: (selectedStep.additionalTechnicians || []).filter(
+        tech => tech.id !== technicianId
+      )
+    };
+
+    handleStepUpdate(updatedStep);
   };
 
   // Handle technician selection from modal
@@ -1659,6 +1774,22 @@ ${fullLayoutData.map(step =>
     setIsEditMode(!isEditMode);
   };
 
+  // Show loading animation while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="relative w-24 h-24 mx-auto mb-4">
+            <div className="absolute inset-0 border-4 border-muted rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-muted-foreground">Loading flowchart...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if flowchart not found after loading
   if (!flowchartData) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -1799,30 +1930,39 @@ ${fullLayoutData.map(step =>
             </div>
 
             {/* Right: Controls */}
-            <div className="flex items-center gap-1.5">
-              {/* Edit Mode Controls */}
-              {isEditMode && (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleAddStep} className="h-8">
+            {isEditMode ? (
+              <div className="flex flex-col gap-1">
+                {/* Row 1: Add, Import, Export */}
+                <div className="flex items-center gap-1.5">
+                  <Button variant="outline" size="sm" onClick={handleAddStep} className="h-7">
                     <Plus className="h-3.5 w-3.5 mr-1.5" />
                     <span className="text-xs">Add</span>
                   </Button>
 
-                  <Button variant="outline" size="sm" onClick={() => setPdfImportOpen(true)} className="h-8">
+                  <Button variant="outline" size="sm" onClick={() => setPdfImportOpen(true)} className="h-7">
                     <FileUp className="h-3.5 w-3.5 mr-1.5" />
                     <span className="text-xs">Import</span>
                   </Button>
 
-                  <Button variant="outline" size="sm" onClick={handleExportFlowchart} className="h-8">
+                  <Button variant="outline" size="sm" onClick={handleExportFlowchart} className="h-7">
                     <FileDown className="h-3.5 w-3.5 mr-1.5" />
                     <span className="text-xs">Export</span>
                   </Button>
 
+                  {/* Divider */}
+                  <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-0.5" />
+
+                  {/* Offline Status */}
+                  <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
+                </div>
+
+                {/* Row 2: Save Layout, Layout, View */}
+                <div className="flex items-center gap-1.5">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleExportToCode}
-                    className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
+                    className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
                   >
                     <Save className="h-3.5 w-3.5 mr-1.5" />
                     <span className="text-xs">Save Layout</span>
@@ -1833,7 +1973,7 @@ ${fullLayoutData.map(step =>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
+                        className="h-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
                       >
                         <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
                         <span className="text-xs">Layout</span>
@@ -1879,37 +2019,26 @@ ${fullLayoutData.map(step =>
                     </PopoverContent>
                   </Popover>
 
-                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
+                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-7">
                     <Eye className="h-3.5 w-3.5 mr-1.5" />
                     <span className="text-xs">View</span>
                   </Button>
-                </>
-              )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                {/* Divider */}
+                <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
-              {/* Divider */}
-              <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-
-              {/* Offline Status */}
-              <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
-
-              {/* Edit button in view mode */}
-              {!isEditMode && (
-                <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
-                  <Edit className="h-3.5 w-3.5 mr-1.5" />
-                  <span className="text-xs">Edit</span>
-                </Button>
-              )}
-
-              {/* Fullscreen */}
-              <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="h-8 w-8 p-0">
-                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              </Button>
-            </div>
+                {/* Offline Status */}
+                <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
+              </div>
+            )}
           </div>
 
           {/* Row 2: Start Service button or Job Tracking Display + Controls */}
           {!isEditMode && (
-            <div className="flex items-center gap-3 ml-1 mt-1">
+            <div className="flex items-center gap-3 ml-11 mt-1">
               {!jobStarted ? (
                 /* Before Service Start */
                 <Button
@@ -2067,6 +2196,7 @@ ${fullLayoutData.map(step =>
             zoom={zoom}
             gridSize={gridSize}
             isEditMode={isEditMode}
+            onToggleEditMode={toggleEditMode}
             setHasUnsavedChanges={setHasUnsavedChanges}
             selectedServiceType={selectedServiceType}
             onServiceTypeChange={setSelectedServiceType}
@@ -2107,6 +2237,9 @@ ${fullLayoutData.map(step =>
         onTaskIndentToggle={handleTaskIndentToggle}
         onStepUpdate={handleStepUpdate}
         isEditMode={isEditMode}
+        onOpenTechnicianPairModal={() => setTechnicianPairModalOpen(true)}
+        onAddAdditionalTechnician={handleAddAdditionalTechnician}
+        onRemoveAdditionalTechnician={handleRemoveAdditionalTechnician}
       />
 
       {/* Step Editor Dialog */}

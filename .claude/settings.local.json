@@ -15,7 +15,8 @@
       "Bash(node calculate-positions.js:*)",
       "Bash(git checkout:*)",
       "Bash(npm run build:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

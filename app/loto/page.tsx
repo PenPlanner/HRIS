@@ -183,8 +183,8 @@ export default function LotoPage() {
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading LOTO data...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto shadow-lg"></div>
+            <p className="mt-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Loading LOTO data...</p>
           </div>
         </div>
       </MainLayout>
@@ -195,10 +195,15 @@ export default function LotoPage() {
     return (
       <MainLayout>
         <div className="p-6">
-          <h1 className="text-3xl font-bold mb-4">LOTO Management</h1>
-          <Card>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">LOTO Management</h1>
+          <Card className="border-2 border-red-300 shadow-md">
             <CardContent className="pt-6">
-              <p className="text-red-500">No data loaded. Please check the console for errors.</p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                  <X className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <p className="text-red-600 dark:text-red-400 font-medium">No data loaded. Please check the console for errors.</p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -212,8 +217,8 @@ export default function LotoPage() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold">LOTO Management</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">LOTO Management</h1>
+            <p className="mt-2 text-muted-foreground font-medium">
               Track Lockout/Tagout procedures performed by technicians
             </p>
           </div>
@@ -222,6 +227,7 @@ export default function LotoPage() {
               variant={view === "chart" ? "default" : "outline"}
               size="sm"
               onClick={() => setView("chart")}
+              className={view === "chart" ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md" : "hover:border-blue-300"}
             >
               <BarChart3 className="mr-2 h-4 w-4" />
               Chart
@@ -230,6 +236,7 @@ export default function LotoPage() {
               variant={view === "table" ? "default" : "outline"}
               size="sm"
               onClick={() => setView("table")}
+              className={view === "table" ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md" : "hover:border-blue-300"}
             >
               <TableIcon className="mr-2 h-4 w-4" />
               Table
@@ -239,55 +246,63 @@ export default function LotoPage() {
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
+          <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-blue-300 dark:hover:border-blue-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total LOTOs</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalLOTOs}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stats.totalLOTOs}</div>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">
                 {selectedMonth === "all" ? "All year" : `Month ${selectedMonth}`}
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-emerald-300 dark:hover:border-emerald-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Technicians</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900 dark:to-emerald-800 flex items-center justify-center">
+                <Users className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeTechnicians}</div>
-              <p className="text-xs text-muted-foreground">With LOTO records</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{stats.activeTechnicians}</div>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">With LOTO records</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-purple-300 dark:hover:border-purple-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Average per Tech</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgLOTOsPerTech}</div>
-              <p className="text-xs text-muted-foreground">LOTOs per technician</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.avgLOTOsPerTech}</div>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">LOTOs per technician</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-amber-300 dark:hover:border-amber-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Filtered Records</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900 dark:to-amber-800 flex items-center justify-center">
+                <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{filteredData.length}</div>
-              <p className="text-xs text-muted-foreground">Of {lotoData.length} total</p>
+              <div className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{filteredData.length}</div>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">Of {lotoData.length} total</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="border-2 shadow-md">
           <CardContent className="pt-6">
             <div className="space-y-4">
               {/* Search */}
@@ -297,13 +312,13 @@ export default function LotoPage() {
                   placeholder="Search by name or initials..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-md"
+                  className="max-w-md border-2 focus:border-blue-400"
                 />
               </div>
 
               {hasActiveFilters && (
                 <div className="flex justify-end">
-                  <Button variant="outline" size="sm" onClick={resetFilters} className="gap-2">
+                  <Button variant="outline" size="sm" onClick={resetFilters} className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950">
                     <X className="h-4 w-4" />
                     Reset Filters
                   </Button>
@@ -378,34 +393,82 @@ export default function LotoPage() {
 
         {/* Content */}
         {view === "chart" ? (
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader>
-              <CardTitle>LOTOs by Week</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                LOTOs by Week
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {chartData.length === 0 || chartData.every(d => d.LOTOs === 0) ? (
                 <div className="text-center py-12">
-                  <p className="text-lg font-medium mb-2">No LOTO data available</p>
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-gray-400" />
+                  </div>
+                  <p className="text-lg font-bold mb-2">No LOTO data available</p>
                   <p className="text-muted-foreground">No LOTO procedures recorded for the selected filters</p>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="LOTOs" stroke="hsl(var(--primary))" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                    <XAxis
+                      dataKey="week"
+                      stroke="#9ca3af"
+                      tick={{ fill: '#9ca3af' }}
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis
+                      stroke="#9ca3af"
+                      tick={{ fill: '#9ca3af' }}
+                      style={{ fontSize: '12px' }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
+                        border: '2px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                    />
+                    <Legend
+                      wrapperStyle={{ color: 'hsl(var(--foreground))' }}
+                      iconType="line"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="LOTOs"
+                      stroke="url(#colorGradient)"
+                      strokeWidth={3}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                      activeDot={{ r: 6, fill: '#2563eb' }}
+                    />
+                    <defs>
+                      <linearGradient id="colorGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#3b82f6" />
+                        <stop offset="50%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#8b5cf6" />
+                      </linearGradient>
+                    </defs>
                   </LineChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader>
-              <CardTitle>LOTO Details</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900 dark:to-teal-900 flex items-center justify-center">
+                  <TableIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                LOTO Details
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -419,12 +482,12 @@ export default function LotoPage() {
                   if (total === 0) return null;
 
                   return (
-                    <div key={idx} className="p-3 border rounded flex items-center justify-between">
+                    <div key={idx} className="p-3 border-2 rounded-lg hover:border-blue-300 hover:shadow-md hover:bg-blue-50/50 dark:hover:bg-blue-950/50 transition-all flex items-center justify-between">
                       <div>
                         <p className="font-medium">{record.NAMN}</p>
                         <p className="text-sm text-muted-foreground">{record.INITIALER} • {record.OMRÅDE}</p>
                       </div>
-                      <Badge>{total} LOTOs</Badge>
+                      <Badge className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">{total} LOTOs</Badge>
                     </div>
                   );
                 })}

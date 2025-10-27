@@ -6,13 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Upload, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle, Info, Clock, Briefcase, TrendingUp, Calendar, History } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { KompetensmatrisForm } from "@/components/technician/kompetensmatris-form";
 import { TrainingNeedsManager } from "@/components/technician/training-needs-manager";
 import { AssessmentHistory } from "@/components/technician/assessment-history";
+import { getTechnicianWorkHistory, TechnicianWorkHistory, TechnicianActivity } from "@/lib/technician-activity";
+import { cn } from "@/lib/utils";
 
 type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
 
@@ -100,10 +102,68 @@ export default function TechnicianProfilePage({
 }) {
   const { id } = use(params);
   const [selectedLevelInfo, setSelectedLevelInfo] = useState<typeof COMPETENCY_LEVELS[0] | null>(null);
+  const [workHistory, setWorkHistory] = useState<TechnicianWorkHistory | null>(null);
 
   // In real app, fetch tech by ID
   const tech = mockTechnician;
   const currentLevelInfo = COMPETENCY_LEVELS.find(l => l.level === tech.competency_level);
+
+  // Load work history
+  useEffect(() => {
+    const history = getTechnicianWorkHistory(id);
+    setWorkHistory(history);
+  }, [id]);
+
+  // Helper functions for work history
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}m`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  };
+
+  const formatDate = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString('sv-SE', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
+  const formatTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('sv-SE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'T1': return 'bg-blue-500';
+      case 'T2': return 'bg-purple-500';
+      case 'T3': return 'bg-amber-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  // Group activities by turbine/service
+  const activitiesByService = workHistory?.activities.reduce((acc, activity) => {
+    const key = `${activity.turbineModel}-${activity.serviceType}`;
+    if (!acc[key]) {
+      acc[key] = {
+        turbineModel: activity.turbineModel,
+        serviceType: activity.serviceType,
+        activities: [],
+        totalMinutes: 0,
+      };
+    }
+    acc[key].activities.push(activity);
+    acc[key].totalMinutes += activity.durationMinutes || 0;
+    return acc;
+  }, {} as Record<string, { turbineModel: string; serviceType: string; activities: TechnicianActivity[]; totalMinutes: number }>) || {};
 
   return (
     <MainLayout>
@@ -273,6 +333,10 @@ export default function TechnicianProfilePage({
             <TabsTrigger value="kompetensmatris">Competency Matrix</TabsTrigger>
             <TabsTrigger value="courses">Courses</TabsTrigger>
             <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
+            <TabsTrigger value="work-history" className="gap-1.5">
+              <History className="h-4 w-4" />
+              Work History
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
@@ -384,6 +448,118 @@ export default function TechnicianProfilePage({
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="work-history" className="space-y-4">
+            {!workHistory || workHistory.activities.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Briefcase className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground">No work history yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Activities will appear here once logged</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Summary Cards */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Total Hours Worked</span>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {formatDuration(workHistory.totalMinutesWorked)}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <TrendingUp className="h-3.5 w-3.5" />
+                        <span>Turbines Worked On</span>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {workHistory.turbinesWorkedOn.length}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {workHistory.turbinesWorkedOn.join(', ')}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Briefcase className="h-3.5 w-3.5" />
+                        <span>Steps Completed</span>
+                      </div>
+                      <div className="text-2xl font-bold">
+                        {workHistory.stepsCompleted}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Activities grouped by service */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Service Activities</h3>
+                  {Object.entries(activitiesByService).map(([key, group]) => (
+                    <Card key={key}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{group.turbineModel}</CardTitle>
+                            <p className="text-sm text-muted-foreground">{group.serviceType}</p>
+                          </div>
+                          <Badge variant="secondary" className="text-sm">
+                            {formatDuration(group.totalMinutes)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {group.activities.map((activity) => (
+                            <div
+                              key={activity.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm"
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge className={cn("text-[10px] px-1.5 py-0", getRoleColor(activity.technicianRole))}>
+                                    {activity.technicianRole}
+                                  </Badge>
+                                  <span className="font-medium">{activity.stepTitle.split('\n')[0]}</span>
+                                </div>
+                                {activity.checkInTime && (
+                                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>
+                                      {formatDate(activity.checkInTime)} {formatTime(activity.checkInTime)}
+                                      {activity.checkOutTime && ` - ${formatTime(activity.checkOutTime)}`}
+                                    </span>
+                                  </div>
+                                )}
+                                {activity.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1 italic">{activity.notes}</p>
+                                )}
+                              </div>
+                              {activity.durationMinutes && (
+                                <div className="text-right ml-3">
+                                  <div className="font-semibold">{formatDuration(activity.durationMinutes)}</div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </div>

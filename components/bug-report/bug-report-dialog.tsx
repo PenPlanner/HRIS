@@ -78,7 +78,7 @@ export function BugReportDialog({
         <Button
           variant="ghost"
           size="sm"
-          className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+          className="h-6 w-6 p-0 text-red-600 hover:bg-red-100 hover:text-red-700"
           title="Report bug"
         >
           <Bug className="h-3.5 w-3.5" />

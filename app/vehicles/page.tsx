@@ -160,8 +160,8 @@ export default function VehiclesPage() {
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading vehicles...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto shadow-lg"></div>
+            <p className="mt-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Loading vehicles...</p>
           </div>
         </div>
       </MainLayout>
@@ -173,8 +173,8 @@ export default function VehiclesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Service Vehicles</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Service Vehicles</h1>
+            <p className="mt-2 text-muted-foreground font-medium">
               Fleet management and assignments
             </p>
           </div>
@@ -183,11 +183,12 @@ export default function VehiclesPage() {
               variant={view === "fleet" ? "default" : "outline"}
               size="sm"
               onClick={() => handleViewChange("fleet")}
+              className={view === "fleet" ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md" : "hover:border-emerald-300"}
             >
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Fleet Status
             </Button>
-            <Button>
+            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
               <Plus className="mr-2 h-4 w-4" />
               New Vehicle
             </Button>
@@ -198,36 +199,38 @@ export default function VehiclesPage() {
           <>
             {/* Overall Statistics */}
             <div className="grid gap-4 md:grid-cols-3">
-              <Card>
+              <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-emerald-300 dark:hover:border-emerald-700">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Vehicles</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                    Total Vehicles
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900 dark:to-emerald-800 flex items-center justify-center">
+                      <Car className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Car className="h-5 w-5 text-primary" />
-                    <p className="text-3xl font-bold">{totalVehicles}</p>
-                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{totalVehicles}</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-blue-300 dark:hover:border-blue-700">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Assigned Technicians</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                    Total Assigned Technicians
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    <p className="text-3xl font-bold">{totalTechnicians}</p>
-                  </div>
+                  <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{totalTechnicians}</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-purple-300 dark:hover:border-purple-700">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Teams</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-lg px-3 py-1">{TEAMS.length}</Badge>
-                  </div>
+                  <Badge variant="outline" className="text-2xl px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 shadow-md">{TEAMS.length}</Badge>
                 </CardContent>
               </Card>
             </div>
@@ -239,6 +242,7 @@ export default function VehiclesPage() {
                   variant={selectedTeam === "all" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedTeam("all")}
+                  className={selectedTeam === "all" ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md" : "hover:border-blue-300"}
                 >
                   All Teams
                 </Button>
@@ -248,6 +252,7 @@ export default function VehiclesPage() {
                     variant={selectedTeam === team.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedTeam(team.id)}
+                    className={selectedTeam === team.id ? "text-white shadow-md" : "hover:border-gray-400"}
                     style={
                       selectedTeam === team.id
                         ? { backgroundColor: team.color, borderColor: team.color }
@@ -264,7 +269,7 @@ export default function VehiclesPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedTeam("all")}
-                  className="gap-2"
+                  className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950"
                 >
                   <X className="h-4 w-4" />
                   Reset Filter
@@ -311,21 +316,25 @@ export default function VehiclesPage() {
             ) : (
               <>
                 {selectedTeam !== "all" && filteredVehicles.length > 0 && (
-                  <Card>
+                  <Card className="border-2 shadow-md">
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                          <Car className="h-5 w-5 text-primary" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900 dark:to-emerald-800 flex items-center justify-center">
+                            <Car className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                          </div>
                           <div>
-                            <p className="text-2xl font-bold">{getTeamStats(filteredVehicles).vehicleCount}</p>
-                            <p className="text-sm text-muted-foreground">Vehicles</p>
+                            <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{getTeamStats(filteredVehicles).vehicleCount}</p>
+                            <p className="text-sm text-muted-foreground font-medium">Vehicles</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-5 w-5 text-primary" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center">
+                            <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                          </div>
                           <div>
-                            <p className="text-2xl font-bold">{getTeamStats(filteredVehicles).technicianCount}</p>
-                            <p className="text-sm text-muted-foreground">Technicians</p>
+                            <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{getTeamStats(filteredVehicles).technicianCount}</p>
+                            <p className="text-sm text-muted-foreground font-medium">Technicians</p>
                           </div>
                         </div>
                       </div>
@@ -342,7 +351,11 @@ export default function VehiclesPage() {
 
             {filteredVehicles.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">No vehicles found</p>
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4">
+                  <Car className="h-8 w-8 text-gray-400" />
+                </div>
+                <p className="text-lg font-bold mb-2">No vehicles found</p>
+                <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             )}
           </>
@@ -352,53 +365,55 @@ export default function VehiclesPage() {
             {loading ? (
               <div className="flex items-center justify-center min-h-[40vh]">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                  <p className="mt-4 text-muted-foreground">Loading fleet data...</p>
+                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mx-auto shadow-lg"></div>
+                  <p className="mt-6 text-lg font-medium bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Loading fleet data...</p>
                 </div>
               </div>
             ) : (
               <>
                 {/* Fleet Statistics */}
                 <div className="grid gap-4 md:grid-cols-4">
-                  <Card>
+                  <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-emerald-300 dark:hover:border-emerald-700">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">Total Fleet</CardTitle>
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center justify-between">
+                        Total Fleet
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900 dark:to-emerald-800 flex items-center justify-center">
+                          <Car className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center gap-2">
-                        <Car className="h-5 w-5 text-primary" />
-                        <p className="text-3xl font-bold">{fleetData.length}</p>
-                      </div>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{fleetData.length}</p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-blue-300 dark:hover:border-blue-700">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Brands</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold">{brands.length}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{brands.length}</p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-purple-300 dark:hover:border-purple-700">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Fuel Types</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold">{fuelTypes.length}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{fuelTypes.length}</p>
                     </CardContent>
                   </Card>
-                  <Card>
+                  <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-amber-300 dark:hover:border-amber-700">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-sm font-medium text-muted-foreground">Filtered</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-3xl font-bold">{filteredFleetData.length}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{filteredFleetData.length}</p>
                     </CardContent>
                   </Card>
                 </div>
 
                 {/* Filters */}
-                <Card>
+                <Card className="border-2 shadow-md">
                   <CardContent className="pt-6">
                     <div className="space-y-4">
                       <div>
@@ -407,13 +422,13 @@ export default function VehiclesPage() {
                           placeholder="Search by license plate, brand, model, or driver..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="max-w-md"
+                          className="max-w-md border-2 focus:border-blue-400"
                         />
                       </div>
 
                       {hasActiveFleetFilters && (
                         <div className="flex justify-end">
-                          <Button variant="outline" size="sm" onClick={resetFleetFilters} className="gap-2">
+                          <Button variant="outline" size="sm" onClick={resetFleetFilters} className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950">
                             <X className="h-4 w-4" />
                             Reset Filters
                           </Button>
@@ -458,7 +473,7 @@ export default function VehiclesPage() {
                 {/* Fleet List */}
                 <div className="space-y-3">
                   {filteredFleetData.map((vehicle, idx) => (
-                    <Card key={idx}>
+                    <Card key={idx} className="border-2 hover:border-emerald-300 hover:shadow-md transition-all">
                       <CardContent className="pt-6">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -498,7 +513,11 @@ export default function VehiclesPage() {
 
                 {filteredFleetData.length === 0 && fleetData.length > 0 && (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground">No vehicles match the selected filters</p>
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4">
+                      <Car className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-bold mb-2">No vehicles match the selected filters</p>
+                    <p className="text-muted-foreground">Try adjusting your search criteria</p>
                   </div>
                 )}
               </>
@@ -514,7 +533,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   return (
     <Link
       href={`/vehicles/${vehicle.id}`}
-      className="rounded-lg border bg-card hover:bg-accent transition-colors"
+      className="rounded-lg border-2 bg-card hover:shadow-lg hover:scale-[1.02] transition-all hover:border-emerald-300 dark:hover:border-emerald-700"
       style={{ borderLeft: `4px solid ${vehicle.team_color}` }}
     >
       <CardHeader className="pb-3">

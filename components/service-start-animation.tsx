@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 
 interface ServiceStartAnimationProps {
@@ -43,6 +43,7 @@ export function ServiceStartAnimation({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">Starting Service</DialogTitle>
         <div className="flex flex-col items-center justify-center py-8 space-y-6">
           {/* Loading spinner */}
           <div className="relative">

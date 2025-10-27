@@ -137,8 +137,8 @@ export default function TechniciansPage() {
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading technicians...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto shadow-lg"></div>
+            <p className="mt-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Loading technicians...</p>
           </div>
         </div>
       </MainLayout>
@@ -150,12 +150,12 @@ export default function TechniciansPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Technicians</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Technicians</h1>
+            <p className="mt-2 text-muted-foreground font-medium">
               {selectedTeamId === "all" ? "All Teams" : selectedTeam?.name} - {filteredTechnicians.length} technicians
             </p>
           </div>
-          <Button>
+          <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
             <Plus className="mr-2 h-4 w-4" />
             New Technician
           </Button>
@@ -164,12 +164,13 @@ export default function TechniciansPage() {
         {/* Team Selector with Reset Button */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">Select Team:</span>
+            <span className="text-sm font-medium text-muted-foreground">Select Team:</span>
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant={selectedTeamId === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedTeamId("all")}
+                className={selectedTeamId === "all" ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md" : "hover:border-blue-300"}
               >
                 All Teams
               </Button>
@@ -179,6 +180,7 @@ export default function TechniciansPage() {
                   variant={selectedTeamId === team.id ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedTeamId(team.id)}
+                  className={selectedTeamId === team.id ? "text-white shadow-md" : "hover:border-gray-400"}
                   style={
                     selectedTeamId === team.id
                       ? { backgroundColor: team.color, borderColor: team.color }
@@ -197,7 +199,7 @@ export default function TechniciansPage() {
               variant="outline"
               size="sm"
               onClick={resetAllFilters}
-              className="gap-2"
+              className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950"
             >
               <X className="h-4 w-4" />
               Reset All Filters
@@ -209,12 +211,13 @@ export default function TechniciansPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {/* Vestas Level Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">Vestas Level:</span>
+            <span className="text-sm font-medium text-muted-foreground">Vestas Level:</span>
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant={selectedVestasLevel === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedVestasLevel("all")}
+                className={selectedVestasLevel === "all" ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md" : "hover:border-emerald-300"}
               >
                 All Levels
               </Button>
@@ -226,6 +229,7 @@ export default function TechniciansPage() {
                     variant={selectedVestasLevel === level ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedVestasLevel(level)}
+                    className={selectedVestasLevel !== level ? "hover:border-gray-400" : "shadow-md"}
                     style={
                       selectedVestasLevel === level
                         ? { backgroundColor: colors.bg, borderColor: colors.border, color: colors.text }
@@ -241,12 +245,13 @@ export default function TechniciansPage() {
 
           {/* Competency Level Filter */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">Competency:</span>
+            <span className="text-sm font-medium text-muted-foreground">Competency:</span>
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant={selectedCompetencyLevel === "all" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedCompetencyLevel("all")}
+                className={selectedCompetencyLevel === "all" ? "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md" : "hover:border-purple-300"}
               >
                 All Levels
               </Button>
@@ -256,7 +261,7 @@ export default function TechniciansPage() {
                   variant={selectedCompetencyLevel === level ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCompetencyLevel(level)}
-                  className={selectedCompetencyLevel === level ? getLevelColor(level) : ""}
+                  className={selectedCompetencyLevel === level ? `${getLevelColor(level)} shadow-md` : "hover:border-gray-400"}
                 >
                   L{level}
                 </Button>
@@ -272,7 +277,7 @@ export default function TechniciansPage() {
               placeholder="Search by initials, name, team, level (e.g., 'L4', 'B', 'Field Trainer')..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 border-2 focus:border-blue-400"
             />
           </div>
         </div>
@@ -288,7 +293,7 @@ export default function TechniciansPage() {
               <Link
                 key={tech.id}
                 href={`/technicians/${tech.id}`}
-                className="rounded-lg border bg-card p-4 hover:bg-accent transition-colors"
+                className="rounded-lg border-2 bg-card p-4 hover:shadow-lg hover:scale-[1.02] transition-all hover:border-blue-300 dark:hover:border-blue-700"
                 style={{ borderLeft: `4px solid ${tech.team_color}` }}
               >
                 <div className="flex items-start gap-4">
@@ -355,7 +360,11 @@ export default function TechniciansPage() {
 
         {filteredTechnicians.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No technicians found</p>
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-700 flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-lg font-bold mb-2">No technicians found</p>
+            <p className="text-muted-foreground">Try adjusting your search filters</p>
           </div>
         )}
       </div>

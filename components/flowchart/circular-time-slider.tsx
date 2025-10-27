@@ -19,7 +19,7 @@ export function CircularTimeSlider({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [center, setCenter] = useState({ x: 0, y: 0 });
-  const radius = 80; // Radius of the circle
+  const radius = 65; // Radius of the circle (reduced from 80 to 65 for compact display)
 
   useEffect(() => {
     if (containerRef.current) {
@@ -142,12 +142,12 @@ export function CircularTimeSlider({
   });
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-2">
       {/* Time Display */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-3 w-full">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-2 w-full">
         <div className="text-center">
-          <p className="text-xs text-blue-600 font-medium mb-1">Selected Time</p>
-          <div className="text-3xl font-bold font-mono text-blue-900">
+          <p className="text-[10px] text-blue-600 font-medium mb-0.5">Selected Time</p>
+          <div className="text-2xl font-bold font-mono text-blue-900">
             {formatTime(value)}
           </div>
         </div>
@@ -156,7 +156,7 @@ export function CircularTimeSlider({
       {/* Circular Slider */}
       <div
         ref={containerRef}
-        className="relative w-52 h-52 select-none touch-none"
+        className="relative w-40 h-40 select-none touch-none"
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
         style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
@@ -169,7 +169,7 @@ export function CircularTimeSlider({
             r={radius}
             fill="none"
             stroke="#e5e7eb"
-            strokeWidth="12"
+            strokeWidth="10"
           />
 
           {/* Progress arc */}
@@ -179,7 +179,7 @@ export function CircularTimeSlider({
             r={radius}
             fill="none"
             stroke="url(#gradient)"
-            strokeWidth="12"
+            strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={`${2 * Math.PI * radius}`}
             strokeDashoffset={`${2 * Math.PI * radius * (1 - currentAngle / 360)}`}
@@ -213,7 +213,7 @@ export function CircularTimeSlider({
           <circle
             cx={center.x}
             cy={center.y}
-            r="4"
+            r="3"
             fill="#6366f1"
           />
 
@@ -231,7 +231,7 @@ export function CircularTimeSlider({
           <circle
             cx={knobX}
             cy={knobY}
-            r="16"
+            r="14"
             fill="white"
             stroke="#6366f1"
             strokeWidth="3"
@@ -247,7 +247,7 @@ export function CircularTimeSlider({
           <circle
             cx={knobX}
             cy={knobY}
-            r="6"
+            r="5"
             fill="#6366f1"
           />
         </svg>
@@ -259,14 +259,14 @@ export function CircularTimeSlider({
             if (hourMinutes > maxMinutes) return null;
 
             const angle = getAngleFromMinutes(hourMinutes);
-            const labelRadius = radius + 25;
+            const labelRadius = radius + 20;
             const x = center.x + labelRadius * Math.sin(angle * Math.PI / 180);
             const y = center.y - labelRadius * Math.cos(angle * Math.PI / 180);
 
             return (
               <div
                 key={hour}
-                className="absolute text-xs font-semibold text-gray-600"
+                className="absolute text-[10px] font-semibold text-gray-600"
                 style={{
                   left: `${x}px`,
                   top: `${y}px`,
@@ -281,8 +281,8 @@ export function CircularTimeSlider({
       </div>
 
       {/* Helper text */}
-      <p className="text-xs text-muted-foreground text-center">
-        Drag the knob around the circle to set time
+      <p className="text-[10px] text-muted-foreground text-center -mt-1">
+        Drag the knob to set time
       </p>
     </div>
   );

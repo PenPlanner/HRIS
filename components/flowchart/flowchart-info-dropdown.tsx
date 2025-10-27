@@ -192,14 +192,14 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     >
       {/* Info Button */}
       <div className={cn(
-        "bg-blue-600/50 hover:bg-blue-700/75 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm",
+        "bg-gray-800/80 hover:bg-gray-700/90 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm border border-gray-700/50",
         !hasBeenOpened && "animate-pulse"
       )}>
         <div className="flex items-center">
           <div
             onMouseDown={handleMouseDown}
             className={cn(
-              "p-1.5 hover:bg-blue-800 rounded-l-md transition-colors",
+              "p-1.5 hover:bg-gray-600/50 rounded-l-md transition-colors",
               isDragging ? "cursor-grabbing" : "cursor-grab"
             )}
             title="Drag to move"
@@ -229,7 +229,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
         )}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-3 py-2 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-700">
           <h3 className="text-white font-bold text-sm">{flowchart.model}</h3>
           <div className="flex items-center gap-1">
             <button

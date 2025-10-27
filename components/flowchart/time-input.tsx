@@ -64,16 +64,23 @@ export function TimeInput({ value, targetMinutes, onChange, disabled }: TimeInpu
             "h-7 px-2.5 text-xs font-mono gap-1.5 min-w-[80px] justify-start",
             value
               ? value <= (targetMinutes || Infinity)
-                ? "text-green-700 bg-green-50 border-green-300 hover:bg-green-100 hover:border-green-400 hover:text-green-800"
-                : "text-red-700 bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400 hover:text-red-800"
-              : "text-gray-700 bg-white border-gray-300 hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900"
+                ? "text-green-600 bg-green-900/20 border-green-600/50 hover:bg-green-900/30 hover:border-green-500"
+                : "text-red-600 bg-red-900/20 border-red-600/50 hover:bg-red-900/30 hover:border-red-500"
+              : "text-gray-400 bg-gray-800/50 border-gray-600/50 hover:bg-gray-700/50 hover:border-gray-500"
           )}
         >
           <Clock className="h-3.5 w-3.5 flex-shrink-0" />
           <span className="flex-1 text-left">{value ? formatTime(value) : "Log time"}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="end" side="bottom" sideOffset={8}>
+      <PopoverContent
+        className="w-72 p-0"
+        align="end"
+        side="bottom"
+        sideOffset={8}
+        avoidCollisions={false}
+        collisionPadding={0}
+      >
         <Tabs defaultValue="grid" className="w-full">
           <TabsList className="grid w-full grid-cols-2 rounded-none border-b h-10 bg-gradient-to-b from-gray-100 to-gray-50 p-1">
             <TabsTrigger
@@ -93,18 +100,20 @@ export function TimeInput({ value, targetMinutes, onChange, disabled }: TimeInpu
           </TabsList>
 
           {/* Circular Slider Tab */}
-          <TabsContent value="slider" className="p-3 m-0 min-h-[320px]">
-            <CircularTimeSlider
-              value={value || 0}
-              onChange={(minutes) => {
-                onChange(minutes);
-                setHours(Math.floor(minutes / 60));
-                setMinutes(minutes % 60);
-              }}
-              maxMinutes={180}
-              step={5}
-            />
-            <div className="flex gap-2 mt-3">
+          <TabsContent value="slider" className="p-3 m-0 h-[280px] overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-auto">
+              <CircularTimeSlider
+                value={value || 0}
+                onChange={(minutes) => {
+                  onChange(minutes);
+                  setHours(Math.floor(minutes / 60));
+                  setMinutes(minutes % 60);
+                }}
+                maxMinutes={180}
+                step={5}
+              />
+            </div>
+            <div className="flex gap-2 mt-2 flex-shrink-0">
               <Button
                 size="sm"
                 onClick={() => setOpen(false)}
@@ -126,7 +135,7 @@ export function TimeInput({ value, targetMinutes, onChange, disabled }: TimeInpu
           </TabsContent>
 
           {/* Grid/Presets Tab */}
-          <TabsContent value="grid" className="p-3 m-0">
+          <TabsContent value="grid" className="p-3 m-0 h-[280px] overflow-auto">
             <div className="space-y-2.5">
               {/* Quick presets */}
               <div>

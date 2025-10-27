@@ -22,6 +22,7 @@ import {
   ArrowDownRight,
   Minus,
   X,
+  Zap,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import Link from "next/link";
@@ -76,8 +77,8 @@ export default function Home() {
       <MainLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto shadow-lg"></div>
+            <p className="mt-6 text-lg font-medium bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Loading dashboard...</p>
           </div>
         </div>
       </MainLayout>
@@ -186,8 +187,8 @@ export default function Home() {
         {/* Header with Team Selector */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">Dashboard</h1>
+            <p className="mt-2 text-muted-foreground font-medium">
               {selectedTeamId === "all" ? "All Teams" : selectedTeam?.name} - Real-time overview
             </p>
           </div>
@@ -195,12 +196,13 @@ export default function Home() {
           {/* Team Selector with Reset Button */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Select Team:</span>
+              <span className="text-sm font-medium text-muted-foreground">Select Team:</span>
               <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant={selectedTeamId === "all" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedTeamId("all")}
+                  className={selectedTeamId === "all" ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md" : "hover:border-blue-300"}
                 >
                   All Teams
                 </Button>
@@ -210,6 +212,7 @@ export default function Home() {
                     variant={selectedTeamId === team.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedTeamId(team.id)}
+                    className={selectedTeamId === team.id ? "text-white shadow-md" : "hover:border-gray-400"}
                     style={
                       selectedTeamId === team.id
                         ? { backgroundColor: team.color, borderColor: team.color }
@@ -228,7 +231,7 @@ export default function Home() {
                 variant="outline"
                 size="sm"
                 onClick={() => setSelectedTeamId("all")}
-                className="gap-2"
+                className="gap-2 hover:bg-red-50 hover:border-red-300 hover:text-red-600 dark:hover:bg-red-950"
               >
                 <X className="h-4 w-4" />
                 Reset Filter
@@ -239,12 +242,14 @@ export default function Home() {
 
         {/* Vehicle Balance Alert (if critical) */}
         {vehicleBalance.status === 'critical' && (
-          <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <Card className="border-2 border-yellow-500 bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="h-6 w-6 text-yellow-600 mt-0.5" />
+                <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-yellow-900 dark:text-yellow-100">
+                  <h3 className="font-bold text-lg text-yellow-900 dark:text-yellow-100">
                     Vehicle Allocation Warning
                   </h3>
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
@@ -266,7 +271,7 @@ export default function Home() {
                   </p>
                 </div>
                 <Link href="/vehicles">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="bg-white hover:bg-yellow-100 border-yellow-400 hover:border-yellow-500 text-yellow-900 shadow-md flex-shrink-0">
                     Review Vehicles
                   </Button>
                 </Link>
@@ -278,16 +283,18 @@ export default function Home() {
         {/* Quick Stats - Clickable */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Link href="/technicians">
-            <Card className="hover:bg-accent transition-colors cursor-pointer">
+            <Card className="hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer border-2 hover:border-blue-300 dark:hover:border-blue-700">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Team Technicians
                 </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900 dark:to-blue-800 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalTechnicians}</div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{stats.totalTechnicians}</div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                   <span>Active in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</span>
                 </div>
               </CardContent>
@@ -295,31 +302,33 @@ export default function Home() {
           </Link>
 
           <Link href="/vehicles">
-            <Card className={`hover:bg-accent transition-colors cursor-pointer ${
-              vehicleBalance.status === 'critical' ? 'border-yellow-500' : ''
+            <Card className={`hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer border-2 ${
+              vehicleBalance.status === 'critical' ? 'border-yellow-500 hover:border-yellow-600' : 'hover:border-emerald-300 dark:hover:border-emerald-700'
             }`}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Service Vehicles
                 </CardTitle>
-                <Car className="h-4 w-4 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900 dark:to-emerald-800 flex items-center justify-center">
+                  <Car className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.serviceVehicles}</div>
-                <div className="flex items-center gap-1 text-xs">
+                <div className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{stats.serviceVehicles}</div>
+                <div className="flex items-center gap-1 text-xs mt-1">
                   {vehicleBalance.status === 'perfect' && (
-                    <span className="text-green-600">Perfect ratio (2:1)</span>
+                    <span className="text-green-600 font-medium">Perfect ratio (2:1)</span>
                   )}
                   {vehicleBalance.status === 'good' && (
-                    <span className="text-green-600">Good ratio</span>
+                    <span className="text-green-600 font-medium">Good ratio</span>
                   )}
                   {vehicleBalance.status === 'warning' && (
-                    <span className="text-yellow-600">
+                    <span className="text-yellow-600 font-medium">
                       {vehicleBalance.balance < 0 ? `${Math.abs(vehicleBalance.balance)} below optimal` : 'Slight surplus'}
                     </span>
                   )}
                   {vehicleBalance.status === 'critical' && (
-                    <span className="text-red-600">
+                    <span className="text-red-600 font-medium">
                       {vehicleBalance.balance < 0 ? `${Math.abs(vehicleBalance.balance)} vans short!` : `${vehicleBalance.balance} excess`}
                     </span>
                   )}
@@ -329,16 +338,18 @@ export default function Home() {
           </Link>
 
           <Link href="/training">
-            <Card className="hover:bg-accent transition-colors cursor-pointer">
+            <Card className="hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer border-2 hover:border-amber-300 dark:hover:border-amber-700">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   Training Needs
                 </CardTitle>
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900 dark:to-amber-800 flex items-center justify-center">
+                  <GraduationCap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.trainingNeeds}</div>
-                <div className="flex items-center gap-1 text-xs text-orange-600">
+                <div className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">{stats.trainingNeeds}</div>
+                <div className="flex items-center gap-1 text-xs text-orange-600 mt-1 font-medium">
                   <AlertCircle className="h-3 w-3" />
                   <span>{stats.highPriorityTraining} high priority</span>
                 </div>
@@ -346,16 +357,18 @@ export default function Home() {
             </Card>
           </Link>
 
-          <Card>
+          <Card className="hover:shadow-lg hover:scale-[1.02] transition-all border-2 hover:border-purple-300 dark:hover:border-purple-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
                 Avg Competency Level
               </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 dark:from-purple-900 dark:to-purple-800 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgCompetencyLevel}</div>
-              <div className="flex items-center gap-1 text-xs text-green-600">
+              <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">{stats.avgCompetencyLevel}</div>
+              <div className="flex items-center gap-1 text-xs text-green-600 mt-1 font-medium">
                 <TrendingUp className="h-3 w-3" />
                 <span>+{stats.levelImprovement} from last quarter</span>
               </div>
@@ -365,9 +378,14 @@ export default function Home() {
 
         {/* Vestas Level Distribution & Quick Actions */}
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 border-2 shadow-md">
             <CardHeader>
-              <CardTitle>Vestas Level Distribution</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 flex items-center justify-center">
+                  <Award className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </div>
+                Vestas Level Distribution
+              </CardTitle>
               <CardDescription>Technicians by Vestas certification level in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
             </CardHeader>
             <CardContent>
@@ -403,38 +421,43 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                Quick Actions
+              </CardTitle>
               <CardDescription>Common tasks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <Link href="/technicians">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 dark:hover:bg-blue-950 transition-all">
                   <Users className="mr-2 h-4 w-4" />
                   Add Technician
                 </Button>
               </Link>
               <Link href="/vehicles">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 dark:hover:bg-emerald-950 transition-all">
                   <Car className="mr-2 h-4 w-4" />
                   Add Vehicle
                 </Button>
               </Link>
               <Link href="/training">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start hover:bg-amber-50 hover:border-amber-300 hover:text-amber-700 dark:hover:bg-amber-950 transition-all">
                   <GraduationCap className="mr-2 h-4 w-4" />
                   Plan Training
                 </Button>
               </Link>
               <Link href="/admin/teams">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-950 transition-all">
                   <UserCheck className="mr-2 h-4 w-4" />
                   Manage Teams
                 </Button>
               </Link>
               <Link href="/admin/courses">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start hover:bg-pink-50 hover:border-pink-300 hover:text-pink-700 dark:hover:bg-pink-950 transition-all">
                   <Award className="mr-2 h-4 w-4" />
                   Course Catalog
                 </Button>
@@ -445,9 +468,14 @@ export default function Home() {
 
         {/* Charts */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader>
-              <CardTitle>All Teams Distribution</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900 dark:to-cyan-900 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                All Teams Distribution
+              </CardTitle>
               <CardDescription>Technicians across all teams in Sweden</CardDescription>
             </CardHeader>
             <CardContent>
@@ -473,9 +501,14 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader>
-              <CardTitle>Competency Level Distribution</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                Competency Level Distribution
+              </CardTitle>
               <CardDescription>{selectedTeamId === "all" ? "All teams" : selectedTeam?.name} - Levels 1-5</CardDescription>
             </CardHeader>
             <CardContent>
@@ -497,14 +530,19 @@ export default function Home() {
 
         {/* Recent Activity & Training */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Recent Assessments</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900 flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  </div>
+                  Recent Assessments
+                </CardTitle>
                 <CardDescription>Latest competency matrix updates in {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
               </div>
               <Link href="/technicians">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="hover:bg-green-50 dark:hover:bg-green-950">
                   View All <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -521,7 +559,7 @@ export default function Home() {
 
                   return (
                     <Link key={assessment.id} href={`/technicians/${assessment.id}`}>
-                      <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between p-3 rounded-lg border-2 hover:border-green-300 hover:shadow-md hover:bg-green-50/50 dark:hover:bg-green-950/50 transition-all cursor-pointer">
                         <div className="flex items-center gap-3">
                           <div
                             className="h-2 w-2 rounded-full"
@@ -558,14 +596,19 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-2 shadow-md">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Upcoming Training</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900 dark:to-orange-900 flex items-center justify-center">
+                    <CalendarDays className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  Upcoming Training
+                </CardTitle>
                 <CardDescription>Scheduled for Q1-Q2 2026</CardDescription>
               </div>
               <Link href="/training">
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="hover:bg-amber-50 dark:hover:bg-amber-950">
                   View All <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -573,7 +616,7 @@ export default function Home() {
             <CardContent>
               <div className="space-y-3">
                 {upcomingTraining.map((training, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div key={index} className="flex items-center justify-between p-3 rounded-lg border-2 hover:border-amber-300 hover:shadow-md hover:bg-amber-50/50 dark:hover:bg-amber-950/50 transition-all">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{training.course}</p>
@@ -594,9 +637,14 @@ export default function Home() {
         </div>
 
         {/* Alerts & Notifications */}
-        <Card>
+        <Card className="border-2 shadow-md">
           <CardHeader>
-            <CardTitle>Alerts & Notifications</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-900 dark:to-orange-900 flex items-center justify-center">
+                <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+              </div>
+              Alerts & Notifications
+            </CardTitle>
             <CardDescription>Important updates and actions required for {selectedTeamId === "all" ? "all teams" : selectedTeam?.name}</CardDescription>
           </CardHeader>
           <CardContent>

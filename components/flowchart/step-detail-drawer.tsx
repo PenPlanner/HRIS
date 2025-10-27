@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight, Download, CloudOff, Loader2, User } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight, Download, CloudOff, Loader2, User, Plus } from "lucide-react";
 import { BugReportDialog } from "../bug-report/bug-report-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMemo, useState, useEffect, useRef } from "react";
@@ -48,6 +48,9 @@ interface StepDetailDrawerProps {
   onStepUpdate?: (step: FlowchartStep) => void;
   selectedServiceType?: string;
   isEditMode?: boolean;
+  onOpenTechnicianPairModal?: () => void;
+  onAddAdditionalTechnician?: (technicianId: string, role: 'T1' | 'T2' | 'T3') => void;
+  onRemoveAdditionalTechnician?: (technicianId: string) => void;
 }
 
 export function StepDetailDrawer({
@@ -71,7 +74,10 @@ export function StepDetailDrawer({
   onTaskIndentToggle,
   onStepUpdate,
   selectedServiceType = "all",
-  isEditMode = false
+  isEditMode = false,
+  onOpenTechnicianPairModal,
+  onAddAdditionalTechnician,
+  onRemoveAdditionalTechnician
 }: StepDetailDrawerProps) {
   // State for "Show All" toggle
   const [showAllTasks, setShowAllTasks] = useState(false);
@@ -84,51 +90,21 @@ export function StepDetailDrawer({
   const [inProgressOpen, setInProgressOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
 
-  // State for technician dropdown
-  const [showTechnicianDropdown, setShowTechnicianDropdown] = useState(false);
-  const techDropdownRef = useRef<HTMLDivElement>(null);
-
   // Offline PDF management
   const { downloadPDF, isAvailable, loading: offlineLoading } = useOfflinePDFs();
 
-  // Get selected technicians for displaying initials (fallback)
+  // Get selected technicians for displaying (synced from header/Start Service)
   const { t1, t2 } = getSelectedTechnicians();
 
-  // Get assigned technician for this step
-  const assignedTechnician = step?.assignedTechnicianId ? getTechnicianById(step.assignedTechnicianId) : null;
+  // State for adding additional technicians
+  const [showAddTechModal, setShowAddTechModal] = useState(false);
+  const [availableTechnicians, setAvailableTechnicians] = useState<Technician[]>([]);
 
-  // Handle click outside to close dropdown
+  // Load available technicians
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (techDropdownRef.current && !techDropdownRef.current.contains(event.target as Node)) {
-        setShowTechnicianDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const techs = getActiveTechnicians();
+    setAvailableTechnicians(techs);
   }, []);
-
-  const handleAssignTechnician = (technician: Technician) => {
-    if (!step || !onStepUpdate) return;
-    const updatedStep = {
-      ...step,
-      assignedTechnicianId: technician.id,
-      assignedTechnicianInitials: technician.initials
-    };
-    onStepUpdate(updatedStep);
-    setShowTechnicianDropdown(false);
-  };
-
-  const handleClearAssignment = () => {
-    if (!step || !onStepUpdate) return;
-    const updatedStep = {
-      ...step,
-      assignedTechnicianId: undefined,
-      assignedTechnicianInitials: undefined
-    };
-    onStepUpdate(updatedStep);
-    setShowTechnicianDropdown(false);
-  };
 
   // Filter tasks based on selected service type
   const filteredTasks = useMemo(() => {
@@ -292,96 +268,86 @@ export function StepDetailDrawer({
 
           {/* Header - Improved Layout */}
           <div className="space-y-3 mb-4">
-            {/* Row 1: Technicians */}
+            {/* Row 1: Technicians - Click to assign T1 and T2 for the job */}
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
-              <div className="relative flex items-center gap-2 flex-1" ref={techDropdownRef}>
+              <div className="flex items-center gap-2 flex-1 flex-wrap">
+                {/* Primary technician(s) for this step */}
                 {step.technician === "both" ? (
                   <>
                     <button
-                      onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                      onClick={() => onOpenTechnicianPairModal?.()}
                       className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                      title="Click to assign T1 and T2 for the job"
                     >
                       <span className="text-xs font-bold text-white">T1</span>
-                      <span className="text-xs text-white/90">{t1 ? `${t1.firstName} ${t1.lastName}` : 'Not assigned'}</span>
-                      <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                      <span className="text-xs text-white/90">{t1 ? t1.initials : 'Not assigned'}</span>
                     </button>
                     <button
-                      onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                      onClick={() => onOpenTechnicianPairModal?.()}
                       className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                      title="Click to assign T1 and T2 for the job"
                     >
                       <span className="text-xs font-bold text-white">T2</span>
-                      <span className="text-xs text-white/90">{t2 ? `${t2.firstName} ${t2.lastName}` : 'Not assigned'}</span>
-                      <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                      <span className="text-xs text-white/90">{t2 ? t2.initials : 'Not assigned'}</span>
                     </button>
                   </>
                 ) : step.technician === "T1" ? (
                   <button
-                    onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                    onClick={() => onOpenTechnicianPairModal?.()}
                     className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                    title="Click to assign T1 and T2 for the job"
                   >
                     <span className="text-xs font-bold text-white">T1</span>
                     <span className="text-xs text-white/90">
-                      {assignedTechnician ? `${assignedTechnician.firstName} ${assignedTechnician.lastName}` : t1 ? `${t1.firstName} ${t1.lastName}` : 'Not assigned'}
+                      {t1 ? t1.initials : 'Not assigned'}
                     </span>
-                    <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
                   </button>
                 ) : (
                   <button
-                    onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                    onClick={() => onOpenTechnicianPairModal?.()}
                     className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                    title="Click to assign T1 and T2 for the job"
                   >
                     <span className="text-xs font-bold text-white">T2</span>
                     <span className="text-xs text-white/90">
-                      {assignedTechnician ? `${assignedTechnician.firstName} ${assignedTechnician.lastName}` : t2 ? `${t2.firstName} ${t2.lastName}` : 'Not assigned'}
+                      {t2 ? t2.initials : 'Not assigned'}
                     </span>
-                    <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
                   </button>
                 )}
 
-                {/* Technician Selection Dropdown */}
-                {showTechnicianDropdown && (
-                  <div className="absolute left-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 min-w-[280px] max-h-[300px] overflow-y-auto">
-                    <div className="p-3">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-bold uppercase tracking-wide">
-                        {step.technician === "both" ? "Assign Technicians for this Step" : `Assign Technician for this Step (${step.technician})`}
-                      </p>
-                      {getActiveTechnicians().map(tech => (
-                        <button
-                          key={tech.id}
-                          onClick={() => handleAssignTechnician(tech)}
-                          className={cn(
-                            "w-full px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors mb-1 border border-transparent",
-                            assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700"
-                          )}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tech.firstName} {tech.lastName}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                {tech.initials} • {tech.email}
-                              </div>
-                            </div>
-                            {assignedTechnician?.id === tech.id && (
-                              <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                      {assignedTechnician && (
-                        <>
-                          <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
-                          <button
-                            onClick={handleClearAssignment}
-                            className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
-                          >
-                            Clear assignment (use default {step.technician})
-                          </button>
-                        </>
-                      )}
-                    </div>
+                {/* Additional technicians */}
+                {step.additionalTechnicians && step.additionalTechnicians.length > 0 && step.additionalTechnicians.map((tech) => (
+                  <div
+                    key={tech.id}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md flex items-center gap-1.5 group relative",
+                      tech.role === 'T1' ? "bg-blue-500/80" : tech.role === 'T2' ? "bg-purple-500/80" : "bg-orange-500/80"
+                    )}
+                  >
+                    <span className="text-xs font-bold text-white">{tech.role}</span>
+                    <span className="text-xs text-white/90">{tech.initials}</span>
+                    {onRemoveAdditionalTechnician && (
+                      <button
+                        onClick={() => onRemoveAdditionalTechnician(tech.id)}
+                        className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove technician"
+                      >
+                        <X className="h-3 w-3 text-white hover:text-red-200" />
+                      </button>
+                    )}
                   </div>
-                )}
+                ))}
+
+                {/* Add technician button */}
+                <button
+                  onClick={() => setShowAddTechModal(true)}
+                  className="bg-gray-200 hover:bg-gray-300 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  title="Add additional technician"
+                >
+                  <Plus className="h-3.5 w-3.5 text-gray-600" />
+                  <span className="text-xs font-medium text-gray-700">Add Tech</span>
+                </button>
               </div>
             </div>
 
@@ -1436,6 +1402,86 @@ export function StepDetailDrawer({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Add Technician Modal */}
+      <Dialog open={showAddTechModal} onOpenChange={setShowAddTechModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Technician to Step</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Select a technician and their role for this step
+            </p>
+            <div className="grid gap-2">
+              {availableTechnicians.map((tech) => {
+                // Check if technician is already added
+                const isAlreadyAdded = step.additionalTechnicians?.some(t => t.id === tech.id);
+                // Check if technician is primary for this step
+                const isPrimary = (step.technician === 'T1' && t1?.id === tech.id) ||
+                                (step.technician === 'T2' && t2?.id === tech.id) ||
+                                (step.technician === 'both' && (t1?.id === tech.id || t2?.id === tech.id));
+
+                if (isPrimary || isAlreadyAdded) return null;
+
+                return (
+                  <Card key={tech.id} className="hover:bg-accent transition-colors">
+                    <CardContent className="pt-3 pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <p className="text-sm font-medium">{tech.name}</p>
+                          <p className="text-xs text-muted-foreground">{tech.initials}</p>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 bg-blue-500 text-white hover:bg-blue-600 border-blue-500"
+                            onClick={() => {
+                              if (onAddAdditionalTechnician) {
+                                onAddAdditionalTechnician(tech.id, 'T1');
+                                setShowAddTechModal(false);
+                              }
+                            }}
+                          >
+                            T1
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 bg-purple-500 text-white hover:bg-purple-600 border-purple-500"
+                            onClick={() => {
+                              if (onAddAdditionalTechnician) {
+                                onAddAdditionalTechnician(tech.id, 'T2');
+                                setShowAddTechModal(false);
+                              }
+                            }}
+                          >
+                            T2
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 bg-orange-500 text-white hover:bg-orange-600 border-orange-500"
+                            onClick={() => {
+                              if (onAddAdditionalTechnician) {
+                                onAddAdditionalTechnician(tech.id, 'T3');
+                                setShowAddTechModal(false);
+                              }
+                            }}
+                          >
+                            T3
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* PDF Viewer Dialog */}
       <PDFViewerDialog

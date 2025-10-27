@@ -157,21 +157,22 @@ export function ServiceTypeSelectionModal({
             ))}
           </div>
 
-          {/* Total time overview */}
-          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-2 border-purple-200 dark:border-purple-800 rounded-lg p-4">
+          {/* Target time overview */}
+          <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-2 border-green-600/50 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                  Total time
+                <Clock className="h-5 w-5 text-green-600" />
+                <span className="text-xs font-semibold text-green-600 uppercase tracking-wide">
+                  Target Time
                 </span>
               </div>
-              <div className="text-2xl font-bold font-mono text-purple-900 dark:text-purple-100">
-                {totalHours > 0 && <span>{totalHours}H </span>}
-                {totalMinutes > 0 && <span>{totalMinutes}M</span>}
+              <div className="text-3xl font-bold font-mono text-white">
+                {totalHours > 0 && <span>{totalHours}h</span>}
+                {totalMinutes > 0 && totalHours > 0 && <span> </span>}
+                {totalMinutes > 0 && <span>{totalMinutes}m</span>}
               </div>
             </div>
-            <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+            <p className="text-xs text-green-400 mt-2">
               {steps.length} steps • Total work time for 2 technicians
             </p>
           </div>
