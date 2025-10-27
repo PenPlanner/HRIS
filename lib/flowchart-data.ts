@@ -176,7 +176,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T1",
-      position: { x: 18, y: -9 },
+      position: { x: 17, y: -9 },
       tasks: [
         { id: "2-1-1", description: "13.5.1.Lift check", serviceType: "1Y" },
         { id: "2-1-2", description: "Lift up", serviceType: "1Y" },
@@ -198,7 +198,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T2",
-      position: { x: 18, y: 9 },
+      position: { x: 17, y: 9 },
       tasks: [
         { id: "2-2-1", description: "Prep bags and tools", serviceType: "1Y" },
         { id: "2-2-2", description: "14.5.11 Earthing system", serviceType: "1Y" },
@@ -219,7 +219,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 35, y: 0 },
+      position: { x: 33, y: 0 },
       tasks: [
         { id: "3-1", description: "Prep in turbine", serviceType: "1Y" },
         { id: "3-2", description: "2.7.2 Safety test Nacelle", serviceType: "1Y" },
@@ -241,7 +241,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 52, y: -4 },
+      position: { x: 49, y: -4 },
       documents: ["7"],
       tasks: [
         { id: "4-1", description: "7. Generator", serviceType: "1Y" },
@@ -269,7 +269,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T1",
-      position: { x: 69, y: -11 },
+      position: { x: 65, y: -11 },
       tasks: [
         { id: "5-1-1", description: "8.5.2 Replace CubePower air filters", serviceType: "2Y" },
         { id: "5-1-2", description: "10.5.1 Yaw control panel ++68", serviceType: "1Y" },
@@ -293,7 +293,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T2",
-      position: { x: 69, y: 9 },
+      position: { x: 65, y: 9 },
       tasks: [
         { id: "5-2-1", description: "4.5.1.2 Hub Cover", serviceType: "1Y" },
         { id: "5-2-2", description: "4.5.1.3 Hub Structure", serviceType: "1Y" },
@@ -326,7 +326,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 86, y: 2 },
+      position: { x: 81, y: 2 },
       tasks: [
         { id: "6-1", description: "6.5.2.1 Gear Oil Sample", serviceType: "1Y" },
         { id: "6-2", description: "5.5.1.2 Hydraulic Oil sample", serviceType: "1Y" },
@@ -343,7 +343,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 103, y: -1 },
+      position: { x: 97, y: -1 },
       tasks: [
         { id: "7-1", description: "5.5.1.1 Check hydraulic oil leakage", serviceType: "1Y" },
         { id: "7-2", description: "5.5.1.5 695-HQ1 air filter replacement", serviceType: "1Y" },
@@ -364,7 +364,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T1",
-      position: { x: 120, y: -8 },
+      position: { x: 113, y: -8 },
       tasks: [
         { id: "8-1-1", description: "4.5.1.7 Lubricate Blade Bearings", serviceType: "1Y" },
         { id: "8-1-2", description: "4.5.1.8 Retighten the blade lock.", serviceType: "1Y" },
@@ -384,7 +384,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T2",
-      position: { x: 120, y: 9 },
+      position: { x: 113, y: 9 },
       tasks: [
         { id: "8-2-1", description: "9.5.1 Nacelle control panel ++03", serviceType: "1Y" },
         { id: "8-2-2", description: "9.5.1.4 Replace UPS batteries", serviceType: "3Y" },
@@ -405,7 +405,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T1",
-      position: { x: 137, y: -6 },
+      position: { x: 129, y: -6 },
       tasks: [
         { id: "9-1-1", description: "Climb down", serviceType: "1Y" },
         { id: "9-1-2", description: "14.5.1-5.2 Inspection tower foundation & flange bolts", serviceType: "1Y" },
@@ -423,7 +423,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "T2",
-      position: { x: 137, y: 9 },
+      position: { x: 129, y: 9 },
       tasks: [
         { id: "9-2-1", description: "Crane down the material", serviceType: "1Y" },
         { id: "9-2-2", description: "14.5.4 LDST", serviceType: "1Y" },
@@ -443,7 +443,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 154, y: 0 },
+      position: { x: 145, y: 0 },
       tasks: [
         { id: "10-1", description: "2.7.1.1 Emergency buttons", serviceType: "1Y" },
         { id: "10-2", description: "14.5.13 LB and UPS control panel ++112", serviceType: "1Y" },
@@ -463,7 +463,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
       technician: "both",
-      position: { x: 154, y: 18 },
+      position: { x: 145, y: 17 },
       tasks: [
         { id: "4y-1", description: "5.1.4.1-2 Check every 10 bolt blade bearing (7h)", serviceType: "4Y" },
         { id: "4y-2", description: "5.2.7.6 Pre-tension every 3. torque arm bolt (3h)", serviceType: "4Y" },

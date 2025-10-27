@@ -125,295 +125,6 @@ function VerticalEdge({ id, sourceX, sourceY, targetX, targetY, style, markerEnd
   return <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} markerStart={markerStart} />;
 }
 
-// Progress Line Component - Renders in viewport coordinates using ViewportPortal
-function ProgressLine({ nodes, steps, selectedServiceType = "1Y" }: { nodes: Node[], steps: FlowchartStep[], selectedServiceType?: string }) {
-  if (nodes.length === 0) return null;
-
-  // Helper to format minutes to readable format
-  const formatMinutes = (mins: number): string => {
-    if (mins === 0) return "0m";
-    const hours = Math.floor(mins / 60);
-    const minutes = mins % 60;
-    if (hours === 0) return `${minutes}m`;
-    if (minutes === 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
-  };
-
-  // Calculate completion, time info for each step
-  const stepsWithData = nodes.map(node => {
-    const step = steps.find(s => s.id === node.id);
-    if (!step) return null;
-
-    // Count ALL tasks, not just those with reference numbers
-    const completedTasks = step.tasks.filter(t => t.completed).length;
-    const totalTasks = step.tasks.length;
-    const isComplete = completedTasks === totalTasks && totalTasks > 0;
-    const completionPercent = totalTasks > 0 ? (completedTasks / totalTasks) : 0;
-
-    // Calculate actual time (sum of all tasks' actualTimeMinutes)
-    const actualTime = step.tasks.reduce((sum, task) => sum + (task.actualTimeMinutes || 0), 0);
-
-    // Get planned time based on selected service type (cumulative)
-    // First, ensure serviceTimes are parsed if not already
-    if (!step.serviceTimes && step.duration) {
-      step.serviceTimes = parseServiceTimes(step.duration);
-    }
-
-    // Calculate cumulative time for selected service type
-    const plannedTime = getCumulativeServiceTime(step.serviceTimes, selectedServiceType) || step.durationMinutes || 0;
-
-    return {
-      x: node.position.x + 150, // Center of box (300px width / 2)
-      y: node.position.y,
-      isComplete,
-      completedTasks,
-      totalTasks,
-      completionPercent,
-      actualTime,
-      plannedTime,
-      step: step,
-      id: node.id
-    };
-  }).filter(Boolean).sort((a, b) => a!.x - b!.x);
-
-  if (stepsWithData.length === 0) return null;
-
-  const first = stepsWithData[0]!;
-  const last = stepsWithData[stepsWithData.length - 1]!;
-
-  // Find highest Y position (smallest Y value = highest on screen)
-  const highestY = Math.min(...stepsWithData.map(s => s!.y));
-  const baseY = highestY - 120; // 120px above highest box for more space
-
-  // Calculate cumulative times for progress visualization
-  let cumulativeTargetTime = 0;
-  let cumulativeActualTime = 0;
-  const stepsWithProgress = stepsWithData.map(stepData => {
-    // Only add to target if step has been worked on (has actual time)
-    if (stepData!.actualTime > 0) {
-      cumulativeTargetTime += stepData!.plannedTime;
-    }
-    cumulativeActualTime += stepData!.actualTime;
-
-    return {
-      ...stepData!,
-      cumulativeTargetTime,
-      cumulativeActualTime
-    } as typeof stepData & {
-      cumulativeTargetTime: number;
-      cumulativeActualTime: number;
-    };
-  });
-
-  // Calculate totals
-  const totalPlannedTime = stepsWithData.reduce((sum, s) => sum + s!.plannedTime, 0);
-  const totalTargetTime = cumulativeTargetTime; // Only steps with actual time
-  const totalActualTime = cumulativeActualTime;
-
-  // Calculate total tasks from ALL steps
-  const allCompletedTasks = stepsWithData.reduce((sum, s) => sum + s!.completedTasks, 0);
-  const allTotalTasks = stepsWithData.reduce((sum, s) => sum + s!.totalTasks, 0);
-  const completedSteps = stepsWithData.filter(s => s!.isComplete).length;
-  const completionPercent = allTotalTasks > 0 ? (allCompletedTasks / allTotalTasks) * 100 : 0;
-
-  // Calculate X positions for time-based progress
-  const totalWidth = last.x - first.x;
-  const calculateXFromTime = (time: number) => {
-    if (totalPlannedTime === 0) return first.x;
-    return first.x + (time / totalPlannedTime) * totalWidth;
-  };
-
-  return (
-    <svg
-      className="pointer-events-none"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        overflow: 'visible'
-      }}
-    >
-      <defs>
-        {/* Gradients - unique IDs for progress tracker */}
-        <linearGradient id="progressTargetGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="100%" stopColor="#34d399" />
-        </linearGradient>
-        <linearGradient id="progressActualGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#eab308" />
-          <stop offset="100%" stopColor="#fbbf24" />
-        </linearGradient>
-
-        {/* Filter for glow effect */}
-        <filter id="progressGlow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-          <feMerge>
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-
-      {/* Title and Legend */}
-      <g>
-        <text
-          x={first.x}
-          y={baseY - 45}
-          fill="#ffffff"
-          fontSize="14"
-          fontWeight="700"
-          fontFamily="system-ui, -apple-system, sans-serif"
-        >
-          Progress Tracker
-        </text>
-
-        {/* Legend */}
-        <g transform={`translate(${first.x}, ${baseY - 22})`}>
-          {/* Target time legend */}
-          <line x1="0" y1="0" x2="20" y2="0" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
-          <text x="25" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
-            Target
-          </text>
-
-          {/* Actual time legend */}
-          <line x1="100" y1="0" x2="120" y2="0" stroke="#eab308" strokeWidth="3" strokeLinecap="round" />
-          <text x="125" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
-            Actual
-          </text>
-
-          {/* Over-target legend */}
-          <line x1="190" y1="0" x2="210" y2="0" stroke="#ef4444" strokeWidth="3" strokeLinecap="round" />
-          <text x="215" y="0" fill="#4b5563" fontSize="10" fontWeight="600" dominantBaseline="middle">
-            Overtime
-          </text>
-
-          {/* Completion status */}
-          <text x="300" y="0" fill="#6b7280" fontSize="10" fontWeight="600" dominantBaseline="middle">
-            {allCompletedTasks}/{allTotalTasks} Tasks ({Math.round(completionPercent)}%) · {completedSteps}/{stepsWithData.length} Steps
-          </text>
-        </g>
-      </g>
-
-      {/* TARGET TIME TRACK (Top line - Green) */}
-      <g>
-        {/* Background track */}
-        <line
-          x1={first.x}
-          y1={baseY}
-          x2={last.x}
-          y2={baseY}
-          stroke="#e5e7eb"
-          strokeWidth="12"
-          strokeLinecap="round"
-        />
-
-        {/* Target time progress (cumulative for steps with actual time) */}
-        {totalTargetTime > 0 && (
-          <line
-            x1={first.x}
-            y1={baseY}
-            x2={calculateXFromTime(totalTargetTime)}
-            y2={baseY}
-            stroke="#10b981"
-            strokeWidth="12"
-            strokeLinecap="round"
-            opacity="0.9"
-            className="transition-all duration-500"
-          />
-        )}
-
-        {/* End label */}
-        <text
-          x={last.x + 15}
-          y={baseY}
-          fill="#10b981"
-          fontSize="10"
-          fontWeight="700"
-          dominantBaseline="middle"
-        >
-          {formatMinutes(totalTargetTime)}
-        </text>
-      </g>
-
-      {/* ACTUAL TIME TRACK (Bottom line - Yellow/Red) */}
-      <g>
-        {/* Background track */}
-        <line
-          x1={first.x}
-          y1={baseY + 20}
-          x2={last.x}
-          y2={baseY + 20}
-          stroke="#e5e7eb"
-          strokeWidth="12"
-          strokeLinecap="round"
-        />
-
-        {/* Actual time progress */}
-        {totalActualTime > 0 && (
-          <>
-            {/* Yellow part (up to target) */}
-            <line
-              x1={first.x}
-              y1={baseY + 20}
-              x2={calculateXFromTime(Math.min(totalActualTime, totalTargetTime))}
-              y2={baseY + 20}
-              stroke="#eab308"
-              strokeWidth="12"
-              strokeLinecap="round"
-              opacity="0.9"
-              className="transition-all duration-500"
-            />
-
-            {/* Red part (over target) */}
-            {totalActualTime > totalTargetTime && (
-              <>
-                <line
-                  x1={calculateXFromTime(totalTargetTime)}
-                  y1={baseY + 20}
-                  x2={calculateXFromTime(totalActualTime)}
-                  y2={baseY + 20}
-                  stroke="#ef4444"
-                  strokeWidth="12"
-                  strokeLinecap="round"
-                  opacity="0.9"
-                  className="transition-all duration-500"
-                />
-
-                {/* Overtime indicator */}
-                <text
-                  x={(calculateXFromTime(totalTargetTime) + calculateXFromTime(totalActualTime)) / 2}
-                  y={baseY + 38}
-                  fill="#ef4444"
-                  fontSize="9"
-                  fontWeight="700"
-                  textAnchor="middle"
-                >
-                  +{formatMinutes(totalActualTime - totalTargetTime)}
-                </text>
-              </>
-            )}
-          </>
-        )}
-
-        {/* End label */}
-        <text
-          x={last.x + 15}
-          y={baseY + 20}
-          fill={totalActualTime > totalTargetTime ? "#ef4444" : "#eab308"}
-          fontSize="10"
-          fontWeight="700"
-          dominantBaseline="middle"
-        >
-          {formatMinutes(totalActualTime)}
-        </text>
-      </g>
-
-    </svg>
-  );
-}
-
 // Custom node component for flowchart steps
 interface StepNodeProps extends NodeProps {
   data: StepNodeData;
@@ -1352,28 +1063,7 @@ function FlowchartEditorInner({
       };
     });
 
-    // Add info card node - positioned to the left of Step 1
-    const step1 = displayedSteps.find(s => s.id === 'step-1');
-    if (step1) {
-      const infoCardNode: Node<InfoCardNodeData> = {
-        id: 'info-card',
-        type: 'infoCardNode',
-        position: {
-          x: (step1.position.x - 13) * gridSize, // 13 grid units left of step 1 (400px / 30px)
-          y: step1.position.y * gridSize
-        },
-        data: {
-          flowchart,
-          onUpdateFlowchart: handleUpdateFlowchart,
-          isEditMode,
-          selectedServiceType,
-          onServiceTypeChange,
-        },
-        draggable: isEditMode,
-      };
-      return [...stepNodes, infoCardNode];
-    }
-
+    // Info card is now a dropdown at the top - no longer a node in the flowchart
     return stepNodes;
   }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart]);
 
@@ -1696,7 +1386,7 @@ function FlowchartEditorInner({
 
     // Layout constants (in grid units)
     const START_X_GRID = 1; // Starting X position
-    const SPACING_GRID = 4; // Horizontal spacing between columns
+    const SPACING_GRID = 3; // Horizontal spacing between columns (3 grid units = 90px for nodes)
     const PARALLEL_SPACING_GRID = 1.5; // Vertical spacing for parallel boxes from center
     const STEP1_START_Y_GRID = 2; // Step 1 starts here
 
@@ -2029,21 +1719,8 @@ function FlowchartEditorInner({
 
       // Update existing nodes (keep their positions)
       const updatedNodes = nds
-        .filter(node => newStepIds.has(node.id) || node.id === 'info-card') // Keep info card and valid steps
+        .filter(node => newStepIds.has(node.id)) // Keep only valid step nodes
         .map((node) => {
-          // Handle info card node separately
-          if (node.id === 'info-card') {
-            return {
-              ...node,
-              data: {
-                flowchart,
-                onUpdateFlowchart: handleUpdateFlowchart,
-                isEditMode,
-              },
-              draggable: isEditMode,
-            };
-          }
-
           const step = displayedSteps.find((s) => s.id === node.id);
           if (!step) return node;
 
@@ -2096,31 +1773,7 @@ function FlowchartEditorInner({
           };
         });
 
-      // Add info card if not present
-      const hasInfoCard = updatedNodes.some(n => n.id === 'info-card');
-      if (!hasInfoCard) {
-        const step1 = displayedSteps.find(s => s.id === 'step-1');
-        if (step1) {
-          const infoCardNode: Node<InfoCardNodeData> = {
-            id: 'info-card',
-            type: 'infoCardNode',
-            position: {
-              x: (step1.position.x - 13) * gridSize,
-              y: step1.position.y * gridSize
-            },
-            data: {
-              flowchart,
-              onUpdateFlowchart: handleUpdateFlowchart,
-              isEditMode,
-              selectedServiceType,
-              onServiceTypeChange,
-            },
-            draggable: isEditMode,
-          };
-          return [...updatedNodes, ...newNodes, infoCardNode];
-        }
-      }
-
+      // Info card is now a dropdown - no longer needed as a node
       return [...updatedNodes, ...newNodes];
     });
 
@@ -2397,8 +2050,8 @@ function FlowchartEditorInner({
 
   // Define custom node types
   const nodeTypes = useMemo(() => ({
-    stepNode: StepNode,
-    infoCardNode: InfoCardNode
+    stepNode: StepNode
+    // infoCardNode removed - now using dropdown component instead
   }), []);
   const edgeTypes = useMemo(() => ({
     horizontal: HorizontalEdge,
@@ -2445,12 +2098,6 @@ function FlowchartEditorInner({
           style={{ bottom: '65px' }}
         />
 
-        {/* Progress Line - Shows overall completion across all steps */}
-        {!isEditMode && (
-          <ViewportPortal>
-            <ProgressLine nodes={nodes} steps={steps} selectedServiceType={selectedServiceType} />
-          </ViewportPortal>
-        )}
       </ReactFlow>
 
       {/* Edge style selector - Enhanced menu */}

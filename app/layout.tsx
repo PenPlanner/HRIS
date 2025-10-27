@@ -14,19 +14,22 @@ export const metadata: Metadata = {
   title: "HRIS - Wind Turbine Service Manager",
   description: "Offline-capable wind turbine service flowchart and documentation manager",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "HRIS",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
 };
+
+// Next.js 15: viewport and themeColor must be separate exports
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
+export const themeColor = "#2563eb";
 
 export default function RootLayout({
   children,

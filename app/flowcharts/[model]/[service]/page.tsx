@@ -16,6 +16,7 @@ import { StepDetailDrawer } from "@/components/flowchart/step-detail-drawer";
 import { ProgressTracker } from "@/components/flowchart/progress-tracker";
 import { FlowchartEditor } from "@/components/flowchart/flowchart-editor";
 import { StepEditorDialog } from "@/components/flowchart/step-editor-dialog";
+import { FlowchartInfoDropdown } from "@/components/flowchart/flowchart-info-dropdown";
 import { extractSIIReferences } from "@/lib/sii-documents";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
@@ -120,96 +121,11 @@ export default function FlowchartViewerPage() {
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const savedData = localStorage.getItem(storageKey);
 
-    // If no saved data exists, auto-arrange on first load
+    // If no saved data exists, use positions from flowchart-data.ts
     if (!savedData) {
-      console.log('No saved data found - will auto-arrange on first load');
-
-      // HORIZONTAL LAYOUT: Flow goes LEFT to RIGHT, parallel steps stack VERTICALLY
-      // Box width is 300px (10 grid units), so we need x spacing of 14 grid units (420px) for horizontal separation
-      // Box height is 180px (6 grid units), so we need y spacing of 8 grid units (240px) for vertical separation
-      const arrangedSteps: FlowchartStep[] = [];
-      const standalone4YSteps: FlowchartStep[] = []; // Separate array for 4Y bolts
-      let currentCol = 0; // Horizontal position (steps go left to right)
-      const COL_SPACING = 14; // 14 * 30px = 420px horizontal spacing (for 300px wide cards)
-      const ROW_SPACING = 8; // 8 * 30px = 240px vertical spacing (for 180px tall cards)
-      const BASELINE_Y = 5; // Start 5 grid units down from top (150px from top)
-      let stepNumber = 1; // For automatic step numbering
-      let i = 0;
-
-      while (i < flowchartData.steps.length) {
-        const currentStep = flowchartData.steps[i];
-        const nextStep = flowchartData.steps[i + 1];
-
-        // Check if this is the "4Y bolts" standalone step (ONLY the one with "4Y bolts" in title)
-        const is4YOnly = currentStep.title.includes("4Y bolts");
-
-        // Check if current and next steps should be parallel (consecutive T1 & T2)
-        const isParallel = nextStep &&
-          !is4YOnly &&
-          ((currentStep.technician === "T1" && nextStep.technician === "T2") ||
-           (currentStep.technician === "T2" && nextStep.technician === "T1"));
-
-        if (is4YOnly) {
-          // 4Y bolts - add to separate array, will be placed at bottom later
-          standalone4YSteps.push({
-            ...currentStep,
-            colorCode: "4Y Only"
-          });
-          console.log(`4Y Only step found - will place at bottom: ${currentStep.title.substring(0, 30)}`);
-          i++;
-        } else if (isParallel) {
-          // Place parallel steps stacked VERTICALLY at same x position
-          const leftStep = currentStep.technician === "T1" ? currentStep : nextStep;
-          const rightStep = currentStep.technician === "T1" ? nextStep : currentStep;
-
-          arrangedSteps.push({
-            ...leftStep,
-            position: { x: currentCol, y: BASELINE_Y }, // Top position
-            colorCode: `${stepNumber}.1` // e.g., "2.1"
-          });
-          arrangedSteps.push({
-            ...rightStep,
-            position: { x: currentCol, y: BASELINE_Y + ROW_SPACING }, // Below, stacked vertically
-            colorCode: `${stepNumber}.2` // e.g., "2.2"
-          });
-          console.log(`Col ${currentCol}: Step ${stepNumber}.1 (top) | ${stepNumber}.2 (bottom)`);
-
-          stepNumber++;
-          currentCol += COL_SPACING; // Move to next column
-          i += 2; // Skip both steps
-        } else {
-          // Single step - place at baseline of current column
-          arrangedSteps.push({
-            ...currentStep,
-            position: { x: currentCol, y: BASELINE_Y },
-            colorCode: `${stepNumber}` // e.g., "1", "3"
-          });
-          console.log(`Col ${currentCol}: Step ${stepNumber} - ${currentStep.title.substring(0, 30)}`);
-
-          stepNumber++;
-          currentCol += COL_SPACING; // Move to next column
-          i++;
-        }
-      }
-
-      // Place 4Y bolts steps at bottom, separate from main flow
-      standalone4YSteps.forEach((step, index) => {
-        arrangedSteps.push({
-          ...step,
-          position: { x: index * COL_SPACING, y: BASELINE_Y + (ROW_SPACING * 3) } // 3 rows below baseline
-        });
-        console.log(`4Y Only at bottom: x=${index * COL_SPACING}, y=${BASELINE_Y + (ROW_SPACING * 3)}`);
-      });
-
-      console.log('First load - auto-arranged steps sequentially');
-      setSteps(arrangedSteps);
-
-      // Save the arranged positions
-      localStorage.setItem(storageKey, JSON.stringify({
-        steps: arrangedSteps,
-        edges: [],
-        lastUpdated: new Date().toISOString()
-      }));
+      console.log('No saved data found - using hardcoded positions from flowchart-data.ts');
+      setSteps(flowchartData.steps);
+      setEdges([]);
       return;
     }
 
@@ -1037,6 +953,167 @@ defaultEdges: ${edgesCode}
     alert('Positions exported! Check console for details.');
   };
 
+  // Export FULL layout data (positions, grid, sizes, edges) for verification
+  const handleExportFullLayoutData = () => {
+    const gridSize = 30; // Grid size constant
+
+    // Collect all data for each step
+    const fullLayoutData = steps.map(step => {
+      // Calculate size (use custom heights if available)
+      const CUSTOM_STEP_HEIGHTS: Record<string, number> = {
+        "step-1": 290,
+        "step-2-1": 450,
+        "step-2-2": 420,
+        "step-3": 450,
+        "step-4": 660,
+        "step-5-1": 510,
+        "step-5-2": 800,
+        "step-6": 320,
+        "step-7": 480,
+        "step-8-1": 420,
+        "step-8-2": 420,
+        "step-9-1": 350,
+        "step-9-2": 420,
+        "step-10": 420,
+        "step-4y-bolts": 350
+      };
+
+      const heightPx = CUSTOM_STEP_HEIGHTS[step.id] || (step.tasks.length > 4 ? 450 : 350);
+      const widthPx = 370;
+
+      return {
+        id: step.id,
+        title: step.title.split('\n')[0], // First line only
+        position: {
+          grid: step.position,  // Grid units
+          pixels: {
+            x: step.position.x * gridSize,
+            y: step.position.y * gridSize
+          }
+        },
+        size: {
+          pixels: { width: widthPx, height: heightPx },
+          grid: {
+            width: Math.ceil(widthPx / gridSize),
+            height: Math.ceil(heightPx / gridSize)
+          }
+        },
+        technician: step.technician,
+        tasks: step.tasks.length
+      };
+    });
+
+    // Export edges data
+    const edgesData = edges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: edge.type,
+      sourceHandle: edge.sourceHandle,
+      targetHandle: edge.targetHandle
+    }));
+
+    const exportData = {
+      flowchart: {
+        id: flowchartData?.id,
+        model: flowchartData?.model,
+        serviceType: flowchartData?.serviceType
+      },
+      gridSize: gridSize,
+      layoutMode: layoutMode || 'centered',
+      steps: fullLayoutData,
+      edges: edgesData,
+      exportedAt: new Date().toISOString()
+    };
+
+    // Log to console
+    console.log('\n========================================');
+    console.log('FULL LAYOUT DATA EXPORT');
+    console.log('========================================\n');
+    console.log('Grid Size:', gridSize, 'px');
+    console.log('Layout Mode:', layoutMode || 'centered');
+    console.log('\nSteps Data:');
+    console.table(fullLayoutData);
+    console.log('\nEdges Data:');
+    console.table(edgesData);
+    console.log('\nFull JSON:');
+    console.log(JSON.stringify(exportData, null, 2));
+
+    // Create a nicely formatted text file
+    const fileContent = `
+========================================
+FULL LAYOUT DATA EXPORT
+========================================
+
+Flowchart: ${flowchartData?.model} - ${flowchartData?.serviceType}
+Grid Size: ${gridSize}px
+Layout Mode: ${layoutMode || 'centered'}
+Exported: ${new Date().toLocaleString()}
+
+========================================
+STEPS DATA (${fullLayoutData.length} steps)
+========================================
+
+${fullLayoutData.map((step, index) => `
+${index + 1}. ${step.id}
+   Title: ${step.title}
+   Technician: ${step.technician}
+   Tasks: ${step.tasks}
+
+   Position (Grid):   x: ${step.position.grid.x}, y: ${step.position.grid.y}
+   Position (Pixels): x: ${step.position.pixels.x}px, y: ${step.position.pixels.y}px
+
+   Size (Grid):   width: ${step.size.grid.width}, height: ${step.size.grid.height}
+   Size (Pixels): width: ${step.size.pixels.width}px, height: ${step.size.pixels.height}px
+`).join('\n')}
+
+========================================
+EDGES DATA (${edgesData.length} connections)
+========================================
+
+${edgesData.map((edge, index) => `
+${index + 1}. ${edge.id}
+   From: ${edge.source} (${edge.sourceHandle})
+   To:   ${edge.target} (${edge.targetHandle})
+   Type: ${edge.type}
+`).join('\n')}
+
+========================================
+FULL JSON DATA
+========================================
+
+${JSON.stringify(exportData, null, 2)}
+
+========================================
+COPY-PASTE READY: Positions for flowchart-data.ts
+========================================
+
+${fullLayoutData.map(step =>
+  `      position: { x: ${step.position.grid.x}, y: ${step.position.grid.y} },  // ${step.id}`
+).join('\n')}
+
+========================================
+`;
+
+    // Download as text file
+    const blob = new Blob([fileContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${flowchartData?.id || 'flowchart'}-full-layout-data.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Copy JSON to clipboard
+    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2)).then(() => {
+      alert(`✅ Full layout data exported!\n\n📄 File downloaded: ${link.download}\n📋 JSON copied to clipboard\n\n${fullLayoutData.length} steps\n${edgesData.length} edges\n\nCheck console for detailed tables.`);
+    }).catch(() => {
+      alert(`✅ Full layout data exported!\n\n📄 File downloaded: ${link.download}\n\n${fullLayoutData.length} steps\n${edgesData.length} edges\n\nCheck console for detailed tables.`);
+    });
+  };
+
   // Import positions from JSON file
   const handleImportPositions = () => {
     const input = document.createElement('input');
@@ -1193,6 +1270,16 @@ defaultEdges: ${edgesCode}
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Layout as Centered
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportFullLayoutData}
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-300"
+                >
+                  <FileDown className="h-4 w-4 mr-2" />
+                  Export Full Data
                 </Button>
 
                 <Popover>
@@ -1356,13 +1443,6 @@ defaultEdges: ${edgesCode}
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowProgressTracker(!showProgressTracker)}
-            >
-              {showProgressTracker ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => setIsFullscreen(!isFullscreen)}
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -1386,7 +1466,10 @@ defaultEdges: ${edgesCode}
         )}
 
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative">
+          {/* Info Legend Dropdown - Top Left */}
+          <FlowchartInfoDropdown flowchart={flowchartData} steps={steps} />
+
           <FlowchartEditor
             flowchart={flowchartData}
             steps={steps}
@@ -1409,25 +1492,6 @@ defaultEdges: ${edgesCode}
           />
         </div>
       </div>
-
-      {/* Progress Tracker Sidebar */}
-      {showProgressTracker && !isFullscreen && (
-        <div className="w-64 border-l bg-background overflow-y-auto">
-          <div className="p-4 space-y-4">
-            <ProgressTracker
-              flowchart={flowchartData}
-              steps={steps}
-              completedSteps={progressMetrics.completedSteps}
-              totalSteps={progressMetrics.totalSteps}
-              completedTasks={progressMetrics.completedTasks}
-              totalTasks={progressMetrics.totalTasks}
-              elapsedTime="00:00:00"
-              totalActualTimeSeconds={progressMetrics.totalActualTimeSeconds}
-              onResetProgress={handleResetProgress}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Step Detail Drawer */}
       <StepDetailDrawer
