@@ -114,6 +114,21 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     setSelectedT2(t2);
   }, []);
 
+  // Listen for auto-open event from flowchart animation
+  useEffect(() => {
+    const handleAutoOpen = () => {
+      console.log('Info dropdown: Received auto-open event, opening in 0.5s...');
+      setTimeout(() => {
+        setIsOpen(true);
+        setIsPinned(false); // Not pinned by default
+        console.log('Info dropdown: Opened!');
+      }, 500); // 0.5s delay after zoom completes
+    };
+
+    window.addEventListener('info-dropdown-auto-open', handleAutoOpen);
+    return () => window.removeEventListener('info-dropdown-auto-open', handleAutoOpen);
+  }, []);
+
   // Handle click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

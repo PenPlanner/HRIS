@@ -802,6 +802,7 @@ export default function FlowchartViewerPage() {
       "- Remove all progress and time logs\n" +
       "- Reset all step positions\n" +
       "- Remove saved default layout\n" +
+      "- Reset loading animation (will show on next visit)\n" +
       "- Reload the page to fresh state\n\n" +
       "This cannot be undone."
     );
@@ -810,11 +811,13 @@ export default function FlowchartViewerPage() {
     // Clear ALL localStorage keys for this flowchart
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const defaultLayoutKey = `default-layout-${serviceId}`;
+    const animationShownKey = `flowchart-animation-shown-${flowchartData.id}`;
 
     localStorage.removeItem(storageKey);
     localStorage.removeItem(defaultLayoutKey);
+    localStorage.removeItem(animationShownKey);
 
-    console.log(`Cleared cache keys: ${storageKey}, ${defaultLayoutKey}`);
+    console.log(`Cleared cache keys: ${storageKey}, ${defaultLayoutKey}, ${animationShownKey}`);
 
     // Reload the page to fresh state
     window.location.reload();
@@ -1561,7 +1564,7 @@ ${fullLayoutData.map(step =>
             <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
 
             {/* Offline Status Indicator */}
-            <OfflineStatusIndicator />
+            <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
 
             <Button
               variant="outline"

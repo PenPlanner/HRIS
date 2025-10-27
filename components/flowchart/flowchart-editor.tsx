@@ -2047,40 +2047,84 @@ function FlowchartEditorInner({
   useEffect(() => {
     if (layoutMode === 'centered' && !autoLayoutTriggered.current && steps.length > 0) {
       autoLayoutTriggered.current = true;
-      console.log('🎯 Starting auto-layout with animation...');
 
-      // Step 0: Loading data (500ms)
-      setLoadingStep(0);
+      // Only show animation on first visit
+      if (isFirstVisit.current) {
+        console.log('🎯 Starting auto-layout with animation (first visit)...');
+        setShowLoadingOverlay(true);
 
-      // Step 1: Building connections (500ms)
-      setTimeout(() => setLoadingStep(1), 500);
+        // Step 0: Loading data (700ms)
+        setLoadingStep(0);
 
-      // Step 2: Applying layout (800ms) - RUN ACTUAL LAYOUT FUNCTION
-      setTimeout(() => {
-        setLoadingStep(2);
-        console.log('   Running handleRealignToGridCentered()...');
+        // Step 1: Building connections (700ms)
+        setTimeout(() => setLoadingStep(1), 700);
+
+        // Step 2: Applying layout (900ms) - RUN ACTUAL LAYOUT FUNCTION
+        setTimeout(() => {
+          setLoadingStep(2);
+          console.log('   Running handleRealignToGridCentered()...');
+          handleRealignToGridCentered();
+        }, 1400);
+
+        // Step 3: Centering viewport (900ms) - RUN FIT VIEW
+        setTimeout(() => {
+          setLoadingStep(3);
+          console.log('   Fitting view...');
+          fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
+        }, 2300);
+
+        // Step 4: Zoom to overview (800ms)
+        setTimeout(() => {
+          setLoadingStep(4);
+          console.log('   Zooming to overview...');
+          fitView({ padding: 0.2, duration: 800, maxZoom: 0.7, minZoom: 0.3 });
+        }, 3100);
+
+        // Step 5: Ready! (700ms)
+        setTimeout(() => {
+          setLoadingStep(5);
+        }, 3900);
+
+        // Hide overlay after total 5 seconds
+        setTimeout(() => {
+          setShowLoadingOverlay(false);
+          console.log('✅ Auto-layout complete!');
+
+          // Zoom to first step after overlay disappears (slower zoom)
+          setTimeout(() => {
+            const firstStep = steps.find(s => s.id.includes('step-1') || s.position.x === 0);
+            if (firstStep) {
+              console.log('   Zooming to first step:', firstStep.id);
+              const nodeId = firstStep.id;
+              fitView({
+                nodes: [{ id: nodeId }],
+                duration: 2000,  // Dubbelt så långsam (2 sekunder)
+                maxZoom: 1.2,
+                minZoom: 0.8,
+                padding: 0.3
+              });
+
+              // After zoom completes, dispatch event to open info dropdown
+              setTimeout(() => {
+                console.log('   Dispatching info-dropdown-auto-open event...');
+                window.dispatchEvent(new CustomEvent('info-dropdown-auto-open'));
+              }, 2000); // After zoom animation completes
+            }
+          }, 500);
+
+          // Mark animation as shown in localStorage
+          localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
+        }, 5000);
+      } else {
+        // No animation, just run layout
+        console.log('🎯 Running auto-layout without animation (already visited)...');
         handleRealignToGridCentered();
-      }, 1000);
-
-      // Step 3: Centering viewport (800ms) - RUN FIT VIEW
-      setTimeout(() => {
-        setLoadingStep(3);
-        console.log('   Fitting view...');
-        fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
-      }, 1800);
-
-      // Step 4: Ready! (600ms)
-      setTimeout(() => {
-        setLoadingStep(4);
-      }, 2600);
-
-      // Hide overlay after total 3.5 seconds
-      setTimeout(() => {
-        setShowLoadingOverlay(false);
-        console.log('✅ Auto-layout complete!');
-      }, 3500);
+        setTimeout(() => {
+          fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
+        }, 100);
+      }
     }
-  }, [layoutMode, steps.length, handleRealignToGridCentered, fitView]);
+  }, [layoutMode, steps.length, handleRealignToGridCentered, fitView, flowchart.id, steps]);
 
   // Sync edges to parent component whenever they change
   useEffect(() => {
@@ -2247,7 +2291,116 @@ function FlowchartEditorInner({
             animation: 'fadeIn 0.3s ease-in-out'
           }}
         >
-          <div className="flex flex-col items-center gap-6 max-w-md w-full px-6">
+          {/* Wind Turbine Animation - Left Side */}
+          <div className="absolute left-12 top-1/2 -translate-y-1/2">
+            <div className="relative">
+              {/* Wind Turbine SVG */}
+              <svg width="180" height="340" viewBox="0 0 180 340" className="opacity-90">
+                {/* Tower - taller and centered */}
+                <rect x="85" y="140" width="10" height="170" fill="#cbd5e1" opacity="0.9" />
+
+                {/* Tower base - wider at bottom */}
+                <polygon points="85,310 95,310 98,320 82,320" fill="#94a3b8" />
+
+                {/* Nacelle (hub housing) */}
+                <ellipse cx="90" cy="135" rx="18" ry="12" fill="#94a3b8" />
+                <ellipse cx="90" cy="133" rx="16" ry="10" fill="#64748b" />
+
+                {/* Rotating Blades - larger and more visible */}
+                <g
+                  style={{
+                    transformOrigin: '90px 135px',
+                    animation: loadingStep === 0 ? 'none' : `windTurbineSpin ${Math.max(3 - loadingStep * 0.4, 0.8)}s linear infinite`
+                  }}
+                >
+                  {/* Blade 1 - pointing up */}
+                  <g transform="translate(90, 135) rotate(0)">
+                    <path
+                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
+                      fill="#f1f5f9"
+                      stroke="#cbd5e1"
+                      strokeWidth="2"
+                      opacity="0.95"
+                    />
+                    <path
+                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
+                      fill="#e2e8f0"
+                      opacity="0.8"
+                    />
+                  </g>
+
+                  {/* Blade 2 - 120 degrees */}
+                  <g transform="translate(90, 135) rotate(120)">
+                    <path
+                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
+                      fill="#f1f5f9"
+                      stroke="#cbd5e1"
+                      strokeWidth="2"
+                      opacity="0.95"
+                    />
+                    <path
+                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
+                      fill="#e2e8f0"
+                      opacity="0.8"
+                    />
+                  </g>
+
+                  {/* Blade 3 - 240 degrees */}
+                  <g transform="translate(90, 135) rotate(240)">
+                    <path
+                      d="M -3,0 L -4,-75 L 0,-85 L 4,-75 L 3,0 Z"
+                      fill="#f1f5f9"
+                      stroke="#cbd5e1"
+                      strokeWidth="2"
+                      opacity="0.95"
+                    />
+                    <path
+                      d="M -2,0 L -2.5,-75 L 0,-82 L 2.5,-75 L 2,0 Z"
+                      fill="#e2e8f0"
+                      opacity="0.8"
+                    />
+                  </g>
+
+                  {/* Center hub - on top of blades */}
+                  <circle cx="90" cy="135" r="6" fill="#475569" />
+                  <circle cx="90" cy="135" r="3" fill="#1e293b" />
+                </g>
+
+                {/* Ground line */}
+                <line x1="40" y1="320" x2="140" y2="320" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+                <line x1="50" y1="325" x2="130" y2="325" stroke="#334155" strokeWidth="2" opacity="0.5" />
+              </svg>
+
+              {/* Wind lines animation */}
+              {loadingStep > 0 && (
+                <div className="absolute top-16 -right-20 flex flex-col gap-4">
+                  <div
+                    className="h-1 bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent rounded-full"
+                    style={{
+                      width: '70px',
+                      animation: 'windFlow 1.5s ease-in-out infinite'
+                    }}
+                  />
+                  <div
+                    className="h-1 bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent rounded-full"
+                    style={{
+                      width: '60px',
+                      animation: 'windFlow 1.5s ease-in-out infinite 0.3s'
+                    }}
+                  />
+                  <div
+                    className="h-1 bg-gradient-to-r from-transparent via-cyan-300/40 to-transparent rounded-full"
+                    style={{
+                      width: '55px',
+                      animation: 'windFlow 1.5s ease-in-out infinite 0.6s'
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-6 max-w-md w-full px-6 relative z-10">
             {/* Main Icon with Pulse Animation */}
             <div className="relative">
               <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse"></div>

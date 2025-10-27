@@ -107,3 +107,37 @@
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(107, 114, 128, 0.6);
 }
+
+/* Wind turbine animation keyframes */
+@keyframes windTurbineSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes windFlow {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(0px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
