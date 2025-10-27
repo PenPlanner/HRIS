@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts, resetToDefaultLayout } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -21,8 +21,10 @@ import { extractSIIReferences } from "@/lib/sii-documents";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
+import { TutorialGuide } from "@/components/tutorial-guide";
 import { saveCompletedFlowchart, isFlowchartFullyCompleted, getEarliestStartTime } from "@/lib/completed-flowcharts";
-import { getSelectedTechnicians, getTechnicianById } from "@/lib/technicians-data";
+import { getSelectedTechnicians, getTechnicianById, getActiveTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
+import { TechnicianSelectModal } from "@/components/technician-select-modal";
 
 // Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
 const PDFImportDialog = dynamic(
@@ -73,12 +75,66 @@ export default function FlowchartViewerPage() {
   // State for layout mode
   const [layoutMode, setLayoutMode] = useState<'topdown' | 'centered'>('centered');
 
+  // State for WTG number (Wind Turbine Generator number)
+  const [wtgNumber, setWtgNumber] = useState<string>("");
+
+  // State for Make Year
+  const [makeYear, setMakeYear] = useState<string>("2024");
+
+  // State for technician assignment
+  const [selectedT1, setSelectedT1] = useState<Technician | null>(null);
+  const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
+  const [technicianModalOpen, setTechnicianModalOpen] = useState(false);
+  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2'>('T1');
+
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
     if (isEditMode) {
       setShowProgressTracker(false);
     }
   }, [isEditMode]);
+
+  // Load WTG number from localStorage or generate random
+  useEffect(() => {
+    if (!flowchartData) return;
+    const wtgKey = `wtg-number-${flowchartData.id}`;
+    const savedWTG = localStorage.getItem(wtgKey);
+    if (savedWTG) {
+      setWtgNumber(savedWTG);
+    } else {
+      // Generate random 5-digit WTG number
+      const randomWTG = Math.floor(10000 + Math.random() * 90000).toString();
+      setWtgNumber(randomWTG);
+    }
+
+    // Load Make Year
+    const makeYearKey = `make-year-${flowchartData.id}`;
+    const savedMakeYear = localStorage.getItem(makeYearKey);
+    if (savedMakeYear) {
+      setMakeYear(savedMakeYear);
+    }
+  }, [flowchartData]);
+
+  // Save WTG number to localStorage when changed
+  useEffect(() => {
+    if (!flowchartData || !wtgNumber) return;
+    const wtgKey = `wtg-number-${flowchartData.id}`;
+    localStorage.setItem(wtgKey, wtgNumber);
+  }, [wtgNumber, flowchartData]);
+
+  // Save Make Year to localStorage when changed
+  useEffect(() => {
+    if (!flowchartData || !makeYear) return;
+    const makeYearKey = `make-year-${flowchartData.id}`;
+    localStorage.setItem(makeYearKey, makeYear);
+  }, [makeYear, flowchartData]);
+
+  // Load selected technicians from localStorage
+  useEffect(() => {
+    const { t1, t2 } = getSelectedTechnicians();
+    setSelectedT1(t1);
+    setSelectedT2(t2);
+  }, []);
 
   // Load flowchart data
   useEffect(() => {
@@ -379,6 +435,12 @@ export default function FlowchartViewerPage() {
       // Get selected technicians
       const { t1, t2 } = getSelectedTechnicians();
 
+      // Validate WTG number is set before saving
+      if (!wtgNumber || wtgNumber.length !== 5) {
+        alert("Please enter a 5-digit WTG number before completing the flowchart.");
+        return;
+      }
+
       // Save the completed flowchart
       const t1Data = t1 ? {
         id: t1.id,
@@ -392,7 +454,10 @@ export default function FlowchartViewerPage() {
         initials: t2.initials
       } : undefined;
 
-      saveCompletedFlowchart(flowchartData, steps, startTime, t1Data, t2Data);
+      // For now, bugs will be empty array (bug reporting will be added later)
+      const bugs: any[] = [];
+
+      saveCompletedFlowchart(flowchartData, steps, startTime, wtgNumber, bugs, t1Data, t2Data);
 
       // Mark as saved to avoid duplicates
       localStorage.setItem(savedKey, 'true');
@@ -559,6 +624,32 @@ export default function FlowchartViewerPage() {
 
     // Mark as having unsaved changes
     setHasUnsavedChanges(true);
+  };
+
+  // Handle technician selection from modal
+  const handleSelectTechnician = (technician: any) => {
+    // Convert from API format to local format
+    const localTech: Technician = {
+      id: technician.id,
+      firstName: technician.first_name,
+      lastName: technician.last_name,
+      initials: technician.initials,
+      email: technician.email,
+      isActive: true
+    };
+
+    if (technicianModalRole === 'T1') {
+      setSelectedT1(localTech);
+      saveSelectedTechnician('T1', localTech.id);
+    } else {
+      setSelectedT2(localTech);
+      saveSelectedTechnician('T2', localTech.id);
+    }
+  };
+
+  const openTechnicianModal = (role: 'T1' | 'T2') => {
+    setTechnicianModalRole(role);
+    setTechnicianModalOpen(true);
   };
 
   // Handle task service type change
@@ -796,18 +887,6 @@ export default function FlowchartViewerPage() {
 
   // Clear cache and reload page
   const handleClearCache = () => {
-    const confirmed = window.confirm(
-      "Clear all cached data for this flowchart?\n\n" +
-      "This will:\n" +
-      "- Remove all progress and time logs\n" +
-      "- Reset all step positions\n" +
-      "- Remove saved default layout\n" +
-      "- Reset loading animation (will show on next visit)\n" +
-      "- Reload the page to fresh state\n\n" +
-      "This cannot be undone."
-    );
-    if (!confirmed) return;
-
     // Clear ALL localStorage keys for this flowchart
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const defaultLayoutKey = `default-layout-${serviceId}`;
@@ -1361,229 +1440,216 @@ ${fullLayoutData.map(step =>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
+        {/* Header - Modern Minimal Layout */}
         {!isFullscreen && (
-        <div className="border-b px-6 py-4 bg-background">
-          {/* Title row */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-4">
-              {!isFullscreen && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push("/flowcharts")}
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back
-                </Button>
-              )}
-              <div>
-                <h1 className="text-2xl font-bold">{flowchartData.model}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-sm text-muted-foreground">Service Program</p>
-                  {flowchartData.isCustom && (
-                    <Badge variant="secondary" className="text-xs">Custom</Badge>
-                  )}
+        <div className="border-b px-4 py-2 bg-background/95 backdrop-blur-sm">
+          {/* Single compact row */}
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: Back button + Title */}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/flowcharts")}
+                className="h-8 px-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">{flowchartData.model}</h1>
+                <span className="text-sm text-muted-foreground">· Service Program</span>
+                <span className="text-xs text-muted-foreground">· Rev. {flowchartData.revisionDate}</span>
+                {flowchartData.isCustom && (
+                  <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
+                )}
+                {/* WTG Number Input */}
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="text-xs text-muted-foreground font-medium">WTG:</span>
+                  <input
+                    type="text"
+                    value={wtgNumber}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                      setWtgNumber(value);
+                    }}
+                    placeholder="00000"
+                    maxLength={5}
+                    className="w-16 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                </div>
+                {/* Make Year Input */}
+                <div className="flex items-center gap-1.5 ml-2">
+                  <span className="text-xs text-muted-foreground font-medium">Make Year:</span>
+                  <input
+                    type="text"
+                    value={makeYear}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setMakeYear(value);
+                    }}
+                    placeholder="2024"
+                    maxLength={4}
+                    className="w-14 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                </div>
+                {/* Technician Assignment */}
+                <div className="flex items-center gap-1 ml-2">
+                  <Users className="h-3 w-3 text-muted-foreground" />
+                  <button
+                    onClick={() => openTechnicianModal('T1')}
+                    className={cn(
+                      "h-6 px-2 text-xs font-bold rounded border transition-colors",
+                      selectedT1
+                        ? "bg-blue-50 dark:bg-blue-950 text-blue-600 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
+                        : "bg-background border-border hover:bg-accent"
+                    )}
+                  >
+                    T1{selectedT1 ? `: ${selectedT1.initials}` : ''}
+                  </button>
+                  <span className="text-muted-foreground">/</span>
+                  <button
+                    onClick={() => openTechnicianModal('T2')}
+                    className={cn(
+                      "h-6 px-2 text-xs font-bold rounded border transition-colors",
+                      selectedT2
+                        ? "bg-purple-50 dark:bg-purple-950 text-purple-600 border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900"
+                        : "bg-background border-border hover:bg-accent"
+                    )}
+                  >
+                    T2{selectedT2 ? `: ${selectedT2.initials}` : ''}
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Controls row - wraps to multiple lines */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Edit Mode Controls */}
-            {isEditMode ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddStep}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Step
-                </Button>
+            {/* Right: Controls */}
+            <div className="flex items-center gap-1.5">
+              {/* Edit Mode Controls */}
+              {isEditMode ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleAddStep} className="h-8">
+                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Add</span>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPdfImportOpen(true)}
-                >
-                  <FileUp className="h-4 w-4 mr-2" />
-                  Import PDF
-                </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPdfImportOpen(true)} className="h-8">
+                    <FileUp className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Import</span>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportFlowchart}
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
+                  <Button variant="outline" size="sm" onClick={handleExportFlowchart} className="h-8">
+                    <FileDown className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Export</span>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportToCode}
-                  className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Layout as Centered
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportToCode}
+                    className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
+                  >
+                    <Save className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Save Layout</span>
+                  </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportFullLayoutData}
-                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-300"
-                >
-                  <FileDown className="h-4 w-4 mr-2" />
-                  Export Full Data
-                </Button>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
-                    >
-                      <Grid3x3 className="h-4 w-4 mr-2" />
-                      Auto Layout
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-2">
-                    <div className="space-y-1">
-                      <button
-                        onClick={() => {
-                          setLayoutMode('topdown');
-                          // Call the specific layout function directly
-                          if ((window as any).__flowchartRealignToGridTopDown) {
-                            (window as any).__flowchartRealignToGridTopDown();
-                            setToastMessage("Applied Top-Down layout!");
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                          }
-                        }}
-                        className={cn(
-                          "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                          layoutMode === 'topdown' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
-                        )}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
                       >
-                        Top-Down
-                      </button>
-                      <button
-                        onClick={() => {
-                          setLayoutMode('centered');
-                          // Call the specific layout function directly
-                          if ((window as any).__flowchartRealignToGridCentered) {
-                            (window as any).__flowchartRealignToGridCentered();
-                            setToastMessage("Applied Centered layout!");
-                            setShowToast(true);
-                            setTimeout(() => setShowToast(false), 2000);
-                          }
-                        }}
-                        className={cn(
-                          "w-full px-3 py-2 text-sm text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
-                          layoutMode === 'centered' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
-                        )}
-                      >
-                        Centered
-                      </button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                        <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
+                        <span className="text-xs">Layout</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-40 p-2">
+                      <div className="space-y-1">
+                        <button
+                          onClick={() => {
+                            setLayoutMode('topdown');
+                            if ((window as any).__flowchartRealignToGridTopDown) {
+                              (window as any).__flowchartRealignToGridTopDown();
+                              setToastMessage("Top-Down layout applied!");
+                              setShowToast(true);
+                              setTimeout(() => setShowToast(false), 2000);
+                            }
+                          }}
+                          className={cn(
+                            "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
+                            layoutMode === 'topdown' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                          )}
+                        >
+                          Top-Down
+                        </button>
+                        <button
+                          onClick={() => {
+                            setLayoutMode('centered');
+                            if ((window as any).__flowchartRealignToGridCentered) {
+                              (window as any).__flowchartRealignToGridCentered();
+                              setToastMessage("Centered layout applied!");
+                              setShowToast(true);
+                              setTimeout(() => setShowToast(false), 2000);
+                            }
+                          }}
+                          className={cn(
+                            "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
+                            layoutMode === 'centered' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                          )}
+                        >
+                          Centered
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
-                {/* Free Positioning Toggle */}
-                <label className="flex items-center gap-2 border rounded-md px-3 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={freePositioning}
-                    onChange={(e) => setFreePositioning(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground">Free Position</span>
-                </label>
+                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
+                    <Eye className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">View</span>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {/* Hide Completed Steps Toggle */}
+                  <label className="flex items-center gap-1.5 border rounded-md px-2 py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors h-8">
+                    <input
+                      type="checkbox"
+                      checked={hideCompletedSteps}
+                      onChange={(e) => setHideCompletedSteps(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-xs font-medium text-muted-foreground">Hide Done</span>
+                  </label>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleEditMode}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Mode
-                </Button>
-              </>
-            ) : (
-              <>
-                {/* Service Type Filter */}
-                <div className="flex items-center gap-2 border rounded-md px-3 py-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">Service Filter:</span>
-                  <Select value={selectedServiceType} onValueChange={setSelectedServiceType}>
-                    <SelectTrigger className="h-7 w-[100px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tasks</SelectItem>
-                      <SelectItem value="1Y">1Y Only</SelectItem>
-                      <SelectItem value="2Y">Up to 2Y</SelectItem>
-                      <SelectItem value="3Y">Up to 3Y</SelectItem>
-                      <SelectItem value="4Y">Up to 4Y</SelectItem>
-                      <SelectItem value="5Y">Up to 5Y</SelectItem>
-                      <SelectItem value="6Y">Up to 6Y</SelectItem>
-                      <SelectItem value="7Y">Up to 7Y</SelectItem>
-                      <SelectItem value="10Y">Up to 10Y</SelectItem>
-                      <SelectItem value="12Y">Up to 12Y</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-8">
+                    <Edit className="h-3.5 w-3.5 mr-1.5" />
+                    <span className="text-xs">Edit</span>
+                  </Button>
+                </>
+              )}
 
-                {/* Hide Completed Steps Toggle */}
-                <label className="flex items-center gap-2 border rounded-md px-3 py-1.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={hideCompletedSteps}
-                    onChange={(e) => setHideCompletedSteps(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground">Hide Completed</span>
-                </label>
+              {/* Divider */}
+              <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleEditMode}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                Edit Mode
+              {/* Offline Status */}
+              <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
+
+              {/* Fullscreen */}
+              <Button variant="outline" size="sm" onClick={() => setIsFullscreen(!isFullscreen)} className="h-8 w-8 p-0">
+                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </Button>
-              </>
-            )}
 
-            {/* Separator */}
-            <div className="h-6 w-px bg-gray-300 dark:bg-gray-600" />
-
-            {/* Offline Status Indicator */}
-            <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-            >
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-
-            {/* Clear Cache Button - Available in both modes */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClearCache}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear Cache
-            </Button>
+              {/* Clear Cache */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearCache}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
+                title="Clear Cache"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </div>
         )}
@@ -1845,6 +1911,18 @@ ${fullLayoutData.map(step =>
           </div>
         </div>
       )}
+
+      {/* Tutorial Guide */}
+      <TutorialGuide />
+
+      {/* Technician Selection Modal */}
+      <TechnicianSelectModal
+        open={technicianModalOpen}
+        onOpenChange={setTechnicianModalOpen}
+        onSelect={handleSelectTechnician}
+        title={technicianModalRole === 'T1' ? "Select Technician 1" : "Select Technician 2"}
+        currentSelection={technicianModalRole === 'T1' ? selectedT1 : selectedT2}
+      />
 
       <style jsx>{`
         @keyframes slideInUp {

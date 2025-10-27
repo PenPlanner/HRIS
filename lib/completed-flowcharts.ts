@@ -1,9 +1,25 @@
 // Completed Flowcharts Storage System
 import { FlowchartData, FlowchartStep } from "./flowchart-data";
 
+export interface BugReport {
+  id: string;
+  taskId: string; // Which task this bug was found in
+  stepId: string; // Which step this bug belongs to
+  title: string;
+  description: string;
+  severity: "low" | "medium" | "high" | "critical";
+  status: "open" | "investigating" | "crushed"; // "crushed" = resolved/fixed
+  reportedAt: string;
+  reportedBy?: string; // Technician who reported it
+  resolvedAt?: string;
+  resolvedBy?: string;
+  notes?: string;
+}
+
 export interface CompletedFlowchart {
   id: string; // Unique ID for this completed report
   flowchartId: string; // Original flowchart ID (e.g., "enventus-mk0-1y")
+  wtgNumber: string; // Wind Turbine Generator number (5-digit unique identifier)
   flowchartData: FlowchartData; // Original flowchart metadata
   steps: FlowchartStep[]; // All steps with completed tasks, times, notes, etc.
   startedAt: string; // ISO timestamp when work started
@@ -21,12 +37,16 @@ export interface CompletedFlowchart {
       initials: string;
     };
   };
+  bugs?: BugReport[]; // Bug reports found during this service
   summary: {
     totalSteps: number;
     completedSteps: number;
     totalTasks: number;
     completedTasks: number;
     totalNotes: number;
+    totalBugs: number;
+    openBugs: number;
+    crushedBugs: number;
     targetTimeMinutes: number;
     actualTimeMinutes: number;
     timeVariance: number; // Positive = overtime, Negative = ahead of schedule
@@ -52,6 +72,8 @@ export function saveCompletedFlowchart(
   flowchartData: FlowchartData,
   steps: FlowchartStep[],
   startedAt: string,
+  wtgNumber: string,
+  bugs?: BugReport[],
   t1?: { id: string; name: string; initials: string },
   t2?: { id: string; name: string; initials: string }
 ): CompletedFlowchart {
@@ -73,9 +95,14 @@ export function saveCompletedFlowchart(
     ), 0
   );
 
+  const totalBugs = bugs?.length || 0;
+  const openBugs = bugs?.filter(b => b.status === "open").length || 0;
+  const crushedBugs = bugs?.filter(b => b.status === "crushed").length || 0;
+
   const completedFlowchart: CompletedFlowchart = {
     id: `${flowchartData.id}-${Date.now()}`, // Unique ID with timestamp
     flowchartId: flowchartData.id,
+    wtgNumber,
     flowchartData,
     steps,
     startedAt,
@@ -85,12 +112,16 @@ export function saveCompletedFlowchart(
       ...(t1 && { t1 }),
       ...(t2 && { t2 })
     },
+    bugs,
     summary: {
       totalSteps: steps.length,
       completedSteps,
       totalTasks,
       completedTasks,
       totalNotes,
+      totalBugs,
+      openBugs,
+      crushedBugs,
       targetTimeMinutes: flowchartData.totalMinutes,
       actualTimeMinutes,
       timeVariance: actualTimeMinutes - flowchartData.totalMinutes
@@ -153,4 +184,61 @@ export function formatDuration(minutes: number): string {
   if (hours === 0) return `${mins}m`;
   if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
+}
+
+// Get all bugs from all completed flowcharts
+export function getAllBugs(): Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> {
+  const allFlowcharts = getCompletedFlowcharts();
+  const bugs: Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> = [];
+
+  allFlowcharts.forEach(flowchart => {
+    if (flowchart.bugs && flowchart.bugs.length > 0) {
+      flowchart.bugs.forEach(bug => {
+        bugs.push({
+          ...bug,
+          flowchartId: flowchart.flowchartId,
+          wtgNumber: flowchart.wtgNumber,
+          flowchartName: `${flowchart.flowchartData.model} - ${flowchart.flowchartData.serviceType}`
+        });
+      });
+    }
+  });
+
+  return bugs;
+}
+
+// Get bugs by status
+export function getBugsByStatus(status: "open" | "investigating" | "crushed"): Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> {
+  return getAllBugs().filter(bug => bug.status === status);
+}
+
+// Get bugs for a specific WTG number
+export function getBugsByWTG(wtgNumber: string): BugReport[] {
+  const flowchart = getCompletedFlowcharts().find(cf => cf.wtgNumber === wtgNumber);
+  return flowchart?.bugs || [];
+}
+
+// Update bug status
+export function updateBugStatus(bugId: string, status: "open" | "investigating" | "crushed", resolvedBy?: string): void {
+  const allFlowcharts = getCompletedFlowcharts();
+
+  for (const flowchart of allFlowcharts) {
+    if (flowchart.bugs) {
+      const bugIndex = flowchart.bugs.findIndex(b => b.id === bugId);
+      if (bugIndex !== -1) {
+        flowchart.bugs[bugIndex].status = status;
+        if (status === "crushed") {
+          flowchart.bugs[bugIndex].resolvedAt = new Date().toISOString();
+          flowchart.bugs[bugIndex].resolvedBy = resolvedBy;
+        }
+
+        // Update summary counts
+        flowchart.summary.openBugs = flowchart.bugs.filter(b => b.status === "open").length;
+        flowchart.summary.crushedBugs = flowchart.bugs.filter(b => b.status === "crushed").length;
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allFlowcharts));
+        break;
+      }
+    }
+  }
 }

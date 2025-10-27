@@ -6,6 +6,7 @@ import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import { getActiveTechnicians, getSelectedTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
 import { Users, Clock, Timer, ChevronDown, ChevronUp, Pin, X, GripVertical, FileText, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TechnicianSelectModal } from "@/components/technician-select-modal";
 
 interface FlowchartInfoDropdownProps {
   flowchart: FlowchartData;
@@ -16,18 +17,16 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
-  const [position, setPosition] = useState({ x: 8, y: 5 }); // Start 8px from left, 5px from top (TEST POSITION)
+  const [position, setPosition] = useState({ x: 18, y: 5 }); // Start 18px from left, 5px from top
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down');
-  const [showT1Dropdown, setShowT1Dropdown] = useState(false);
-  const [showT2Dropdown, setShowT2Dropdown] = useState(false);
   const [selectedT1, setSelectedT1] = useState<Technician | null>(null);
   const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
+  const [technicianModalOpen, setTechnicianModalOpen] = useState(false);
+  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2'>('T1');
   const timerRef = useRef<NodeJS.Timeout>();
   const buttonRef = useRef<HTMLDivElement>(null);
-  const t1DropdownRef = useRef<HTMLDivElement>(null);
-  const t2DropdownRef = useRef<HTMLDivElement>(null);
 
   // Calculate progress metrics
   const totalTasks = steps.reduce((sum, step) => sum + (step.tasks?.length || 0), 0);
@@ -122,6 +121,12 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
         setIsOpen(true);
         setIsPinned(false); // Not pinned by default
         console.log('Info dropdown: Opened!');
+
+        // After dropdown opens, dispatch event to open tutorial
+        setTimeout(() => {
+          console.log('Info dropdown: Dispatching tutorial-auto-open event...');
+          window.dispatchEvent(new CustomEvent('tutorial-auto-open'));
+        }, 2000); // 2.0s after dropdown opens (gives time for user to see info panel)
       }, 500); // 0.5s delay after zoom completes
     };
 
@@ -129,20 +134,6 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     return () => window.removeEventListener('info-dropdown-auto-open', handleAutoOpen);
   }, []);
 
-  // Handle click outside to close dropdowns
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (t1DropdownRef.current && !t1DropdownRef.current.contains(event.target as Node)) {
-        setShowT1Dropdown(false);
-      }
-      if (t2DropdownRef.current && !t2DropdownRef.current.contains(event.target as Node)) {
-        setShowT2Dropdown(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Save position to localStorage when dragging stops
   useEffect(() => {
@@ -173,16 +164,29 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     setIsPinned(!isPinned);
   };
 
-  const handleSelectTechnician = (role: 'T1' | 'T2', technician: Technician) => {
-    if (role === 'T1') {
-      setSelectedT1(technician);
-      saveSelectedTechnician('T1', technician.id);
-      setShowT1Dropdown(false);
+  const handleSelectTechnician = (technician: any) => {
+    // Convert from API format to local format
+    const localTech: Technician = {
+      id: technician.id,
+      firstName: technician.first_name,
+      lastName: technician.last_name,
+      initials: technician.initials,
+      email: technician.email,
+      isActive: true
+    };
+
+    if (technicianModalRole === 'T1') {
+      setSelectedT1(localTech);
+      saveSelectedTechnician('T1', localTech.id);
     } else {
-      setSelectedT2(technician);
-      saveSelectedTechnician('T2', technician.id);
-      setShowT2Dropdown(false);
+      setSelectedT2(localTech);
+      saveSelectedTechnician('T2', localTech.id);
     }
+  };
+
+  const openTechnicianModal = (role: 'T1' | 'T2') => {
+    setTechnicianModalRole(role);
+    setTechnicianModalOpen(true);
   };
 
   // Drag handlers
@@ -232,6 +236,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
+      data-tutorial="info-panel"
     >
       {/* Info Button */}
       <div className="bg-blue-600/50 hover:bg-blue-700/75 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm">
@@ -299,61 +304,21 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
             <div className="flex items-center gap-1.5">
               {flowchart.technicians === 2 ? (
                 <>
-                  {/* T1 Badge with dropdown */}
-                  <div className="relative" ref={t1DropdownRef}>
-                    <button
-                      onClick={() => setShowT1Dropdown(!showT1Dropdown)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
-                    >
-                      T1{selectedT1 ? `: ${selectedT1.initials}` : ''}
-                    </button>
+                  {/* T1 Button */}
+                  <button
+                    onClick={() => openTechnicianModal('T1')}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                  >
+                    T1{selectedT1 ? `: ${selectedT1.initials}` : ''}
+                  </button>
 
-                    {showT1Dropdown && (
-                      <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[150px] max-h-[200px] overflow-y-auto">
-                        {getActiveTechnicians().map(tech => (
-                          <button
-                            key={tech.id}
-                            onClick={() => handleSelectTechnician('T1', tech)}
-                            className={cn(
-                              "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
-                              selectedT1?.id === tech.id && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-semibold"
-                            )}
-                          >
-                            <div className="font-medium">{tech.firstName} {tech.lastName}</div>
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* T2 Badge with dropdown */}
-                  <div className="relative" ref={t2DropdownRef}>
-                    <button
-                      onClick={() => setShowT2Dropdown(!showT2Dropdown)}
-                      className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
-                    >
-                      T2{selectedT2 ? `: ${selectedT2.initials}` : ''}
-                    </button>
-
-                    {showT2Dropdown && (
-                      <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[150px] max-h-[200px] overflow-y-auto">
-                        {getActiveTechnicians().map(tech => (
-                          <button
-                            key={tech.id}
-                            onClick={() => handleSelectTechnician('T2', tech)}
-                            className={cn(
-                              "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
-                              selectedT2?.id === tech.id && "bg-purple-50 dark:bg-purple-950 text-purple-600 font-semibold"
-                            )}
-                          >
-                            <div className="font-medium">{tech.firstName} {tech.lastName}</div>
-                            <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {/* T2 Button */}
+                  <button
+                    onClick={() => openTechnicianModal('T2')}
+                    className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-colors"
+                  >
+                    T2{selectedT2 ? `: ${selectedT2.initials}` : ''}
+                  </button>
                 </>
               ) : (
                 <span className="text-xs font-semibold">{flowchart.technicians} Technicians</span>
@@ -539,6 +504,15 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
           </div>
         </div>
       </div>
+
+      {/* Technician Selection Modal */}
+      <TechnicianSelectModal
+        open={technicianModalOpen}
+        onOpenChange={setTechnicianModalOpen}
+        onSelect={handleSelectTechnician}
+        title={technicianModalRole === 'T1' ? "Select Technician 1" : "Select Technician 2"}
+        currentSelection={technicianModalRole === 'T1' ? selectedT1 : selectedT2}
+      />
     </div>
   );
 }

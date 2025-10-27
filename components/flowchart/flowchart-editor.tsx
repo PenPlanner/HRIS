@@ -1215,6 +1215,25 @@ function FlowchartEditorInner({
     { icon: '✨', text: 'Ready!', subtext: 'Flowchart loaded successfully' }
   ];
 
+  // Enter fullscreen when loading overlay shows
+  useEffect(() => {
+    if (showLoadingOverlay) {
+      // Request fullscreen
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.log('Fullscreen request denied:', err);
+        });
+      }
+    } else {
+      // Exit fullscreen when overlay closes
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch((err) => {
+          console.log('Exit fullscreen failed:', err);
+        });
+      }
+    }
+  }, [showLoadingOverlay]);
+
   // Re-align all nodes to grid - Auto-layout with intelligent positioning (TOP-DOWN)
   const handleRealignToGridTopDown = useCallback(() => {
     // Parse step number from ID (e.g., "step-2-1" -> {major: 2, minor: 1})
@@ -2099,9 +2118,9 @@ function FlowchartEditorInner({
               fitView({
                 nodes: [{ id: nodeId }],
                 duration: 2000,  // Dubbelt så långsam (2 sekunder)
-                maxZoom: 1.2,
-                minZoom: 0.8,
-                padding: 0.3
+                maxZoom: 0.9,  // Mindre zoom - ett steg ut
+                minZoom: 0.6,
+                padding: 0.4
               });
 
               // After zoom completes, dispatch event to open info dropdown
@@ -2283,10 +2302,10 @@ function FlowchartEditorInner({
 
   return (
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
-      {/* Animated Loading Overlay */}
+      {/* Animated Loading Overlay - Fullscreen */}
       {showLoadingOverlay && (
         <div
-          className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-blue-900/90 to-gray-900/95 backdrop-blur-md"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-blue-900/90 to-gray-900/95 backdrop-blur-md"
           style={{
             animation: 'fadeIn 0.3s ease-in-out'
           }}
