@@ -27,8 +27,8 @@ export function PDFViewerDialog({
   useEffect(() => {
     if (open && pdfUrl) {
       // Add #page= fragment to jump to specific page
-      // Also add view=FitH for better initial view
-      setPdfSrc(`${pdfUrl}#page=${initialPage}&view=FitH`);
+      // Set zoom to 100% and hide sidebar/thumbnails
+      setPdfSrc(`${pdfUrl}#page=${initialPage}&zoom=100&pagemode=none&navpanes=0`);
     }
   }, [open, pdfUrl, initialPage]);
 
@@ -46,13 +46,13 @@ export function PDFViewerDialog({
         className={`${
           isFullscreen
             ? 'w-screen h-screen max-w-none m-0 p-0'
-            : 'max-w-6xl h-[85vh]'
+            : 'max-w-[95vw] h-[95vh]'
         } flex flex-col overflow-hidden p-0`}
       >
         <DialogHeader className={`${isFullscreen ? 'px-4 pt-4 pb-3' : 'px-6 pt-6 pb-4'} flex-shrink-0 border-b`}>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg truncate pr-6">{title}</DialogTitle>
-            <div className="flex items-center gap-4 flex-shrink-0">
+            <div className="flex items-center gap-4 flex-shrink-0 mr-16">
               <Button
                 variant="ghost"
                 size="sm"

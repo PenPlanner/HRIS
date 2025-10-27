@@ -8,7 +8,7 @@ const STORAGE_KEY = 'completed-flowcharts';
 const example1: CompletedFlowchart = {
   id: 'enventus-mk0-1y-1735300000000',
   flowchartId: 'enventus-mk0-1y',
-  wtgNumber: '10523',
+  wtgNumber: '248024',
   flowchartData: {
     id: 'enventus-mk0-1y',
     model: 'EnVentus Mk 0',
@@ -231,7 +231,7 @@ const example1: CompletedFlowchart = {
 const example2: CompletedFlowchart = {
   id: 'enventus-mk0-2y-1735200000000',
   flowchartId: 'enventus-mk0-2y',
-  wtgNumber: '10487',
+  wtgNumber: '156782',
   flowchartData: {
     id: 'enventus-mk0-2y',
     model: 'EnVentus Mk 0',
@@ -472,7 +472,7 @@ const example2: CompletedFlowchart = {
 const example3: CompletedFlowchart = {
   id: 'enventus-mk0-1y-1735100000000',
   flowchartId: 'enventus-mk0-1y',
-  wtgNumber: '10391',
+  wtgNumber: '392045',
   flowchartData: {
     id: 'enventus-mk0-1y',
     model: 'EnVentus Mk 0',
@@ -708,17 +708,17 @@ export function seedCompletedFlowcharts(): void {
 
   if (!existingIds.includes(example1.id)) {
     flowcharts.push(example1);
-    console.log('✅ Added example 1: WTG-10523 (1Y Service - Minor issues)');
+    console.log('✅ Added example 1: WTG-248024 (1Y Service - Minor issues)');
   }
 
   if (!existingIds.includes(example2.id)) {
     flowcharts.push(example2);
-    console.log('✅ Added example 2: WTG-10487 (2Y Service - All issues resolved)');
+    console.log('✅ Added example 2: WTG-156782 (2Y Service - All issues resolved)');
   }
 
   if (!existingIds.includes(example3.id)) {
     flowcharts.push(example3);
-    console.log('✅ Added example 3: WTG-10391 (1Y Service - Critical bearing damage)');
+    console.log('✅ Added example 3: WTG-392045 (1Y Service - Critical bearing damage)');
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(flowcharts));

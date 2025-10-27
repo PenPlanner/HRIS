@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Zap, CheckCircle2 } from "lucide-react";
 import { FlowchartStep, FlowchartData } from "@/lib/flowchart-data";
 import { cn } from "@/lib/utils";
+import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 
 interface ServiceTypeSelectionModalProps {
   open: boolean;
@@ -17,14 +18,14 @@ interface ServiceTypeSelectionModalProps {
   flowchartData?: FlowchartData;
 }
 
-// Service type options
+// Service type options with matching colors from Info Panel
 const SERVICE_TYPES = [
-  { value: "1Y", label: "1 Year Service", yearsOld: 1, color: "from-blue-500 to-blue-600" },
-  { value: "2Y", label: "2 Year Service", yearsOld: 2, color: "from-green-500 to-green-600" },
-  { value: "3Y", label: "3 Year Service", yearsOld: 3, color: "from-yellow-500 to-yellow-600" },
-  { value: "4Y", label: "4 Year Service", yearsOld: 4, color: "from-orange-500 to-orange-600" },
-  { value: "5Y", label: "5 Year Service", yearsOld: 5, color: "from-red-500 to-red-600" },
-  { value: "10Y", label: "10 Year Service", yearsOld: 10, color: "from-purple-500 to-purple-600" },
+  { value: "1Y", label: "1 Year Service", yearsOld: 1, color: SERVICE_TYPE_COLORS["1Y"] },
+  { value: "2Y", label: "2 Year Service", yearsOld: 2, color: SERVICE_TYPE_COLORS["2Y"] },
+  { value: "3Y", label: "3 Year Service", yearsOld: 3, color: SERVICE_TYPE_COLORS["3Y"] },
+  { value: "4Y", label: "4 Year Service", yearsOld: 4, color: SERVICE_TYPE_COLORS["4Y"] },
+  { value: "5Y", label: "5 Year Service", yearsOld: 5, color: SERVICE_TYPE_COLORS["5Y"] },
+  { value: "10Y", label: "10 Year Service", yearsOld: 10, color: SERVICE_TYPE_COLORS["10Y"] },
 ];
 
 export function ServiceTypeSelectionModal({
@@ -138,10 +139,13 @@ export function ServiceTypeSelectionModal({
                 )}
 
                 {/* Service badge */}
-                <div className={cn(
-                  "inline-block px-3 py-1 rounded-md text-white font-bold text-sm mb-2 bg-gradient-to-r",
-                  serviceType.color
-                )}>
+                <div
+                  className="inline-block px-3 py-1 rounded-md font-bold text-sm mb-2 shadow-sm"
+                  style={{
+                    backgroundColor: serviceType.color,
+                    color: serviceType.value === "7Y" || serviceType.value === "10Y" ? "#000000" : "#FFFFFF"
+                  }}
+                >
                   {serviceType.value}
                 </div>
 
@@ -153,22 +157,22 @@ export function ServiceTypeSelectionModal({
             ))}
           </div>
 
-          {/* Total target time overview */}
+          {/* Total time overview */}
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-2 border-purple-200 dark:border-purple-800 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 <span className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                  Total Target Time
+                  Total time
                 </span>
               </div>
               <div className="text-2xl font-bold font-mono text-purple-900 dark:text-purple-100">
-                {totalHours > 0 && <span>{totalHours}h </span>}
-                {totalMinutes > 0 && <span>{totalMinutes}m</span>}
+                {totalHours > 0 && <span>{totalHours}H </span>}
+                {totalMinutes > 0 && <span>{totalMinutes}M</span>}
               </div>
             </div>
             <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
-              {steps.length} steps • Tested target time (2 technicians)
+              {steps.length} steps • Total work time for 2 technicians
             </p>
           </div>
         </div>

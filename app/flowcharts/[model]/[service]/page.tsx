@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users, GraduationCap } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users, GraduationCap, CheckCircle2 } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts, resetToDefaultLayout } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -488,8 +488,8 @@ export default function FlowchartViewerPage() {
       const { t1, t2 } = getSelectedTechnicians();
 
       // Validate WTG number is set before saving
-      if (!wtgNumber || wtgNumber.length !== 5) {
-        alert("Please enter a 5-digit WTG number before completing the flowchart.");
+      if (!wtgNumber || wtgNumber.length < 5 || wtgNumber.length > 6) {
+        alert("Please enter a 5-6 digit WTG number before completing the flowchart.");
         return;
       }
 
@@ -733,8 +733,14 @@ export default function FlowchartViewerPage() {
   };
 
   const openTechnicianModal = (role: 'T1' | 'T2' | 'T3') => {
-    setTechnicianModalRole(role);
-    setTechnicianModalOpen(true);
+    if (role === 'T3') {
+      // T3 is trainee - use single selection modal
+      setTechnicianModalRole(role);
+      setTechnicianModalOpen(true);
+    } else {
+      // T1 or T2 - open pair selection modal
+      setTechnicianPairModalOpen(true);
+    }
   };
 
   // Find next active steps after completing a step
@@ -1716,12 +1722,12 @@ ${fullLayoutData.map(step =>
                     type="text"
                     value={wtgNumber}
                     onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                       setWtgNumber(value);
                     }}
-                    placeholder="00000"
-                    maxLength={5}
-                    className="w-16 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                    placeholder="248024"
+                    maxLength={6}
+                    className="w-20 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                   />
                 </div>
 
@@ -1928,12 +1934,18 @@ ${fullLayoutData.map(step =>
                     <span className="text-xs font-mono font-semibold">
                       {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
-                      {new Date(jobStarted).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(jobStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   </div>
                   {selectedServiceType && selectedServiceType !== 'all' && (
-                    <div className="px-2 py-1 bg-purple-50 dark:bg-purple-950 border border-purple-300 dark:border-purple-700 rounded-md">
-                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{selectedServiceType}</span>
+                    <div
+                      className="px-2 py-1 rounded-md shadow-sm"
+                      style={{
+                        backgroundColor: SERVICE_TYPE_COLORS[selectedServiceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS["1Y"],
+                        color: selectedServiceType === "7Y" || selectedServiceType === "10Y" ? "#000000" : "#FFFFFF"
+                      }}
+                    >
+                      <span className="text-xs font-bold">{selectedServiceType}</span>
                     </div>
                   )}
                 </>
@@ -1952,7 +1964,7 @@ ${fullLayoutData.map(step =>
                     <span className="text-xs font-mono font-semibold">
                       {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
-                      {new Date(jobStarted).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(jobStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700 rounded-md">
@@ -1960,12 +1972,18 @@ ${fullLayoutData.map(step =>
                     <span className="text-xs font-mono font-semibold text-green-700 dark:text-green-300">
                       {new Date(jobFinished).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
-                      {new Date(jobFinished).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(jobFinished).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   </div>
                   {selectedServiceType && selectedServiceType !== 'all' && (
-                    <div className="px-2 py-1 bg-purple-50 dark:bg-purple-950 border border-purple-300 dark:border-purple-700 rounded-md">
-                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{selectedServiceType}</span>
+                    <div
+                      className="px-2 py-1 rounded-md shadow-sm"
+                      style={{
+                        backgroundColor: SERVICE_TYPE_COLORS[selectedServiceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS["1Y"],
+                        color: selectedServiceType === "7Y" || selectedServiceType === "10Y" ? "#000000" : "#FFFFFF"
+                      }}
+                    >
+                      <span className="text-xs font-bold">{selectedServiceType}</span>
                     </div>
                   )}
                 </>
@@ -1993,6 +2011,26 @@ ${fullLayoutData.map(step =>
                   title="Clear Cache"
                 >
                   <Trash2 className="h-3 w-3" />
+                </Button>
+
+                {/* Test: Complete All Tasks */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const updatedSteps = steps.map(step => ({
+                      ...step,
+                      tasks: step.tasks.map(task => ({ ...task, completed: true }))
+                    }));
+                    setSteps(updatedSteps);
+                    setToastMessage('✅ All tasks completed (test mode)');
+                    setShowToast(true);
+                  }}
+                  className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300 dark:hover:bg-green-950"
+                  title="Complete All Tasks (Test)"
+                >
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  <span className="text-xs">Test 100%</span>
                 </Button>
               </div>
             </div>
@@ -2039,6 +2077,9 @@ ${fullLayoutData.map(step =>
             freePositioning={freePositioning}
             layoutMode={layoutMode}
             activeStepIds={activeStepIds}
+            onOpenTechnicianPairModal={() => setTechnicianPairModalOpen(true)}
+            selectedT1={selectedT1}
+            selectedT2={selectedT2}
           />
         </div>
       </div>

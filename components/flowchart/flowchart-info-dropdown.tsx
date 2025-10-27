@@ -61,23 +61,16 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     return sum + (step.notes ? 1 : 0);
   }, 0);
 
-  // Format minutes to hh:mm format
-  const formatToHHMM = (minutes: number): string => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}h`;
-  };
-
-  // Format to "h o m" format
+  // Format to "H M" format (e.g., "38H", "19H 30M")
   const formatToHM = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
-    if (mins === 0) return `${hours}h`;
-    return `${hours}h ${mins}m`;
+    if (mins === 0) return `${hours}H`;
+    return `${hours}H ${mins}M`;
   };
 
   const durationMinutes = flowchart.totalMinutes / flowchart.technicians;
-  const durationFormatted = formatToHHMM(Math.round(durationMinutes));
+  const durationFormatted = formatToHM(Math.round(durationMinutes));
 
   // Auto-close logic: close after 5s if not pinned and not hovering
   useEffect(() => {
@@ -282,28 +275,21 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
             </div>
           </div>
 
-          {/* Work Time */}
-          <div className="grid grid-cols-3 gap-2 text-[11px]">
+          {/* Time Displays */}
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div className="flex flex-col">
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5">
-                <Timer className="h-3 w-3" />
-                <span>Work</span>
-              </div>
-              <div className="font-bold">{flowchart.totalMinutes}m</div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5">
+              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5" title="Turbine downtime - time when turbine is not producing">
                 <Clock className="h-3 w-3" />
-                <span>Total</span>
-              </div>
-              <div className="font-bold">{formatToHM(flowchart.totalMinutes)}</div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5">
-                <Clock className="h-3 w-3" />
-                <span>Down</span>
+                <span>Downtime</span>
               </div>
               <div className="font-bold">{durationFormatted}</div>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5" title="Total work time for 2 technicians (downtime × 2)">
+                <Timer className="h-3 w-3" />
+                <span>Total time</span>
+              </div>
+              <div className="font-bold">{formatToHM(flowchart.totalMinutes)}</div>
             </div>
           </div>
 

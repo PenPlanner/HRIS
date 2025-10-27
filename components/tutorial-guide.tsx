@@ -68,19 +68,19 @@ const tutorialSteps: TutorialStep[] = [
     icon: <Navigation className="h-6 w-6" />,
     position: 'center',
     preview: (
-      <div className="relative bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 rounded-lg p-6 border-2 border-dashed border-blue-400">
+      <div className="relative bg-gray-100 dark:bg-gray-800 rounded-lg p-6 border-2 border-dashed border-blue-400">
         {/* Mock flowchart canvas */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-xs text-blue-600 font-semibold">
             <MousePointer2 className="h-4 w-4" />
-            <span className="animate-pulse">Click & drag to pan →</span>
+            <span>Click & drag to pan →</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="h-16 bg-white dark:bg-gray-700 rounded shadow-md border-2 border-blue-300 animate-pulse" />
+            <div className="h-16 bg-white dark:bg-gray-700 rounded shadow-md border-2 border-blue-300" />
             <div className="h-16 bg-white dark:bg-gray-700 rounded shadow-md" />
           </div>
           <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold">
-            <span className="animate-pulse">⚲ Scroll to zoom</span>
+            <span>⚲ Scroll to zoom</span>
           </div>
         </div>
       </div>
@@ -95,10 +95,10 @@ const tutorialSteps: TutorialStep[] = [
     position: 'left',
     preview: (
       <div className="relative">
-        {/* Mock step box with click animation */}
+        {/* Mock step box */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-blue-500 shadow-xl relative overflow-hidden">
           <div className="absolute top-2 right-2">
-            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center animate-ping opacity-75">
+            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
               <MousePointer2 className="h-4 w-4 text-white" />
             </div>
           </div>
@@ -111,7 +111,7 @@ const tutorialSteps: TutorialStep[] = [
           </div>
         </div>
         <div className="mt-2 text-center">
-          <ArrowRight className="h-4 w-4 mx-auto text-blue-600 animate-bounce" style={{ animationDirection: 'alternate' }} />
+          <ArrowRight className="h-4 w-4 mx-auto text-blue-600" />
           <div className="text-xs text-gray-600 mt-1">Click to open details</div>
         </div>
       </div>
@@ -128,7 +128,7 @@ const tutorialSteps: TutorialStep[] = [
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
           <div className="text-xs font-medium mb-2">11.5.1 Examine crane</div>
           <div className="flex gap-2">
-            <div className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold cursor-pointer hover:bg-blue-600 transition-all animate-pulse">
+            <div className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-bold cursor-pointer hover:bg-blue-600 transition-all">
               📄 SII-11
             </div>
             <div className="text-xs text-blue-600 underline cursor-pointer">Section 5.1 →</div>
@@ -155,7 +155,7 @@ const tutorialSteps: TutorialStep[] = [
           </div>
           <div className="text-xs line-through text-gray-500">Task 1: Check oil level</div>
         </div>
-        <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border-2 border-blue-500 animate-pulse">
+        <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded border-2 border-blue-500">
           <div className="h-4 w-4 rounded border-2 border-gray-300" />
           <div className="text-xs font-medium">Task 2: Inspect bearings ← Click here!</div>
         </div>
@@ -176,7 +176,7 @@ const tutorialSteps: TutorialStep[] = [
       <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <div className="text-xs font-medium">Check oil level</div>
-          <button className="p-1 hover:bg-gray-100 rounded animate-pulse border-2 border-blue-500">
+          <button className="p-1 hover:bg-gray-100 rounded border-2 border-blue-500">
             <Clock className="h-4 w-4 text-blue-600" />
           </button>
         </div>
@@ -211,7 +211,7 @@ const tutorialSteps: TutorialStep[] = [
             </div>
           </div>
         </div>
-        <button className="w-full p-2 border-2 border-dashed border-blue-400 rounded text-xs text-blue-600 hover:bg-blue-50 animate-pulse">
+        <button className="w-full p-2 border-2 border-dashed border-blue-400 rounded text-xs text-blue-600 hover:bg-blue-50">
           + Add Note
         </button>
       </div>
@@ -241,7 +241,7 @@ const tutorialSteps: TutorialStep[] = [
         </div>
 
         {/* After state - completed! */}
-        <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 rounded-lg p-4 border-2 border-green-500 shadow-lg animate-pulse">
+        <div className="bg-green-50 dark:bg-green-950 rounded-lg p-4 border-2 border-green-500 shadow-lg">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-bold text-green-900 dark:text-green-100 flex items-center gap-2">
               <CheckSquare className="h-5 w-5 text-green-600" />
@@ -281,7 +281,7 @@ const tutorialSteps: TutorialStep[] = [
               <div className="h-full bg-green-500 w-1/2" />
             </div>
           </div>
-          <div className="text-[10px] text-green-600 animate-pulse">✓ On track!</div>
+          <div className="text-[10px] text-green-600">✓ On track!</div>
         </div>
       </div>
     ),
@@ -294,13 +294,13 @@ const tutorialSteps: TutorialStep[] = [
     position: 'center',
     preview: (
       <div className="space-y-3">
-        <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 animate-pulse border-2 border-blue-400">
+        <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 border-2 border-blue-400">
           <Download className="h-5 w-5" />
           Make Available Offline
         </button>
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200">
           <div className="flex items-center gap-2 mb-2">
-            <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+            <Loader2 className="h-4 w-4 text-blue-600" />
             <span className="text-xs font-medium">Downloading...</span>
           </div>
           <div className="space-y-2">
@@ -309,7 +309,7 @@ const tutorialSteps: TutorialStep[] = [
               <span>SII-11: Service crane</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <Loader2 className="h-3 w-3 text-blue-600 animate-spin" />
+              <Loader2 className="h-3 w-3 text-blue-600" />
               <span>SII-12: High voltage...</span>
             </div>
           </div>
@@ -325,8 +325,8 @@ const tutorialSteps: TutorialStep[] = [
     position: 'center',
     preview: (
       <div className="text-center space-y-3">
-        <div className="text-6xl animate-bounce">🎉</div>
-        <div className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="text-6xl">🎉</div>
+        <div className="text-lg font-bold text-blue-600">
           You're all set!
         </div>
         <div className="flex items-center justify-center gap-2 text-xs text-gray-600">
@@ -424,7 +424,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center">
                 <Bot className="h-7 w-7 text-white" />
               </div>
               <div>
@@ -458,7 +458,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
             <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleStart}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 Yes, show me around!
@@ -479,7 +479,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
               {/* Progress Bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300"
+                  className="h-full bg-blue-600 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -487,7 +487,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
               <DialogHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
+                    <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white">
                       {step.icon}
                     </div>
                     <div>
@@ -533,7 +533,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
 
               <Button
                 onClick={handleNext}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="gap-2 bg-blue-600 hover:bg-blue-700"
               >
                 {currentStep === tutorialSteps.length - 1 ? 'Finish' : 'Next'}
                 {currentStep === tutorialSteps.length - 1 ? (
@@ -565,7 +565,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center">
                 <Book className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -577,7 +577,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
 
           <div className="flex-1 overflow-y-auto space-y-4">
             {/* Restart Tutorial */}
-            <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
+            <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Bot className="h-8 w-8 text-blue-600" />
@@ -664,7 +664,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
 
           {/* Helper text */}
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-2xl flex items-center gap-2 animate-bounce">
+            <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-2xl flex items-center gap-2">
               <span className="text-2xl">👆</span>
               <span className="text-sm font-semibold">Check out this feature!</span>
             </div>

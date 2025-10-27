@@ -290,171 +290,178 @@ export function StepDetailDrawer({
             Step {step.colorCode} Details
           </DialogTitle>
 
-          {/* Header Cards - Horizontal Layout */}
-          <div className="flex items-stretch gap-2 mb-3">
-            {/* Technician Badge Card - Clickable with Dropdown */}
-            <div className="relative" ref={techDropdownRef}>
-              <div
-                className="rounded-md px-2 py-1.5 flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
-              >
+          {/* Header - Improved Layout */}
+          <div className="space-y-3 mb-4">
+            {/* Row 1: Technicians */}
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
+              <div className="relative flex items-center gap-2 flex-1" ref={techDropdownRef}>
                 {step.technician === "both" ? (
                   <>
-                    <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
-                      <User className="h-3 w-3 text-white" />
-                      <span className="text-[10px] font-bold text-white">
-                        T1{assignedTechnician || t1 ? `: ${(assignedTechnician || t1)?.initials}` : ''}
-                      </span>
-                    </div>
-                    <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
-                      <User className="h-3 w-3 text-white" />
-                      <span className="text-[10px] font-bold text-white">
-                        T2{assignedTechnician || t2 ? `: ${(assignedTechnician || t2)?.initials}` : ''}
-                      </span>
-                    </div>
+                    <button
+                      onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                      className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                    >
+                      <span className="text-xs font-bold text-white">T1</span>
+                      <span className="text-xs text-white/90">{t1 ? `${t1.firstName} ${t1.lastName}` : 'Not assigned'}</span>
+                      <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                    </button>
+                    <button
+                      onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                      className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                    >
+                      <span className="text-xs font-bold text-white">T2</span>
+                      <span className="text-xs text-white/90">{t2 ? `${t2.firstName} ${t2.lastName}` : 'Not assigned'}</span>
+                      <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                    </button>
                   </>
                 ) : step.technician === "T1" ? (
-                  <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
-                    <User className="h-3 w-3 text-white" />
-                    <span className="text-[10px] font-bold text-white">
-                      T1{assignedTechnician || t1 ? `: ${(assignedTechnician || t1)?.initials}` : ''}
+                  <button
+                    onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                    className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  >
+                    <span className="text-xs font-bold text-white">T1</span>
+                    <span className="text-xs text-white/90">
+                      {assignedTechnician ? `${assignedTechnician.firstName} ${assignedTechnician.lastName}` : t1 ? `${t1.firstName} ${t1.lastName}` : 'Not assigned'}
                     </span>
-                    {assignedTechnician && <span className="text-[10px] text-white">✓</span>}
-                  </div>
+                    <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                  </button>
                 ) : (
-                  <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
-                    <User className="h-3 w-3 text-white" />
-                    <span className="text-[10px] font-bold text-white">
-                      T2{assignedTechnician || t2 ? `: ${(assignedTechnician || t2)?.initials}` : ''}
+                  <button
+                    onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                    className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  >
+                    <span className="text-xs font-bold text-white">T2</span>
+                    <span className="text-xs text-white/90">
+                      {assignedTechnician ? `${assignedTechnician.firstName} ${assignedTechnician.lastName}` : t2 ? `${t2.firstName} ${t2.lastName}` : 'Not assigned'}
                     </span>
-                    {assignedTechnician && <span className="text-[10px] text-white">✓</span>}
+                    <ChevronDown className="h-3 w-3 text-white/70 group-hover:text-white" />
+                  </button>
+                )}
+
+                {/* Technician Selection Dropdown */}
+                {showTechnicianDropdown && (
+                  <div className="absolute left-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 z-50 min-w-[280px] max-h-[300px] overflow-y-auto">
+                    <div className="p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-bold uppercase tracking-wide">
+                        {step.technician === "both" ? "Assign Technicians for this Step" : `Assign Technician for this Step (${step.technician})`}
+                      </p>
+                      {getActiveTechnicians().map(tech => (
+                        <button
+                          key={tech.id}
+                          onClick={() => handleAssignTechnician(tech)}
+                          className={cn(
+                            "w-full px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors mb-1 border border-transparent",
+                            assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{tech.firstName} {tech.lastName}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {tech.initials} • {tech.email}
+                              </div>
+                            </div>
+                            {assignedTechnician?.id === tech.id && (
+                              <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                      {assignedTechnician && (
+                        <>
+                          <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
+                          <button
+                            onClick={handleClearAssignment}
+                            className="w-full px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
+                          >
+                            Clear assignment (use default {step.technician})
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Technician Selection Dropdown */}
-              {showTechnicianDropdown && (
-                <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[180px] max-h-[250px] overflow-y-auto">
-                  <div className="p-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Assign Technician</p>
-                    {getActiveTechnicians().map(tech => (
-                      <button
-                        key={tech.id}
-                        onClick={() => handleAssignTechnician(tech)}
-                        className={cn(
-                          "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors mb-1",
-                          assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-semibold"
-                        )}
-                      >
-                        <div className="font-medium">{tech.firstName} {tech.lastName}</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
-                      </button>
-                    ))}
-                    {assignedTechnician && (
-                      <>
-                        <div className="border-t my-1"></div>
-                        <button
-                          onClick={handleClearAssignment}
-                          className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-colors"
-                        >
-                          Clear assignment
-                        </button>
-                      </>
+            {/* Row 2: Target Time and Progress */}
+            <div className="flex items-center gap-4">
+              {/* Target Time */}
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg px-4 py-2 flex items-center gap-3 flex-1">
+                <div className="bg-white dark:bg-gray-900 rounded-full p-2">
+                  <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <div className="text-xs text-green-700 dark:text-green-400 font-semibold uppercase tracking-wide">Target Time</div>
+                  <div className="text-2xl font-bold font-mono text-green-900 dark:text-green-100">
+                    {formatDurationTarget(step.duration)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tasks Progress */}
+              <div className={cn(
+                "border-2 rounded-lg px-4 py-2 flex items-center gap-3 min-w-[180px]",
+                isComplete ? "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700" : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+              )}>
+                <div className="relative w-12 h-12 flex-shrink-0">
+                  {/* Background Circle */}
+                  <svg className="w-12 h-12 transform -rotate-90">
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className={cn(
+                        isComplete ? "text-green-200 dark:text-green-900" : "text-gray-200 dark:text-gray-700"
+                      )}
+                    />
+                    {/* Progress Circle */}
+                    <circle
+                      cx="24"
+                      cy="24"
+                      r="20"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 20}`}
+                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
+                      className={cn(
+                        "transition-all duration-500",
+                        isComplete ? "text-green-500" : "text-blue-500"
+                      )}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+
+                  {/* Center Content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    {isComplete ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{Math.round((totalTasks > 0 ? completedTasks / totalTasks : 0) * 100)}%</span>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Progress Card */}
-            <div className={cn(
-              "border rounded-md px-2 py-1.5 flex items-center gap-2",
-              isComplete ? "bg-green-50 border-green-200" : "border-gray-200"
-            )}>
-              <div className="relative w-10 h-10 flex-shrink-0">
-                {/* Background Circle */}
-                <svg className="w-10 h-10 transform -rotate-90">
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r="16"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    className={cn(
-                      isComplete ? "text-green-200" : "text-gray-200"
-                    )}
-                  />
-                  {/* Progress Circle */}
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r="16"
-                    stroke="currentColor"
-                    strokeWidth="3"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 16}`}
-                    strokeDashoffset={`${2 * Math.PI * 16 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
-                    className={cn(
-                      "transition-all duration-500",
-                      isComplete ? "text-green-500" : "text-blue-500"
-                    )}
-                    strokeLinecap="round"
-                  />
-                </svg>
-
-                {/* Center Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  {isComplete ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Clock className="h-4 w-4 text-blue-600" />
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">Tasks</div>
+                  <div className={cn(
+                    "text-xl font-bold font-mono",
+                    isComplete ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-gray-100"
+                  )}>
+                    {completedTasks}/{totalTasks}
+                  </div>
+                  {isComplete && (
+                    <div className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      Completed
+                    </div>
                   )}
                 </div>
               </div>
-
-              {/* Time Info */}
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wide">Target:</span>
-                  <span className="text-[10px] font-semibold text-gray-700 font-mono">
-                    {formatDurationTarget(step.duration)}
-                  </span>
-                </div>
-                {totalStepTimeMinutes > 0 && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-[9px] text-gray-500 uppercase tracking-wide">Actual:</span>
-                    <span className={cn(
-                      "text-[10px] font-semibold font-mono",
-                      totalStepTimeMinutes <= step.durationMinutes ? "text-green-700" : "text-red-700"
-                    )}>
-                      {formatTime(totalStepTimeMinutes)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Completion Info */}
-              {isComplete && step.completedAt && (
-                <div>
-                  <p className="text-[10px] font-bold text-green-700 font-mono leading-tight">
-                    {new Date(step.completedAt).toLocaleDateString('sv-SE', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit'
-                    })}
-                  </p>
-                  <p className="text-[10px] font-bold text-green-700 font-mono">
-                    {new Date(step.completedAt).toLocaleTimeString('sv-SE', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  <p className="text-[8px] font-medium uppercase tracking-wide text-green-600">
-                    Completed
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 

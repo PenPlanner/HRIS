@@ -33,18 +33,18 @@ export function ProgressTracker({
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
   const taskProgressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-  // Format minutes to human readable format (e.g., "1h 30m" or "45m")
+  // Format minutes to H M format (e.g., "1H 30M" or "45M")
   const formatTime = (totalMinutes: number): string => {
-    if (totalMinutes === 0) return "0m";
+    if (totalMinutes === 0) return "0M";
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
 
-    if (hours === 0) return `${minutes}m`;
-    if (minutes === 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
+    if (hours === 0) return `${minutes}M`;
+    if (minutes === 0) return `${hours}H`;
+    return `${hours}H ${minutes}M`;
   };
 
-  // Format duration string like "2280m" to "38h" or "38h 0m"
+  // Format duration string like "2280m" to "38H" or "38H 0M"
   const formatDuration = (duration: string): string => {
     const match = duration.match(/(\d+)m/);
     if (!match) return duration;

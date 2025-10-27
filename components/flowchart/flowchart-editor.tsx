@@ -28,11 +28,13 @@ import { FlowchartStep, FlowchartData, generateStepId, parseServiceTimes, getCum
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getSelectedTechnicians, getActiveTechnicians, getTechnicianById, Technician } from "@/lib/technicians-data";
+import { TechnicianSelectModal } from "@/components/technician-select-modal";
+import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
 
 interface FlowchartEditorProps {
   flowchart: FlowchartData;
@@ -55,6 +57,9 @@ interface FlowchartEditorProps {
   freePositioning?: boolean;
   layoutMode?: 'topdown' | 'centered';
   activeStepIds?: string[];
+  onOpenTechnicianPairModal?: () => void;
+  selectedT1?: Technician | null;
+  selectedT2?: Technician | null;
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -92,6 +97,7 @@ interface StepNodeData {
   selectedServiceType?: string;
   gridSize: number;
   isActive?: boolean;
+  onOpenTechnicianPairModal?: () => void;
   [key: string]: unknown; // Index signature for React Flow compatibility
 }
 
@@ -133,57 +139,29 @@ interface StepNodeProps extends NodeProps {
 }
 
 function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: StepNodeProps) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive } = data;
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, onOpenTechnicianPairModal } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
-  const [showTechnicianDropdown, setShowTechnicianDropdown] = useState(false);
-  const techDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Get selected technicians for displaying initials (fallback)
-  const { t1, t2 } = getSelectedTechnicians();
-
-  // Get assigned technician for this step
-  const assignedTechnician = step.assignedTechnicianId ? getTechnicianById(step.assignedTechnicianId) : null;
-
-  // Determine which technician to display
-  const displayTechnician = assignedTechnician || (step.technician === "T1" ? t1 : t2);
-
-  // Handle click outside to close dropdown
+  // Debug: Log when isActive changes
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (techDropdownRef.current && !techDropdownRef.current.contains(event.target as Node)) {
-        setShowTechnicianDropdown(false);
-      }
+    if (isActive) {
+      console.log(`[StepNode ${step.id}] isActive = true! Should show blue border.`);
     }
+  }, [isActive, step.id]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleAssignTechnician = (technician: Technician) => {
-    const updatedStep = {
-      ...step,
-      assignedTechnicianId: technician.id,
-      assignedTechnicianInitials: technician.initials
-    };
-    onUpdateStep(updatedStep);
-    setShowTechnicianDropdown(false);
-  };
-
-  const handleClearAssignment = () => {
-    const updatedStep = {
-      ...step,
-      assignedTechnicianId: undefined,
-      assignedTechnicianInitials: undefined
-    };
-    onUpdateStep(updatedStep);
-    setShowTechnicianDropdown(false);
-  };
+  // Get selected technicians for displaying (synced from header/Start Service)
+  const { t1, t2 } = getSelectedTechnicians();
 
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+  // Debug logging
+  if (isActive || isComplete) {
+    console.log(`[StepNode ${step.id}] Render: isActive=${isActive}, isComplete=${isComplete}, tasks=${completedTasks}/${totalTasks}`);
+  }
 
   // Calculate total notes count from all tasks
   const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
@@ -340,18 +318,26 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
           "relative p-4 w-full h-full hover:shadow-lg transition-all flex flex-col overflow-auto",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
-            : isComplete
-              ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
-              : isActive
-                ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50"
-                : "border-gray-700/50 border-2"
+            : isActive && isComplete
+              ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50 ring-4 ring-blue-300/50"
+              : isComplete
+                ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
+                : isActive
+                  ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50 ring-4 ring-blue-300/50"
+                  : "border-gray-700/50 border-2"
         )}
         style={{
-          backgroundColor: isComplete ? `rgba(34, 197, 94, 0.1)` : isActive ? `rgba(59, 130, 246, 0.05)` : `${step.color}15`,
+          backgroundColor: isActive && isComplete
+            ? `rgba(59, 130, 246, 0.15)`
+            : isComplete
+              ? `rgba(34, 197, 94, 0.1)`
+              : isActive
+                ? `rgba(59, 130, 246, 0.1)`
+                : `${step.color}15`,
           ...(isActive ? {
             borderColor: 'rgb(59, 130, 246)',
             borderWidth: '4px',
-            animation: 'activeStepPulse 2s ease-in-out infinite, activeBorderGlow 2s ease-in-out infinite',
+            boxShadow: '0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3)',
           } : {})
         }}
       >
@@ -439,28 +425,28 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
         </div>
         )}
 
-        {/* Technician Badge - Centered below Step label - Clickable to assign */}
+        {/* Technician Badge - Centered below Step label - Click to assign T1/T2 for job */}
         <div className="flex justify-center mb-2 mt-5 flex-shrink-0">
-          <div className="flex gap-1 relative" ref={techDropdownRef}>
+          <div className="flex gap-1 relative">
             {step.technician === "both" ? (
               <>
                 <Badge
                   variant="secondary"
                   className="text-xs bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
-                  onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                  onClick={() => onOpenTechnicianPairModal?.()}
+                  title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T1{displayTechnician && step.technician === "T1" ? `: ${displayTechnician.initials}` : (t1 ? `: ${t1.initials}` : '')}
-                  {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
+                  T1{t1 ? `: ${t1.firstName} ${t1.lastName}` : ''}
                 </Badge>
                 <Badge
                   variant="secondary"
                   className="text-xs bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
-                  onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                  onClick={() => onOpenTechnicianPairModal?.()}
+                  title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T2{displayTechnician && step.technician === "T2" ? `: ${displayTechnician.initials}` : (t2 ? `: ${t2.initials}` : '')}
-                  {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
+                  T2{t2 ? `: ${t2.firstName} ${t2.lastName}` : ''}
                 </Badge>
               </>
             ) : (
@@ -470,45 +456,12 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   "text-xs text-white border-0 flex items-center gap-1 cursor-pointer transition-colors",
                   step.technician === "T1" ? "bg-blue-500/90 hover:bg-blue-600/90" : "bg-purple-500/90 hover:bg-purple-600/90"
                 )}
-                onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                onClick={() => onOpenTechnicianPairModal?.()}
+                title="Click to assign T1 and T2 for the job"
               >
                 <User className="h-3 w-3" />
-                {step.technician}{displayTechnician ? `: ${displayTechnician.initials}` : ''}
-                {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
+                {step.technician === "T1" ? (t1 ? `T1: ${t1.firstName} ${t1.lastName}` : 'T1') : (t2 ? `T2: ${t2.firstName} ${t2.lastName}` : 'T2')}
               </Badge>
-            )}
-
-            {/* Technician Selection Dropdown */}
-            {showTechnicianDropdown && (
-              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[180px] max-h-[250px] overflow-y-auto">
-                <div className="p-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Assign Technician</p>
-                  {getActiveTechnicians().map(tech => (
-                    <button
-                      key={tech.id}
-                      onClick={() => handleAssignTechnician(tech)}
-                      className={cn(
-                        "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors mb-1",
-                        assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-semibold"
-                      )}
-                    >
-                      <div className="font-medium">{tech.firstName} {tech.lastName}</div>
-                      <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
-                    </button>
-                  ))}
-                  {assignedTechnician && (
-                    <>
-                      <div className="border-t my-1"></div>
-                      <button
-                        onClick={handleClearAssignment}
-                        className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-colors"
-                      >
-                        Clear assignment
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
             )}
           </div>
         </div>
@@ -1101,24 +1054,47 @@ function FlowchartEditorInner({
   onRealignToGrid,
   freePositioning = false,
   layoutMode = 'centered',
-  activeStepIds = []
+  activeStepIds = [],
+  onOpenTechnicianPairModal,
+  selectedT1,
+  selectedT2
 }: FlowchartEditorProps) {
   // Get React Flow instance to access fitView and zoom functions
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
-  // Filter steps based on hideCompletedSteps
+  // Filter steps based on hideCompletedSteps and selectedServiceType
   const displayedSteps = useMemo(() => {
-    if (!hideCompletedSteps || isEditMode) return steps;
+    let filteredSteps = steps;
 
-    return steps.filter(step => {
-      // Count ALL tasks
-      const completedTasks = step.tasks.filter(t => t.completed).length;
-      const totalTasks = step.tasks.length;
-      const isComplete = completedTasks === totalTasks && totalTasks > 0;
+    // Filter by service type (always apply, even in edit mode)
+    if (selectedServiceType && selectedServiceType !== "all") {
+      const includedTypes = getIncludedServiceTypes(selectedServiceType);
 
-      return !isComplete; // Only show incomplete steps
-    });
-  }, [steps, hideCompletedSteps, isEditMode]);
+      filteredSteps = filteredSteps.filter(step => {
+        // Check if step has at least one visible task for this service type
+        const hasVisibleTasks = step.tasks.some(task => {
+          const taskServiceType = task.serviceType || "All";
+          return includedTypes.includes(taskServiceType);
+        });
+
+        return hasVisibleTasks;
+      });
+    }
+
+    // Filter by completion status
+    if (hideCompletedSteps && !isEditMode) {
+      filteredSteps = filteredSteps.filter(step => {
+        // Count ALL tasks
+        const completedTasks = step.tasks.filter(t => t.completed).length;
+        const totalTasks = step.tasks.length;
+        const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+        return !isComplete; // Only show incomplete steps
+      });
+    }
+
+    return filteredSteps;
+  }, [steps, hideCompletedSteps, isEditMode, selectedServiceType]);
 
   // Define handlers first before using them in useMemo
   const handleDelete = useCallback((stepId: string) => {
@@ -1185,6 +1161,7 @@ function FlowchartEditorInner({
           selectedServiceType,
           gridSize,
           isActive,
+          onOpenTechnicianPairModal,
         },
         draggable: isEditMode,
       };
@@ -1246,7 +1223,6 @@ function FlowchartEditorInner({
 
   // Overlay state with progress steps
   const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
-  const [loadingStep, setLoadingStep] = useState(0);
 
   // Viewport lock state
   const [isViewportLocked, setIsViewportLocked] = useState(false);
@@ -1281,38 +1257,6 @@ function FlowchartEditorInner({
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  const loadingSteps = [
-    {
-      code: `> Initializing flowchart engine...`,
-      detail: `Found ${steps.length} steps`,
-      status: 'OK'
-    },
-    {
-      code: `> Parsing step dependencies...`,
-      detail: `Connected ${initialEdges.length} edges`,
-      status: 'OK'
-    },
-    {
-      code: `> Calculating layout positions...`,
-      detail: `Grid: ${gridSize}px | Mode: ${layoutMode}`,
-      status: 'OK'
-    },
-    {
-      code: `> Optimizing viewport...`,
-      detail: `Zoom: fit | Center: auto`,
-      status: 'OK'
-    },
-    {
-      code: `> Loading service data...`,
-      detail: `Ready for interaction`,
-      status: 'OK'
-    },
-    {
-      code: `> System ready`,
-      detail: `Flowchart loaded successfully`,
-      status: 'DONE'
-    }
-  ];
 
   // Enter fullscreen when loading overlay shows
   useEffect(() => {
@@ -2026,6 +1970,8 @@ function FlowchartEditorInner({
           const heightWithPadding = gridAlignedHeight + 60;
           const initialHeight = Math.max(240, Math.min(660, heightWithPadding));
 
+          const isActive = activeStepIds.includes(step.id);
+
           return {
             id: step.id,
             type: 'stepNode',
@@ -2041,6 +1987,8 @@ function FlowchartEditorInner({
               isEditMode,
               selectedServiceType,
               gridSize,
+              isActive,
+              onOpenTechnicianPairModal,
             },
             draggable: isEditMode,
           };
@@ -2176,6 +2124,9 @@ function FlowchartEditorInner({
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Note: Edges to/from hidden steps are automatically hidden by ReactFlow
+  // No need to manually filter edges - ReactFlow handles this for us
+
   // SIMPLE: Auto-run centered layout on mount (once) with animated progress
   useEffect(() => {
     if (layoutMode === 'centered' && !autoLayoutTriggered.current && steps.length > 0) {
@@ -2186,44 +2137,22 @@ function FlowchartEditorInner({
         console.log('🎯 Starting auto-layout with animation (first visit)...');
         setShowLoadingOverlay(true);
 
-        // Step 0: Loading data (1200ms)
-        setLoadingStep(0);
+        // Run layout immediately
+        console.log('   Running handleRealignToGridCentered()...');
+        handleRealignToGridCentered();
 
-        // Step 1: Building connections (1200ms)
-        setTimeout(() => setLoadingStep(1), 1200);
-
-        // Step 2: Applying layout (1300ms) - RUN ACTUAL LAYOUT FUNCTION
+        // Fit view after layout
         setTimeout(() => {
-          setLoadingStep(2);
-          console.log('   Running handleRealignToGridCentered()...');
-          handleRealignToGridCentered();
-        }, 2400);
-
-        // Step 3: Centering viewport (1300ms) - RUN FIT VIEW
-        setTimeout(() => {
-          setLoadingStep(3);
           console.log('   Fitting view...');
           fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
-        }, 3700);
+        }, 100);
 
-        // Step 4: Zoom to overview (1200ms)
-        setTimeout(() => {
-          setLoadingStep(4);
-          console.log('   Zooming to overview...');
-          fitView({ padding: 0.2, duration: 800, maxZoom: 0.7, minZoom: 0.3 });
-        }, 4900);
-
-        // Step 5: Ready! (1200ms)
-        setTimeout(() => {
-          setLoadingStep(5);
-        }, 6100);
-
-        // Hide overlay after total 7.5 seconds (increased from 5)
+        // Hide overlay after 2 seconds
         setTimeout(() => {
           setShowLoadingOverlay(false);
           console.log('✅ Auto-layout complete!');
 
-          // Zoom to first step after overlay disappears (slower zoom)
+          // Zoom to first step after overlay disappears
           setTimeout(() => {
             const firstStep = steps.find(s => s.id.includes('step-1') || s.position.x === 0);
             if (firstStep) {
@@ -2231,8 +2160,8 @@ function FlowchartEditorInner({
               const nodeId = firstStep.id;
               fitView({
                 nodes: [{ id: nodeId }],
-                duration: 2000,  // Dubbelt så långsam (2 sekunder)
-                maxZoom: 0.9,  // Mindre zoom - ett steg ut
+                duration: 2000,
+                maxZoom: 0.9,
                 minZoom: 0.6,
                 padding: 0.4
               });
@@ -2241,13 +2170,13 @@ function FlowchartEditorInner({
               setTimeout(() => {
                 console.log('   Dispatching info-dropdown-auto-open event...');
                 window.dispatchEvent(new CustomEvent('info-dropdown-auto-open'));
-              }, 2000); // After zoom animation completes
+              }, 2000);
             }
           }, 500);
 
           // Mark animation as shown in localStorage
           localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
-        }, 7500);
+        }, 2000);
       } else {
         // No animation, just run layout
         console.log('🎯 Running auto-layout without animation (already visited)...');
@@ -2418,79 +2347,23 @@ function FlowchartEditorInner({
     <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
       {/* Animated Loading Overlay - Fullscreen */}
       {showLoadingOverlay && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/60 backdrop-blur-xl"
-          style={{
-            animation: 'fadeIn 0.3s ease-in-out'
-          }}
-        >
-          {/* Terminal-style console */}
-          <div className="max-w-2xl w-full mx-6">
-            {/* Terminal Header */}
-            <div className="bg-gray-800/90 border border-gray-700/50 rounded-t-lg px-4 py-2 flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
-              </div>
-              <div className="flex-1 text-center">
-                <span className="text-xs text-gray-400 font-mono">flowchart-engine@1.0.0</span>
-              </div>
-            </div>
-
-            {/* Terminal Body */}
-            <div className="bg-gray-900/95 border-x border-b border-gray-700/50 rounded-b-lg p-6 font-mono text-sm">
-              {/* Command Lines */}
-              <div className="space-y-2">
-                {loadingSteps.map((step, idx) => {
-                  if (idx > loadingStep) return null;
-
-                  return (
-                    <div key={idx} className="space-y-1">
-                      {/* Command line */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-green-400">$</span>
-                        <span className="text-gray-300">{step.code}</span>
-                      </div>
-
-                      {/* Output line */}
-                      <div className="flex items-center gap-2 pl-4">
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          step.status === 'DONE'
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                            : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                        }`}>
-                          {step.status}
-                        </span>
-                        <span className="text-gray-500 text-xs">{step.detail}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Current loading cursor */}
-                {loadingStep < loadingSteps.length && (
-                  <div className="flex items-center gap-2 pt-2">
-                    <span className="text-green-400">$</span>
-                    <span className="text-gray-400 animate-pulse">_</span>
-                  </div>
-                )}
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/80 backdrop-blur-md">
+          <div className="bg-white/95 dark:bg-gray-900/95 rounded-lg p-8 shadow-2xl">
+            <div className="flex flex-col items-center justify-center space-y-6">
+              {/* Loading spinner */}
+              <div className="relative">
+                <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
+                <div className="absolute inset-0 h-16 w-16 rounded-full border-4 border-blue-200 dark:border-blue-800" />
               </div>
 
-              {/* Progress bar at bottom */}
-              <div className="mt-6 pt-4 border-t border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-500">Progress</span>
-                  <span className="text-xs text-gray-400 font-semibold">
-                    {Math.round(((loadingStep + 1) / loadingSteps.length) * 100)}%
-                  </span>
-                </div>
-                <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500"
-                    style={{ width: `${((loadingStep + 1) / loadingSteps.length) * 100}%` }}
-                  />
-                </div>
+              {/* Loading text */}
+              <div className="text-center space-y-2">
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Loading...
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {flowchart.model}
+                </p>
               </div>
             </div>
           </div>
@@ -2534,59 +2407,59 @@ function FlowchartEditorInner({
         )}
 
         {/* Custom horizontal zoom controls at bottom */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-gray-800/90 backdrop-blur-md border border-gray-600 rounded-lg p-1 shadow-lg">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-gray-800/50 backdrop-blur-md border border-gray-600/50 rounded-lg p-1 shadow-lg">
           <button
             onClick={() => zoomIn({ duration: 200 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
             title="Zoom In"
           >
             <Plus className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
 
           <button
             onClick={() => zoomOut({ duration: 200 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
             title="Zoom Out"
           >
             <Minus className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
 
           <button
             onClick={() => fitView({ padding: 0.15, duration: 400 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors border border-gray-600"
+            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
             title="Fit View"
           >
             <Maximize2 className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
 
           <button
             onClick={toggleFullscreen}
             className={cn(
-              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600",
+              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
               isFullscreen
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-700 hover:bg-gray-600 text-white"
+                ? "bg-blue-600/80 hover:bg-blue-700/80 text-white"
+                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
             )}
             title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
             <Expand className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
 
           <button
             onClick={() => setIsViewportLocked(!isViewportLocked)}
             className={cn(
-              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600",
+              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
               isViewportLocked
-                ? "bg-orange-600 hover:bg-orange-700 text-white"
-                : "bg-gray-700 hover:bg-gray-600 text-white"
+                ? "bg-orange-600/80 hover:bg-orange-700/80 text-white"
+                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
             )}
             title={isViewportLocked ? "Unlock Viewport" : "Lock Viewport"}
           >
