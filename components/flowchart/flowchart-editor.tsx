@@ -33,6 +33,7 @@ import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRig
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { getSelectedTechnicians, getActiveTechnicians, getTechnicianById, Technician } from "@/lib/technicians-data";
 
 interface FlowchartEditorProps {
   flowchart: FlowchartData;
@@ -134,6 +135,49 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
+  const [showTechnicianDropdown, setShowTechnicianDropdown] = useState(false);
+  const techDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Get selected technicians for displaying initials (fallback)
+  const { t1, t2 } = getSelectedTechnicians();
+
+  // Get assigned technician for this step
+  const assignedTechnician = step.assignedTechnicianId ? getTechnicianById(step.assignedTechnicianId) : null;
+
+  // Determine which technician to display
+  const displayTechnician = assignedTechnician || (step.technician === "T1" ? t1 : t2);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (techDropdownRef.current && !techDropdownRef.current.contains(event.target as Node)) {
+        setShowTechnicianDropdown(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAssignTechnician = (technician: Technician) => {
+    const updatedStep = {
+      ...step,
+      assignedTechnicianId: technician.id,
+      assignedTechnicianInitials: technician.initials
+    };
+    onUpdateStep(updatedStep);
+    setShowTechnicianDropdown(false);
+  };
+
+  const handleClearAssignment = () => {
+    const updatedStep = {
+      ...step,
+      assignedTechnicianId: undefined,
+      assignedTechnicianInitials: undefined
+    };
+    onUpdateStep(updatedStep);
+    setShowTechnicianDropdown(false);
+  };
 
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
@@ -387,30 +431,76 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
         </div>
         )}
 
-        {/* Technician Badge - Centered below Step label */}
+        {/* Technician Badge - Centered below Step label - Clickable to assign */}
         <div className="flex justify-center mb-2 mt-5 flex-shrink-0">
-          <div className="flex gap-1">
+          <div className="flex gap-1 relative" ref={techDropdownRef}>
             {step.technician === "both" ? (
               <>
-                <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0 flex items-center gap-1">
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
+                  onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                >
                   <User className="h-3 w-3" />
-                  T1
+                  T1{displayTechnician && step.technician === "T1" ? `: ${displayTechnician.initials}` : (t1 ? `: ${t1.initials}` : '')}
+                  {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
                 </Badge>
-                <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0 flex items-center gap-1">
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
+                  onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+                >
                   <User className="h-3 w-3" />
-                  T2
+                  T2{displayTechnician && step.technician === "T2" ? `: ${displayTechnician.initials}` : (t2 ? `: ${t2.initials}` : '')}
+                  {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
                 </Badge>
               </>
-            ) : step.technician === "T1" ? (
-              <Badge variant="secondary" className="text-xs bg-blue-500/90 text-white border-0 flex items-center gap-1">
-                <User className="h-3 w-3" />
-                T1
-              </Badge>
             ) : (
-              <Badge variant="secondary" className="text-xs bg-purple-500/90 text-white border-0 flex items-center gap-1">
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-xs text-white border-0 flex items-center gap-1 cursor-pointer transition-colors",
+                  step.technician === "T1" ? "bg-blue-500/90 hover:bg-blue-600/90" : "bg-purple-500/90 hover:bg-purple-600/90"
+                )}
+                onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+              >
                 <User className="h-3 w-3" />
-                T2
+                {step.technician}{displayTechnician ? `: ${displayTechnician.initials}` : ''}
+                {assignedTechnician && <span className="ml-1 text-[10px]">✓</span>}
               </Badge>
+            )}
+
+            {/* Technician Selection Dropdown */}
+            {showTechnicianDropdown && (
+              <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[180px] max-h-[250px] overflow-y-auto">
+                <div className="p-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Assign Technician</p>
+                  {getActiveTechnicians().map(tech => (
+                    <button
+                      key={tech.id}
+                      onClick={() => handleAssignTechnician(tech)}
+                      className={cn(
+                        "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors mb-1",
+                        assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-semibold"
+                      )}
+                    >
+                      <div className="font-medium">{tech.firstName} {tech.lastName}</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
+                    </button>
+                  ))}
+                  {assignedTechnician && (
+                    <>
+                      <div className="border-t my-1"></div>
+                      <button
+                        onClick={handleClearAssignment}
+                        className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-colors"
+                      >
+                        Clear assignment
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -419,7 +509,8 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
         <div className="flex-1 flex flex-col min-h-0 mt-2">
           {/* Task list - compact format - scrollable if overflow */}
           <div
-            className="flex-1 overflow-y-auto space-y-0.5 mb-3 pr-2 scrollbar-thin"
+            className="flex-1 overflow-y-auto mb-3 pr-2 scrollbar-thin flex flex-col"
+            style={{ gap: `${step.displaySettings?.taskSpacing ?? 0.5}rem` }}
             onWheel={(e) => {
               // Stop propagation to prevent React Flow from zooming
               e.stopPropagation();
@@ -452,16 +543,27 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
               const refNumber = refMatch ? refMatch[1] : '';
               const description = refMatch ? refMatch[2] : task.description;
 
+              // Get display settings with defaults
+              const displaySettings = {
+                fontSize: step.displaySettings?.fontSize ?? 11,
+                taskSpacing: step.displaySettings?.taskSpacing ?? 0.5,
+                referenceColumnWidth: step.displaySettings?.referenceColumnWidth ?? 0 // 0 = auto
+              };
+
               return (
                 <div
                   key={task.id}
                   className={cn(
-                    "grid items-center gap-2 text-[11px] py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
-                    "grid-cols-[auto_80px_1fr_auto]",
+                    "grid items-center py-0.5 pl-0 pr-2 rounded-sm overflow-hidden group/task",
                     isIndented && "ml-6 text-muted-foreground"
                   )}
                   style={{
-                    backgroundColor: !isIndented ? `${badgeColor}10` : 'transparent'
+                    backgroundColor: !isIndented ? `${badgeColor}10` : 'transparent',
+                    gap: `${displaySettings.taskSpacing}rem`,
+                    fontSize: `${displaySettings.fontSize}px`,
+                    gridTemplateColumns: displaySettings.referenceColumnWidth === 0
+                      ? 'auto auto 1fr auto'
+                      : `auto ${displaySettings.referenceColumnWidth}px 1fr auto`
                   }}
                 >
                   {!isIndented && (
@@ -615,7 +717,17 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   </div>
                 )}
                 {isComplete && (
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-green-400" />
+                    {step.completedByInitials && (
+                      <div className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-bold text-white",
+                        step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
+                      )}>
+                        {step.completedByInitials}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

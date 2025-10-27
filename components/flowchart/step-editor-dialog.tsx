@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Slider } from "@/components/ui/slider";
 import { FlowchartStep, FlowchartTask, generateTaskId } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
-import { Plus, Trash2, Pencil, X, Indent, Outdent } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Indent, Outdent, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StepEditorDialogProps {
@@ -97,9 +99,26 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
     });
   };
 
+  const handleDisplaySettingChange = (setting: string, value: any) => {
+    setEditedStep({
+      ...editedStep,
+      displaySettings: {
+        ...editedStep.displaySettings,
+        [setting]: value
+      }
+    });
+  };
+
+  // Get display settings with defaults
+  const displaySettings = {
+    fontSize: editedStep.displaySettings?.fontSize ?? 11,
+    taskSpacing: editedStep.displaySettings?.taskSpacing ?? 0.5,
+    referenceColumnWidth: editedStep.displaySettings?.referenceColumnWidth ?? 0 // 0 = auto
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Step</DialogTitle>
         </DialogHeader>
@@ -140,17 +159,30 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
             </div>
           </div>
 
-          {/* Tasks */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label>Tasks ({editedStep.tasks.length})</Label>
-              <Button onClick={handleAddTask} size="sm" variant="outline">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Task
-              </Button>
-            </div>
+          {/* Tabs for Tasks and Display */}
+          <Tabs defaultValue="tasks" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="tasks">
+                <Plus className="h-4 w-4 mr-2" />
+                Tasks ({editedStep.tasks.length})
+              </TabsTrigger>
+              <TabsTrigger value="display">
+                <Eye className="h-4 w-4 mr-2" />
+                Display & Preview
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            {/* Tasks Tab */}
+            <TabsContent value="tasks" className="space-y-3 mt-4">
+              <div className="flex items-center justify-between">
+                <Label>Tasks ({editedStep.tasks.length})</Label>
+                <Button onClick={handleAddTask} size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Task
+                </Button>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
               {editedStep.tasks.map((task, index) => {
                 // Check if task starts with reference number (e.g., "13.5.1", "2.7.2.3", "11.5.1.")
                 // Match 2 or more parts, allow optional trailing dot
@@ -236,8 +268,175 @@ export function StepEditorDialog({ step, open, onOpenChange, onSave }: StepEdito
                   </Card>
                 );
               })}
-            </div>
-          </div>
+              </div>
+            </TabsContent>
+
+            {/* Display & Preview Tab */}
+            <TabsContent value="display" className="space-y-4 mt-4">
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left: Display Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold">Display Settings</h3>
+
+                  {/* Font Size */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="fontSize">Font Size</Label>
+                      <span className="text-xs text-muted-foreground">{displaySettings.fontSize}px</span>
+                    </div>
+                    <Slider
+                      id="fontSize"
+                      min={9}
+                      max={14}
+                      step={1}
+                      value={[displaySettings.fontSize]}
+                      onValueChange={(value) => handleDisplaySettingChange('fontSize', value[0])}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Adjust text size (default: 11px)
+                    </p>
+                  </div>
+
+                  {/* Task Spacing */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="taskSpacing">Task Spacing</Label>
+                      <span className="text-xs text-muted-foreground">{displaySettings.taskSpacing}rem</span>
+                    </div>
+                    <Slider
+                      id="taskSpacing"
+                      min={0.25}
+                      max={1.5}
+                      step={0.25}
+                      value={[displaySettings.taskSpacing]}
+                      onValueChange={(value) => handleDisplaySettingChange('taskSpacing', value[0])}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Gap between tasks (default: 0.5rem)
+                    </p>
+                  </div>
+
+                  {/* Reference Column Width */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="referenceColumnWidth">Reference Column Width</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {displaySettings.referenceColumnWidth === 0 ? 'Auto' : `${displaySettings.referenceColumnWidth}px`}
+                      </span>
+                    </div>
+                    <Slider
+                      id="referenceColumnWidth"
+                      min={0}
+                      max={120}
+                      step={10}
+                      value={[displaySettings.referenceColumnWidth]}
+                      onValueChange={(value) => handleDisplaySettingChange('referenceColumnWidth', value[0])}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Reference number column width - 0 for auto, 40-120px for fixed (default: auto)
+                    </p>
+                  </div>
+
+                  {/* Reset Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditedStep({
+                        ...editedStep,
+                        displaySettings: undefined
+                      });
+                    }}
+                    className="w-full"
+                  >
+                    Reset to Default
+                  </Button>
+                </div>
+
+                {/* Right: Preview */}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold">Preview</h3>
+                  <Card className="border-2" style={{ borderColor: editedStep.color }}>
+                    <CardHeader className="pb-2 pt-3 px-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-semibold">
+                          Step Preview
+                        </CardTitle>
+                        <Badge variant="secondary" className="text-xs">
+                          {editedStep.duration}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-3 pb-3">
+                      <div className="space-y-1" style={{ gap: `${displaySettings.taskSpacing}rem` }}>
+                        {editedStep.tasks.slice(0, 5).map((task, index) => {
+                          const taskMatch = task.description.match(/^([\d.\-]+)\s+(.+)$/);
+                          const ref = taskMatch ? taskMatch[1] : (index + 1).toString();
+                          const desc = taskMatch ? taskMatch[2] : task.description;
+                          const isIndented = task.isIndented || false;
+
+                          return (
+                            <div
+                              key={task.id}
+                              className={cn(
+                                "grid items-center rounded-sm overflow-hidden py-0.5 px-2",
+                                isIndented && "ml-6"
+                              )}
+                              style={{
+                                backgroundColor: task.serviceType
+                                  ? `${SERVICE_TYPE_COLORS[task.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default}10`
+                                  : 'rgba(156, 163, 175, 0.15)',
+                                gap: '0.5rem',
+                                fontSize: `${displaySettings.fontSize}px`,
+                                gridTemplateColumns: displaySettings.referenceColumnWidth === 0
+                                  ? 'auto auto 1fr'
+                                  : `auto ${displaySettings.referenceColumnWidth}px 1fr`
+                              }}
+                            >
+                              {task.serviceType && (
+                                <div
+                                  style={{
+                                    backgroundColor: SERVICE_TYPE_COLORS[task.serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default
+                                  }}
+                                  className="px-2 py-1 flex items-center justify-center flex-shrink-0"
+                                >
+                                  <span className="text-[10px] font-mono font-bold text-white">
+                                    {task.serviceType}
+                                  </span>
+                                </div>
+                              )}
+                              <span className="font-mono text-blue-600 font-medium flex-shrink-0">
+                                {ref}
+                              </span>
+                              <span className="truncate">
+                                {desc}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {editedStep.tasks.length > 5 && (
+                          <div className="text-xs text-muted-foreground text-center py-1">
+                            ... and {editedStep.tasks.length - 5} more tasks
+                          </div>
+                        )}
+                        {editedStep.tasks.length === 0 && (
+                          <div className="text-xs text-muted-foreground text-center py-4">
+                            No tasks yet. Add tasks in the Tasks tab.
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <p className="text-xs text-muted-foreground">
+                    This preview shows how the step box will appear in the flowchart with your custom settings.
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           {/* Notes */}
           <div className="space-y-2">

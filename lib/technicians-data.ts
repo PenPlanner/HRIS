@@ -3,10 +3,20 @@ export interface Technician {
   id: string;
   firstName: string;
   lastName: string;
-  initials: string;
+  initials: string; // 5 characters: positions 0,2 from first + first 3 from last
   email?: string;
   phone?: string;
   active: boolean;
+}
+
+// Generate initials from name (positions 0,2 from first + first 3 from last)
+// Example: "Johan Andersson" => "JHAND" (J + h + AND)
+function generateInitials(firstName: string, lastName: string): string {
+  const firstPart = firstName.length >= 3 ?
+    (firstName.charAt(0) + firstName.charAt(2)).toUpperCase() :
+    (firstName.charAt(0) + (firstName.charAt(1) || 'X')).toUpperCase();
+  const lastPart = lastName.substring(0, 3).toUpperCase();
+  return firstPart + lastPart;
 }
 
 // Mock technicians data - replace with actual database later
@@ -15,7 +25,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-001",
     firstName: "Johan",
     lastName: "Andersson",
-    initials: "JA",
+    initials: generateInitials("Johan", "Andersson"), // JHAND
     email: "johan.andersson@example.com",
     active: true
   },
@@ -23,7 +33,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-002",
     firstName: "Maria",
     lastName: "Svensson",
-    initials: "MS",
+    initials: generateInitials("Maria", "Svensson"), // MASVE
     email: "maria.svensson@example.com",
     active: true
   },
@@ -31,7 +41,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-003",
     firstName: "Erik",
     lastName: "Karlsson",
-    initials: "EK",
+    initials: generateInitials("Erik", "Karlsson"), // ERKAR
     email: "erik.karlsson@example.com",
     active: true
   },
@@ -39,7 +49,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-004",
     firstName: "Anna",
     lastName: "Nilsson",
-    initials: "AN",
+    initials: generateInitials("Anna", "Nilsson"), // ANNIL
     email: "anna.nilsson@example.com",
     active: true
   },
@@ -47,7 +57,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-005",
     firstName: "Peter",
     lastName: "Johansson",
-    initials: "PJ",
+    initials: generateInitials("Peter", "Johansson"), // PTJOH
     email: "peter.johansson@example.com",
     active: true
   },
@@ -55,7 +65,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-006",
     firstName: "Linda",
     lastName: "Berg",
-    initials: "LB",
+    initials: generateInitials("Linda", "Berg"), // LIBER
     email: "linda.berg@example.com",
     active: true
   },
@@ -63,7 +73,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-007",
     firstName: "Stefan",
     lastName: "Eriksson",
-    initials: "SE",
+    initials: generateInitials("Stefan", "Eriksson"), // STERI
     email: "stefan.eriksson@example.com",
     active: true
   },
@@ -71,7 +81,7 @@ export const TECHNICIANS: Technician[] = [
     id: "tech-008",
     firstName: "Karin",
     lastName: "Larsson",
-    initials: "KL",
+    initials: generateInitials("Karin", "Larsson"), // KARLAR
     email: "karin.larsson@example.com",
     active: true
   }

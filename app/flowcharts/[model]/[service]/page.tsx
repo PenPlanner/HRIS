@@ -21,6 +21,8 @@ import { extractSIIReferences } from "@/lib/sii-documents";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
+import { saveCompletedFlowchart, isFlowchartFullyCompleted, getEarliestStartTime } from "@/lib/completed-flowcharts";
+import { getSelectedTechnicians, getTechnicianById } from "@/lib/technicians-data";
 
 // Dynamically import PDFImportDialog to avoid SSR issues with pdfjs-dist
 const PDFImportDialog = dynamic(
@@ -295,6 +297,47 @@ export default function FlowchartViewerPage() {
     };
   }, [steps]);
 
+  // Auto-save completed flowchart when all tasks are done
+  useEffect(() => {
+    if (!flowchartData || steps.length === 0) return;
+
+    // Check if flowchart is fully completed
+    if (isFlowchartFullyCompleted(steps)) {
+      // Check if already saved (to avoid duplicate saves)
+      const savedKey = `flowchart-saved-${flowchartData.id}`;
+      if (localStorage.getItem(savedKey)) return; // Already saved
+
+      // Get start time from earliest step
+      const startTime = getEarliestStartTime(steps) || new Date().toISOString();
+
+      // Get selected technicians
+      const { t1, t2 } = getSelectedTechnicians();
+
+      // Save the completed flowchart
+      const t1Data = t1 ? {
+        id: t1.id,
+        name: `${t1.firstName} ${t1.lastName}`,
+        initials: t1.initials
+      } : undefined;
+
+      const t2Data = t2 ? {
+        id: t2.id,
+        name: `${t2.firstName} ${t2.lastName}`,
+        initials: t2.initials
+      } : undefined;
+
+      saveCompletedFlowchart(flowchartData, steps, startTime, t1Data, t2Data);
+
+      // Mark as saved to avoid duplicates
+      localStorage.setItem(savedKey, 'true');
+
+      // Show success message
+      setToastMessage("🎉 Flowchart completed and saved!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    }
+  }, [steps, flowchartData]);
+
   // Handle task toggle
   const handleTaskToggle = (taskId: string) => {
     if (!selectedStep) return;
@@ -343,10 +386,36 @@ export default function FlowchartViewerPage() {
           .filter(task => siiTaskIds.includes(task.id))
           .every(task => task.completed);
 
+        // Get technician for this completed step
+        let completedBy: string | undefined;
+        let completedByInitials: string | undefined;
+        if (allSIITasksCompleted && siiTaskIds.length > 0) {
+          // First check if there's an assigned technician for this specific step
+          if (step.assignedTechnicianId) {
+            completedBy = step.assignedTechnicianId;
+            completedByInitials = step.assignedTechnicianInitials;
+          } else {
+            // Fallback to global T1/T2 selection
+            const techRole = step.technician === "T1" || step.technician === "both" ? "T1" : "T2";
+            const techKey = techRole === "T1" ? 'flowchart-technician-t1' : 'flowchart-technician-t2';
+            const techId = localStorage.getItem(techKey);
+            if (techId) {
+              const { getTechnicianById } = require('@/lib/technicians-data');
+              const tech = getTechnicianById(techId);
+              if (tech) {
+                completedBy = techId;
+                completedByInitials = tech.initials;
+              }
+            }
+          }
+        }
+
         return {
           ...step,
           tasks: updatedTasks,
-          completedAt: allSIITasksCompleted && siiTaskIds.length > 0 ? new Date().toISOString() : undefined
+          completedAt: allSIITasksCompleted && siiTaskIds.length > 0 ? new Date().toISOString() : undefined,
+          completedBy,
+          completedByInitials
         };
       })
     );
@@ -409,6 +478,21 @@ export default function FlowchartViewerPage() {
         )
       };
     });
+  };
+
+  // Handle step update (e.g., technician assignment)
+  const handleStepUpdate = (updatedStep: FlowchartStep) => {
+    setSteps(prevSteps =>
+      prevSteps.map(step =>
+        step.id === updatedStep.id ? updatedStep : step
+      )
+    );
+
+    // Update selected step
+    setSelectedStep(updatedStep);
+
+    // Mark as having unsaved changes
+    setHasUnsavedChanges(true);
   };
 
   // Handle task service type change
@@ -1514,6 +1598,7 @@ ${fullLayoutData.map(step =>
         onTaskServiceTypeChange={handleTaskServiceTypeChange}
         onTaskDescriptionChange={handleTaskDescriptionChange}
         onTaskIndentToggle={handleTaskIndentToggle}
+        onStepUpdate={handleStepUpdate}
         isEditMode={isEditMode}
       />
 

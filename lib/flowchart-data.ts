@@ -36,6 +36,12 @@ export interface ServiceTimesBreakdown {
   [serviceType: string]: number; // e.g., "1Y": 120, "2Y": 240
 }
 
+export interface StepDisplaySettings {
+  fontSize?: number; // Font size in px (default: 11)
+  taskSpacing?: number; // Gap between tasks in rem (default: 0.5)
+  referenceColumnWidth?: number; // Reference number column width in px (default: 80, 0 = auto)
+}
+
 export interface FlowchartStep {
   id: string;
   title: string;
@@ -51,6 +57,13 @@ export interface FlowchartStep {
   media?: string[];
   notes?: string;
   completedAt?: string; // Timestamp when step was completed
+  completedBy?: string; // Technician ID who completed this step
+  completedByInitials?: string; // Technician initials for quick display
+  startedAt?: string; // Timestamp when step was started
+  elapsedTime?: number; // Total elapsed time in seconds for this step
+  assignedTechnicianId?: string; // ID of technician assigned to this specific step
+  assignedTechnicianInitials?: string; // Initials of assigned technician for display
+  displaySettings?: StepDisplaySettings; // Custom display settings for this step
 }
 
 /**

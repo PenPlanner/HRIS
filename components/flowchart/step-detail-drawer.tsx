@@ -14,16 +14,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight, Download, CloudOff, Loader2 } from "lucide-react";
+import { Clock, CheckCircle2, FileText, Image as ImageIcon, PlayCircle, X, ExternalLink, BookOpen, Info, Pencil, Save, Indent, Outdent, ChevronDown, ChevronRight, Download, CloudOff, Loader2, User } from "lucide-react";
 import { BugReportDialog } from "../bug-report/bug-report-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { PDFViewerDialog } from "./pdf-viewer-dialog";
 import { TimeInput } from "./time-input";
 import { TaskNotes } from "./task-notes";
 import { Clock as ClockIcon } from "lucide-react";
 import { useOfflinePDFs } from "@/hooks/use-offline-pdfs";
+import { getSelectedTechnicians, getActiveTechnicians, getTechnicianById, Technician } from "@/lib/technicians-data";
 
 interface StepDetailDrawerProps {
   step: FlowchartStep | null;
@@ -44,6 +45,7 @@ interface StepDetailDrawerProps {
   onTaskServiceTypeChange?: (taskId: string, serviceType: string) => void;
   onTaskDescriptionChange?: (taskId: string, description: string) => void;
   onTaskIndentToggle?: (taskId: string, isIndented: boolean) => void;
+  onStepUpdate?: (step: FlowchartStep) => void;
   selectedServiceType?: string;
   isEditMode?: boolean;
 }
@@ -67,6 +69,7 @@ export function StepDetailDrawer({
   onTaskServiceTypeChange,
   onTaskDescriptionChange,
   onTaskIndentToggle,
+  onStepUpdate,
   selectedServiceType = "all",
   isEditMode = false
 }: StepDetailDrawerProps) {
@@ -81,8 +84,51 @@ export function StepDetailDrawer({
   const [inProgressOpen, setInProgressOpen] = useState(false);
   const [completedOpen, setCompletedOpen] = useState(false);
 
+  // State for technician dropdown
+  const [showTechnicianDropdown, setShowTechnicianDropdown] = useState(false);
+  const techDropdownRef = useRef<HTMLDivElement>(null);
+
   // Offline PDF management
   const { downloadPDF, isAvailable, loading: offlineLoading } = useOfflinePDFs();
+
+  // Get selected technicians for displaying initials (fallback)
+  const { t1, t2 } = getSelectedTechnicians();
+
+  // Get assigned technician for this step
+  const assignedTechnician = step?.assignedTechnicianId ? getTechnicianById(step.assignedTechnicianId) : null;
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (techDropdownRef.current && !techDropdownRef.current.contains(event.target as Node)) {
+        setShowTechnicianDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleAssignTechnician = (technician: Technician) => {
+    if (!step || !onStepUpdate) return;
+    const updatedStep = {
+      ...step,
+      assignedTechnicianId: technician.id,
+      assignedTechnicianInitials: technician.initials
+    };
+    onStepUpdate(updatedStep);
+    setShowTechnicianDropdown(false);
+  };
+
+  const handleClearAssignment = () => {
+    if (!step || !onStepUpdate) return;
+    const updatedStep = {
+      ...step,
+      assignedTechnicianId: undefined,
+      assignedTechnicianInitials: undefined
+    };
+    onStepUpdate(updatedStep);
+    setShowTechnicianDropdown(false);
+  };
 
   // Filter tasks based on selected service type
   const filteredTasks = useMemo(() => {
@@ -246,24 +292,76 @@ export function StepDetailDrawer({
 
           {/* Header Cards - Horizontal Layout */}
           <div className="flex items-stretch gap-2 mb-3">
-            {/* Technician Badge Card */}
-            <div className="rounded-md px-2 py-1.5 flex items-center gap-1.5">
-              {step.technician === "both" ? (
-                <>
-                  <div className="bg-blue-500/90 px-2 py-1 rounded-md">
-                    <span className="text-[10px] font-bold text-white">T1</span>
+            {/* Technician Badge Card - Clickable with Dropdown */}
+            <div className="relative" ref={techDropdownRef}>
+              <div
+                className="rounded-md px-2 py-1.5 flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => setShowTechnicianDropdown(!showTechnicianDropdown)}
+              >
+                {step.technician === "both" ? (
+                  <>
+                    <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+                      <User className="h-3 w-3 text-white" />
+                      <span className="text-[10px] font-bold text-white">
+                        T1{assignedTechnician || t1 ? `: ${(assignedTechnician || t1)?.initials}` : ''}
+                      </span>
+                    </div>
+                    <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+                      <User className="h-3 w-3 text-white" />
+                      <span className="text-[10px] font-bold text-white">
+                        T2{assignedTechnician || t2 ? `: ${(assignedTechnician || t2)?.initials}` : ''}
+                      </span>
+                    </div>
+                  </>
+                ) : step.technician === "T1" ? (
+                  <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+                    <User className="h-3 w-3 text-white" />
+                    <span className="text-[10px] font-bold text-white">
+                      T1{assignedTechnician || t1 ? `: ${(assignedTechnician || t1)?.initials}` : ''}
+                    </span>
+                    {assignedTechnician && <span className="text-[10px] text-white">✓</span>}
                   </div>
-                  <div className="bg-purple-500/90 px-2 py-1 rounded-md">
-                    <span className="text-[10px] font-bold text-white">T2</span>
+                ) : (
+                  <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
+                    <User className="h-3 w-3 text-white" />
+                    <span className="text-[10px] font-bold text-white">
+                      T2{assignedTechnician || t2 ? `: ${(assignedTechnician || t2)?.initials}` : ''}
+                    </span>
+                    {assignedTechnician && <span className="text-[10px] text-white">✓</span>}
                   </div>
-                </>
-              ) : step.technician === "T1" ? (
-                <div className="bg-blue-500/90 px-2 py-1 rounded-md">
-                  <span className="text-[10px] font-bold text-white">T1</span>
-                </div>
-              ) : (
-                <div className="bg-purple-500/90 px-2 py-1 rounded-md">
-                  <span className="text-[10px] font-bold text-white">T2</span>
+                )}
+              </div>
+
+              {/* Technician Selection Dropdown */}
+              {showTechnicianDropdown && (
+                <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-md shadow-xl border border-gray-200 dark:border-gray-700 z-50 min-w-[180px] max-h-[250px] overflow-y-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Assign Technician</p>
+                    {getActiveTechnicians().map(tech => (
+                      <button
+                        key={tech.id}
+                        onClick={() => handleAssignTechnician(tech)}
+                        className={cn(
+                          "w-full px-3 py-2 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors mb-1",
+                          assignedTechnician?.id === tech.id && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-semibold"
+                        )}
+                      >
+                        <div className="font-medium">{tech.firstName} {tech.lastName}</div>
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400">{tech.initials}</div>
+                      </button>
+                    ))}
+                    {assignedTechnician && (
+                      <>
+                        <div className="border-t my-1"></div>
+                        <button
+                          onClick={handleClearAssignment}
+                          className="w-full px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-colors"
+                        >
+                          Clear assignment
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -36,14 +36,28 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
   }, 0);
   const taskProgressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-  // Calculate actual time from all step timers
-  const totalActualTimeSeconds = steps.reduce((sum, step) => sum + (step.elapsedTime || 0), 0);
-  const totalActualTimeMinutes = Math.floor(totalActualTimeSeconds / 60);
-  const targetDurationMinutes = flowchart.totalMinutes;
-  const actualProgressPercent = targetDurationMinutes > 0 ? (totalActualTimeMinutes / targetDurationMinutes) * 100 : 0;
+  // Calculate actual time and target time from COMPLETED steps only
+  const completedSteps = steps.filter(step => step.completedAt);
+
+  // Sum actual time from completed steps
+  const totalActualTimeMinutes = completedSteps.reduce((sum, step) => {
+    return sum + step.tasks.reduce((taskSum, task) =>
+      taskSum + (task.actualTimeMinutes || 0), 0
+    );
+  }, 0);
+
+  // Sum target time from completed steps only
+  const targetDurationMinutes = completedSteps.reduce((sum, step) => {
+    return sum + (step.durationMinutes || 0);
+  }, 0);
+
+  const totalTargetMinutes = flowchart.totalMinutes; // Total for all steps (for percentage calculation)
+  const actualProgressPercent = totalTargetMinutes > 0 ? (totalActualTimeMinutes / totalTargetMinutes) * 100 : 0;
+  const targetProgressPercent = totalTargetMinutes > 0 ? (targetDurationMinutes / totalTargetMinutes) * 100 : 0;
+
   const isOvertime = totalActualTimeMinutes > targetDurationMinutes;
   const timeDifferenceMinutes = totalActualTimeMinutes - targetDurationMinutes;
-  const isAheadOfSchedule = timeDifferenceMinutes < 0;
+  const isAheadOfSchedule = timeDifferenceMinutes < 0 && completedSteps.length > 0;
 
   // Count total notes
   const totalNotes = steps.reduce((sum, step) => {
@@ -388,7 +402,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-green-500 transition-all"
-                  style={{ width: "100%" }}
+                  style={{ width: `${targetProgressPercent}%` }}
                 />
               </div>
             </div>
@@ -398,7 +412,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-600 dark:text-gray-300">Actual</span>
                 <div className="flex items-center gap-1">
-                  {totalActualTimeMinutes > 0 && (
+                  {totalActualTimeMinutes > 0 && targetDurationMinutes > 0 && (
                     <>
                       {isAheadOfSchedule ? (
                         <ArrowUp className="h-3 w-3 text-green-600" />
@@ -415,7 +429,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
                   )}
                   <span className={cn(
                     "text-[10px] font-bold",
-                    isOvertime ? "text-red-600" : "text-yellow-600"
+                    isOvertime && targetDurationMinutes > 0 ? "text-red-600" : "text-yellow-600"
                   )}>
                     {formatToHM(totalActualTimeMinutes)}
                   </span>
@@ -425,7 +439,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
                 <div
                   className={cn(
                     "h-full rounded-full transition-all",
-                    isOvertime ? "bg-red-500" : "bg-yellow-500"
+                    isOvertime && targetDurationMinutes > 0 ? "bg-red-500" : "bg-yellow-500"
                   )}
                   style={{ width: `${Math.min(100, actualProgressPercent)}%` }}
                 />
@@ -433,7 +447,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
             </div>
 
             {/* Overtime bar if applicable */}
-            {isOvertime && (
+            {isOvertime && targetDurationMinutes > 0 && (
               <div className="mt-1">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] text-red-600 dark:text-red-400">Overtime</span>
@@ -444,7 +458,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-red-500 transition-all"
-                    style={{ width: `${Math.min(100, ((totalActualTimeMinutes - targetDurationMinutes) / targetDurationMinutes) * 100)}%` }}
+                    style={{ width: `${Math.min(100, ((totalActualTimeMinutes - targetDurationMinutes) / totalTargetMinutes) * 100)}%` }}
                   />
                 </div>
               </div>
