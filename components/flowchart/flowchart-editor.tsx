@@ -1194,6 +1194,27 @@ function FlowchartEditorInner({
   // Track if auto-layout has been triggered
   const autoLayoutTriggered = useRef(false);
 
+  // Check if this is the first visit to this flowchart
+  const isFirstVisit = useRef<boolean>(false);
+  useEffect(() => {
+    const storageKey = `flowchart-animation-shown-${flowchart.id}`;
+    const hasSeenAnimation = localStorage.getItem(storageKey);
+    isFirstVisit.current = !hasSeenAnimation && layoutMode === 'centered';
+  }, [flowchart.id, layoutMode]);
+
+  // Overlay state with progress steps
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingSteps = [
+    { icon: '📦', text: 'Loading flowchart data...', subtext: `${steps.length} steps found` },
+    { icon: '🔗', text: 'Building connections...', subtext: `${initialEdges.length} edges to connect` },
+    { icon: '⚡', text: 'Applying centered layout...', subtext: 'Calculating positions' },
+    { icon: '🎯', text: 'Centering viewport...', subtext: 'Optimizing view' },
+    { icon: '🌬️', text: 'Zooming to overview...', subtext: 'Preparing workspace' },
+    { icon: '✨', text: 'Ready!', subtext: 'Flowchart loaded successfully' }
+  ];
+
   // Re-align all nodes to grid - Auto-layout with intelligent positioning (TOP-DOWN)
   const handleRealignToGridTopDown = useCallback(() => {
     // Parse step number from ID (e.g., "step-2-1" -> {major: 2, minor: 1})
@@ -2022,23 +2043,42 @@ function FlowchartEditorInner({
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // SIMPLE: Auto-run centered layout on mount (once)
+  // SIMPLE: Auto-run centered layout on mount (once) with animated progress
   useEffect(() => {
     if (layoutMode === 'centered' && !autoLayoutTriggered.current && steps.length > 0) {
       autoLayoutTriggered.current = true;
+      console.log('🎯 Starting auto-layout with animation...');
 
-      console.log('🎯 Auto-running centered layout on mount...');
+      // Step 0: Loading data (500ms)
+      setLoadingStep(0);
 
+      // Step 1: Building connections (500ms)
+      setTimeout(() => setLoadingStep(1), 500);
+
+      // Step 2: Applying layout (800ms) - RUN ACTUAL LAYOUT FUNCTION
       setTimeout(() => {
+        setLoadingStep(2);
         console.log('   Running handleRealignToGridCentered()...');
         handleRealignToGridCentered();
-
-        setTimeout(() => {
-          console.log('   Fitting view...');
-          fitView({ padding: 0.15, duration: 800, maxZoom: 0.85, minZoom: 0.5 });
-          console.log('✅ Auto-layout done!');
-        }, 500);
       }, 1000);
+
+      // Step 3: Centering viewport (800ms) - RUN FIT VIEW
+      setTimeout(() => {
+        setLoadingStep(3);
+        console.log('   Fitting view...');
+        fitView({ padding: 0.15, duration: 600, maxZoom: 0.85, minZoom: 0.5 });
+      }, 1800);
+
+      // Step 4: Ready! (600ms)
+      setTimeout(() => {
+        setLoadingStep(4);
+      }, 2600);
+
+      // Hide overlay after total 3.5 seconds
+      setTimeout(() => {
+        setShowLoadingOverlay(false);
+        console.log('✅ Auto-layout complete!');
+      }, 3500);
     }
   }, [layoutMode, steps.length, handleRealignToGridCentered, fitView]);
 
@@ -2198,7 +2238,79 @@ function FlowchartEditorInner({
   }), []);
 
   return (
-    <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
+    <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
+      {/* Animated Loading Overlay */}
+      {showLoadingOverlay && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-blue-900/90 to-gray-900/95 backdrop-blur-md"
+          style={{
+            animation: 'fadeIn 0.3s ease-in-out'
+          }}
+        >
+          <div className="flex flex-col items-center gap-6 max-w-md w-full px-6">
+            {/* Main Icon with Pulse Animation */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-2xl animate-pulse"></div>
+              <div className="relative text-7xl animate-bounce">
+                {loadingSteps[loadingStep]?.icon}
+              </div>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="w-full bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-blue-500/30 shadow-2xl">
+              {/* Current Step */}
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  {loadingSteps[loadingStep]?.text}
+                </h3>
+                <p className="text-blue-300 text-sm">
+                  {loadingSteps[loadingStep]?.subtext}
+                </p>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative h-2 bg-gray-700 rounded-full overflow-hidden mb-4">
+                <div
+                  className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${((loadingStep + 1) / loadingSteps.length) * 100}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
+                </div>
+              </div>
+
+              {/* Step Indicators */}
+              <div className="flex justify-between items-center gap-2">
+                {loadingSteps.map((step, idx) => (
+                  <div key={idx} className="flex flex-col items-center gap-1 flex-1">
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                        idx <= loadingStep
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-400 text-white scale-110 shadow-lg shadow-blue-500/50'
+                          : 'bg-gray-700 text-gray-500 scale-90'
+                      }`}
+                    >
+                      {idx < loadingStep ? '✓' : idx + 1}
+                    </div>
+                    <div className={`text-[10px] text-center transition-opacity ${
+                      idx <= loadingStep ? 'text-blue-300 opacity-100' : 'text-gray-600 opacity-50'
+                    }`}>
+                      {step.icon}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Loading Spinner Dots */}
+            <div className="flex gap-2">
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-3 h-3 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-3 h-3 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ReactFlow
         nodes={nodes as any}
         edges={edges}
