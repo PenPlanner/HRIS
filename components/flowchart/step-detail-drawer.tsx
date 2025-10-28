@@ -115,8 +115,6 @@ export function StepDetailDrawer({
   const filteredTasks = useMemo(() => {
     if (!step) return [];
 
-    console.log(`Step ${step.id} has ${step.tasks.length} total tasks:`, step.tasks.map(t => t.description));
-
     // If "Show All" is enabled, return all tasks
     if (showAllTasks) return step.tasks;
 
@@ -130,7 +128,6 @@ export function StepDetailDrawer({
       // Check if task's serviceType is in the included types
       return includedTypes.includes(task.serviceType);
     });
-    console.log(`After filtering for ${selectedServiceType}: ${filtered.length} tasks`, filtered.map(t => t.description));
     return filtered;
   }, [step, selectedServiceType, showAllTasks]);
 
@@ -219,13 +216,13 @@ export function StepDetailDrawer({
                   metadata.set(docNum, meta);
                 }
               } catch (error) {
-                console.error(`Failed to load metadata for doc ${docNum}:`, error);
+                // Silent error handling - metadata loading failed
               }
             }
           })
         );
       } catch (error) {
-        console.error('Failed to load PDF metadata module:', error);
+        // Silent error handling - PDF metadata module failed to load
       }
 
       setPdfMetadata(metadata);
@@ -475,13 +472,8 @@ export function StepDetailDrawer({
                     return { idx, ref, desc, taskObj, isCompleted, siiRef };
                   });
 
-                  console.log(`Parsed tasks for ${step.id}:`, tasks.map(t => ({ idx: t.idx, ref: t.ref, desc: t.desc, serviceType: t.taskObj.serviceType })));
-
                   const inProgressTasks = tasks.filter(t => !t.isCompleted);
                   const completedTasks = tasks.filter(t => t.isCompleted);
-
-                  console.log(`In progress tasks:`, inProgressTasks.map(t => ({ idx: t.idx, desc: t.desc })));
-                  console.log(`Completed tasks:`, completedTasks.map(t => ({ idx: t.idx, desc: t.desc })));
 
                   return (
                     <>
@@ -510,12 +502,6 @@ export function StepDetailDrawer({
                               return acc;
                             }, {} as Record<string, typeof inProgressTasks>);
 
-                            console.log("Grouped by service:", Object.entries(groupedByService).map(([type, tasks]) => ({
-                              type,
-                              count: tasks.length,
-                              tasks: tasks.map(t => ({ id: t.taskObj.id, desc: t.desc }))
-                            })));
-
                             return (
                               <div className="space-y-3">
                                 {Object.entries(groupedByService)
@@ -528,7 +514,6 @@ export function StepDetailDrawer({
                                   .map(([serviceType, tasks]) => (
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
-                                        console.log(`⭐ Rendering task:`, { id: taskObj.id, ref, desc });
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
                                         const isIndented = taskObj?.isIndented || false;
 
@@ -707,7 +692,6 @@ export function StepDetailDrawer({
                                   .map(([serviceType, tasks]) => (
                                     <div key={serviceType} className="space-y-1">
                                       {tasks.map(({ idx, ref, desc, taskObj, siiRef }) => {
-                                        console.log(`⭐ Rendering task:`, { id: taskObj.id, ref, desc });
                                         const hasReferenceNumber = /^\d+\.\d+(\.\d+)*\.?$/.test(ref);
                                         const isIndented = taskObj?.isIndented || false;
 
@@ -1229,7 +1213,7 @@ export function StepDetailDrawer({
                                 try {
                                   await downloadPDF(pdfId, pdfUrl, `Doc ${docNum}: ${refs[0].documentTitle}`);
                                 } catch (error) {
-                                  console.error(`Failed to download ${pdfId}:`, error);
+                                  // Silent error handling - download failed
                                 }
                               }
                             }
@@ -1322,7 +1306,7 @@ export function StepDetailDrawer({
                                         try {
                                           await downloadPDF(pdfId, pdfUrl, `Doc ${docNum}: ${refs[0].documentTitle}`);
                                         } catch (error) {
-                                          console.error('Download failed:', error);
+                                          // Silent error handling - download failed
                                         }
                                       }
                                     }}

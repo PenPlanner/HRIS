@@ -18,16 +18,12 @@ import { assignVehicle } from './technician-vehicle';
 export function seedWorkHistory(): void {
   if (typeof window === 'undefined') return;
 
-  console.log('🌱 Seeding work history data...');
-
   // Clear existing data (optional - comment out to keep existing data)
   // clearAllActivities();
 
   // ===========================================
   // SEED VEHICLES
   // ===========================================
-
-  console.log('🚗 Seeding vehicle data for Markus Anderson...');
 
   // Markus Anderson's assigned vehicle
   assignVehicle({
@@ -44,8 +40,6 @@ export function seedWorkHistory(): void {
     fuelCard: 'FC-2022-0315',
     notes: 'Equipped with full toolset and spare parts inventory. Regular service vehicle for northern region turbines.',
   });
-
-  console.log('✅ Vehicle seeded for Markus Anderson');
 
   // ===========================================
   // EXAMPLE 1: WTG-248024 - 1Y Service (2025-01-15)
@@ -879,46 +873,6 @@ export function seedWorkHistory(): void {
     durationMinutes: 150,
     notes: 'Older V120 model - replaced aging components. All electrical systems tested.',
   });
-
-  console.log('✅ Work history seed data created!');
-  console.log('✅ Vehicle data seeded!');
-  console.log('');
-  console.log('📊 Created activities for:');
-  console.log('   🌟 Markus Anderson (MRADR) - 60+ activities across 18+ turbines!');
-  console.log('      • EnVentus Mk 0: WTG-248024, 156782, 392045, 501234, 675432, 123789, 908765, 445566, 334455, 778899, 112233, 998877');
-  console.log('      • V136 Mk3: WTG-V136-001, V136-002');
-  console.log('      • V150-4.2 MW: WTG-V150-001, V150-002');
-  console.log('      • V162-6.2 MW: WTG-V162-001');
-  console.log('      • V120-2.2 MW: WTG-V120-001');
-  console.log('      • Services: 1Y, 2Y, 3Y, 4Y, 5Y (full range!)');
-  console.log('      • Roles: T1 and T2 (versatile technician)');
-  console.log('      • Vehicle: VW Transporter T6.1 (ABC 123)');
-  console.log('   - Sarah Miller (SAMIL) - WTG-248024');
-  console.log('   - Lisa Kim (LIKIM) - WTG-156782');
-  console.log('   - Mike Garcia (MIGAR) - WTG-392045');
-  console.log('   - Emma Lopez (EMLOP) - T3 Trainee on WTG-248024');
-  console.log('   - David Park (DAPAR) - T3 Trainee on WTG-392045');
-  console.log('   - Alex Chen (ALCHE) - T3 Trainee with Markus on WTG-908765');
-  console.log('   - Anna Wilson (ANWIL) - WTG-501234');
-  console.log('');
-  console.log('🎯 Variations included:');
-  console.log('   ⏱️  Times over target (yaw brake emergency: 210min)');
-  console.log('   🚀 Times under target (fast service: 90min vs 120min target)');
-  console.log('   🎓 T3 trainees on training steps (3 different trainees!)');
-  console.log('   📝 Notes on special circumstances');
-  console.log('   🔄 Technicians in different roles (T1/T2)');
-  console.log('   🏗️  Major services (4Y bolt check: 7 hours, 5Y generator overhaul: 9 hours)');
-  console.log('   ⚠️  Problem scenarios (worn brake pads, accumulator pressure issues)');
-  console.log('   ✅ Efficient services (under budget, clean inspections)');
-  console.log('   🌍 Multiple turbine models (EnVentus, V136, V150, V162, V120)');
-  console.log('');
-  console.log('📈 Markus Anderson Work Summary:');
-  console.log('   • Total activities: ~65');
-  console.log('   • Total hours: ~125+ hours');
-  console.log('   • Timespan: Oct 2024 - Jan 2025');
-  console.log('   • Turbine models: 5 different types (EnVentus, V136, V150, V162, V120)');
-  console.log('   • Shortest job: 45 minutes (LDST check)');
-  console.log('   • Longest job: 540 minutes (9 hours, 5Y generator overhaul)');
 }
 
 /**
@@ -933,7 +887,6 @@ export function initializeWorkHistoryData(): void {
   if (existing) {
     const activities = JSON.parse(existing);
     if (activities.length > 0) {
-      console.log('ℹ️  Work history already exists. Run seedWorkHistory() to add more data.');
       return;
     }
   }

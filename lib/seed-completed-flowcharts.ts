@@ -1052,7 +1052,7 @@ export function seedCompletedFlowcharts(): void {
     try {
       flowcharts = JSON.parse(existing);
     } catch (e) {
-      console.error('Failed to parse existing completed flowcharts:', e);
+      // Silent error handling - failed to parse existing completed flowcharts
     }
   }
 
@@ -1062,36 +1062,29 @@ export function seedCompletedFlowcharts(): void {
 
   if (!existingIds.includes(example1.id)) {
     flowcharts.push(example1);
-    console.log('✅ Added example 1: WTG-248024 (EnVentus Mk 0, 1Y Service - Minor issues)');
   }
 
   if (!existingIds.includes(example2.id)) {
     flowcharts.push(example2);
-    console.log('✅ Added example 2: WTG-156782 (EnVentus Mk 0, 2Y Service - All issues resolved)');
   }
 
   if (!existingIds.includes(example3.id)) {
     flowcharts.push(example3);
-    console.log('✅ Added example 3: WTG-392045 (EnVentus Mk 0, 1Y Service - Critical bearing damage)');
   }
 
   if (!existingIds.includes(example4.id)) {
     flowcharts.push(example4);
-    console.log('✅ Added example 4: WTG-V136-001 (V136 Mk3, 2Y Service - Blade bearing service)');
   }
 
   if (!existingIds.includes(example5.id)) {
     flowcharts.push(example5);
-    console.log('✅ Added example 5: WTG-V150-001 (V150-4.2 MW, 3Y Service - Pitch system overhaul)');
   }
 
   if (!existingIds.includes(example6.id)) {
     flowcharts.push(example6);
-    console.log('✅ Added example 6: WTG-V162-001 (V162-6.2 MW, 2Y Service - Generator inspection)');
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(flowcharts));
-  console.log('🎉 Seed data complete! 6 example completed flowcharts added (5 different turbine models).');
 }
 
 /**
@@ -1108,8 +1101,7 @@ export function clearSeedData(): void {
     const exampleIds = [example1.id, example2.id, example3.id];
     const filtered = flowcharts.filter((f: CompletedFlowchart) => !exampleIds.includes(f.id));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    console.log('🗑️ Seed data cleared!');
   } catch (e) {
-    console.error('Failed to clear seed data:', e);
+    // Silent error handling - failed to clear seed data
   }
 }

@@ -147,38 +147,15 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
 
-  // Debug: Log when isActive changes
-  useEffect(() => {
-    if (isActive) {
-      console.log(`[StepNode ${step.id}] isActive = true! Should show blue border.`);
-    }
-  }, [isActive, step.id]);
 
   // Use technicians passed from parent (synced from header/Start Service)
   const t1 = selectedT1;
   const t2 = selectedT2;
 
-  // Debug logging for technicians - log on EVERY render
-  const dataKeys = Object.keys(data);
-  console.log(`[StepNode ${step.id}] RENDER - t1:`, t1?.initials, 't2:', t2?.initials, 'from data:', data.selectedT1?.initials, data.selectedT2?.initials);
-  console.log(`[StepNode ${step.id}] Full data keys (${dataKeys.length}):`, dataKeys.join(', '));
-  console.log(`[StepNode ${step.id}] selectedT1 in keys?`, dataKeys.includes('selectedT1'), 'value:', data.selectedT1);
-  console.log(`[StepNode ${step.id}] selectedT2 in keys?`, dataKeys.includes('selectedT2'), 'value:', data.selectedT2);
-
-  // Debug logging for technicians in useEffect
-  useEffect(() => {
-    console.log(`[StepNode ${step.id}] useEffect - t1:`, t1?.initials, 't2:', t2?.initials);
-  }, [t1, t2, step.id]);
-
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
   const totalTasks = step.tasks.length;
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
-
-  // Debug logging
-  if (isActive || isComplete) {
-    console.log(`[StepNode ${step.id}] Render: isActive=${isActive}, isComplete=${isComplete}, tasks=${completedTasks}/${totalTasks}`);
-  }
 
   // Calculate total notes count from all tasks
   const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
@@ -875,7 +852,6 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
   const [editingTechnicians, setEditingTechnicians] = useState(false);
   const [editingTotalMinutes, setEditingTotalMinutes] = useState(false);
 
-  console.log("InfoCardNode render:", { selectedServiceType, hasOnServiceTypeChange: !!onServiceTypeChange });
 
   // Format minutes to H:M format with minutes in parentheses (e.g., "38:00h (2280m)")
   const formatTimeWithMinutes = (minutes: number): string => {
@@ -1100,7 +1076,6 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log("Reset clicked!");
                     onServiceTypeChange("all");
                   }}
                   className="h-6 px-2 text-xs nodrag"
@@ -1127,7 +1102,6 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log(`Service type ${serviceType} clicked!`);
                       onServiceTypeChange?.(serviceType);
                     }}
                   >
@@ -1159,7 +1133,6 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log(`Service type ${code} clicked!`);
                       onServiceTypeChange?.(code);
                     }}
                   >
@@ -1223,7 +1196,6 @@ function FlowchartEditorInner({
   selectedT2
 }: FlowchartEditorProps) {
   // Debug: Log selectedT1 and selectedT2 on every render
-  console.log('[FlowchartEditorInner RENDER] selectedT1:', selectedT1?.initials, 'selectedT2:', selectedT2?.initials);
 
   // Get React Flow instance to access fitView and zoom functions
   const { fitView, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
@@ -1343,15 +1315,6 @@ function FlowchartEditorInner({
   // Update nodes when initialNodes changes (e.g., when technicians change)
   // initialNodes already includes selectedT1 and selectedT2 in the data, so this is sufficient
   useEffect(() => {
-    console.log('[FlowchartEditor] initialNodes changed, updating all nodes. T1:', selectedT1?.initials, 'T2:', selectedT2?.initials);
-
-    // Debug: Check what's actually in initialNodes[0].data
-    if (initialNodes.length > 0 && initialNodes[0].type === 'stepNode') {
-      console.log('[FlowchartEditor] initialNodes[0].data keys:', Object.keys(initialNodes[0].data));
-      console.log('[FlowchartEditor] initialNodes[0].data.selectedT1:', initialNodes[0].data.selectedT1);
-      console.log('[FlowchartEditor] initialNodes[0].data.selectedT2:', initialNodes[0].data.selectedT2);
-    }
-
     // Create completely new array reference and new object references for each node
     // to force React Flow to recognize the change
     const timestamp = Date.now();
@@ -1363,16 +1326,10 @@ function FlowchartEditorInner({
       }
     }));
 
-    console.log('[FlowchartEditor] Setting nodes with forced update timestamp:', timestamp);
-    console.log('[FlowchartEditor] forcedNodes[0].data keys:', forcedNodes.length > 0 ? Object.keys(forcedNodes[0].data) : 'no nodes');
-    console.log('[FlowchartEditor] forcedNodes[0].data.selectedT1:', forcedNodes.length > 0 ? forcedNodes[0].data.selectedT1 : 'no nodes');
-    console.log('[FlowchartEditor] forcedNodes[0].data.selectedT2:', forcedNodes.length > 0 ? forcedNodes[0].data.selectedT2 : 'no nodes');
-
     setNodes(forcedNodes);
 
     // Force React Flow to re-render nodes after state update
     setTimeout(() => {
-      console.log('[FlowchartEditor] Forcing React Flow to update node internals');
       forcedNodes.forEach((node) => {
         if (node.type === 'stepNode') {
           updateNodeInternals(node.id);
@@ -1383,14 +1340,12 @@ function FlowchartEditorInner({
 
   // Update nodes when activeStepIds changes
   useEffect(() => {
-    console.log('[FlowchartEditor useEffect] activeStepIds changed:', activeStepIds);
 
     setNodes((currentNodes) => {
       const updated = currentNodes.map((node) => {
         if (node.type === 'stepNode') {
           const isActive = activeStepIds.includes(node.id);
           if (isActive !== node.data.isActive) {
-            console.log('[FlowchartEditor useEffect] Updating node:', node.id, 'isActive:', isActive);
             return {
               ...node,
               data: {
@@ -1452,13 +1407,13 @@ function FlowchartEditorInner({
       document.documentElement.requestFullscreen().then(() => {
         setIsFullscreen(true);
       }).catch((err) => {
-        console.error('Error attempting to enable fullscreen:', err);
+        // Error attempting to enable fullscreen
       });
     } else {
       document.exitFullscreen().then(() => {
         setIsFullscreen(false);
       }).catch((err) => {
-        console.error('Error attempting to exit fullscreen:', err);
+        // Error attempting to exit fullscreen
       });
     }
   }, []);

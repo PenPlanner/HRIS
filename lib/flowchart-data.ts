@@ -681,7 +681,7 @@ export function loadCustomFlowcharts(): FlowchartData[] {
     const data = JSON.parse(stored);
     return Object.values(data) as FlowchartData[];
   } catch (error) {
-    console.error("Failed to load custom flowcharts:", error);
+    // Silent error handling - failed to load custom flowcharts
     return [];
   }
 }
@@ -711,7 +711,7 @@ export function saveFlowchart(flowchart: FlowchartData): void {
     // Save back to localStorage
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
-    console.error("Failed to save flowchart:", error);
+    // Silent error handling - failed to save flowchart
     throw error;
   }
 }
@@ -731,7 +731,7 @@ export function deleteFlowchart(flowchartId: string): void {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (error) {
-    console.error("Failed to delete flowchart:", error);
+    // Silent error handling - failed to delete flowchart
     throw error;
   }
 }
@@ -746,10 +746,8 @@ export function resetToDefaultLayout(flowchartId: string): void {
   try {
     // Delete any custom saved version
     deleteFlowchart(flowchartId);
-
-    console.log(`Reset flowchart ${flowchartId} to default layout`);
   } catch (error) {
-    console.error("Failed to reset flowchart to default:", error);
+    // Silent error handling - failed to reset flowchart
   }
 }
 
@@ -770,7 +768,7 @@ export function exportFlowchartJSON(flowchart: FlowchartData): void {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error("Failed to export flowchart:", error);
+    // Silent error handling - failed to export flowchart
     throw error;
   }
 }
