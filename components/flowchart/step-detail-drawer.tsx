@@ -51,6 +51,8 @@ interface StepDetailDrawerProps {
   onOpenTechnicianPairModal?: () => void;
   onAddAdditionalTechnician?: (technicianId: string, role: 'T1' | 'T2' | 'T3') => void;
   onRemoveAdditionalTechnician?: (technicianId: string) => void;
+  selectedT1?: Technician | null;
+  selectedT2?: Technician | null;
 }
 
 export function StepDetailDrawer({
@@ -77,7 +79,9 @@ export function StepDetailDrawer({
   isEditMode = false,
   onOpenTechnicianPairModal,
   onAddAdditionalTechnician,
-  onRemoveAdditionalTechnician
+  onRemoveAdditionalTechnician,
+  selectedT1,
+  selectedT2
 }: StepDetailDrawerProps) {
   // State for "Show All" toggle
   const [showAllTasks, setShowAllTasks] = useState(false);
@@ -93,8 +97,9 @@ export function StepDetailDrawer({
   // Offline PDF management
   const { downloadPDF, isAvailable, loading: offlineLoading } = useOfflinePDFs();
 
-  // Get selected technicians for displaying (synced from header/Start Service)
-  const { t1, t2 } = getSelectedTechnicians();
+  // Use selected technicians from props (synced from header/Start Service)
+  const t1 = selectedT1;
+  const t2 = selectedT2;
 
   // State for adding additional technicians
   const [showAddTechModal, setShowAddTechModal] = useState(false);

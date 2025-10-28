@@ -1,6 +1,10 @@
+"use client"
+
 import { MainLayout } from "@/components/layout/main-layout";
 import Link from "next/link";
 import { Users, GraduationCap, Settings as SettingsIcon } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SeedDataButton } from "@/components/admin/seed-data-button";
 
 export default function AdminPage() {
   return (
@@ -10,6 +14,30 @@ export default function AdminPage() {
         <p className="mt-2 text-muted-foreground">
           Manage teams, courses, and system settings
         </p>
+
+        {/* Development Tools */}
+        <Card className="mt-6 border-dashed border-2 border-amber-500/50 bg-amber-500/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <span>🛠️</span> Development Tools
+            </CardTitle>
+            <CardDescription>
+              Tools for seeding test data and development utilities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium mb-2">Work History Data</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Seed realistic work history data based on completed flowcharts.
+                  Includes activities for multiple technicians with T3 trainees, varied times, and realistic scenarios.
+                </p>
+                <SeedDataButton />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <Link

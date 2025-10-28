@@ -16,7 +16,9 @@
       "Bash(git checkout:*)",
       "Bash(npm run build:*)",
       "Bash(npm start)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Read(//Users/home/Pictures/**)",
+      "Read(//Users/home/**)"
     ],
     "deny": [],
     "ask": []

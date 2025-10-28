@@ -146,7 +146,6 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, onOpenTechnicianPairModal, selectedT1, selectedT2 } = data;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
-  const [showT3Modal, setShowT3Modal] = useState(false);
 
   // Debug: Log when isActive changes
   useEffect(() => {
@@ -159,25 +158,10 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const t1 = selectedT1;
   const t2 = selectedT2;
 
-  // Handle T3 selection
-  const handleT3Select = (tech: Technician | null) => {
-    if (tech) {
-      onUpdateStep({
-        ...step,
-        hasT3: true,
-        t3Id: tech.id,
-        t3Initials: tech.initials,
-      });
-    } else {
-      // Remove T3
-      onUpdateStep({
-        ...step,
-        hasT3: false,
-        t3Id: undefined,
-        t3Initials: undefined,
-      });
-    }
-  };
+  // Debug logging for technicians
+  useEffect(() => {
+    console.log(`[StepNode ${step.id}] t1:`, t1?.initials, 't2:', t2?.initials);
+  }, [t1, t2, step.id]);
 
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
@@ -463,7 +447,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T1{t1 ? `: ${t1.initials}` : ''}
+                  {t1 ? t1.initials : 'T1'}
                 </Badge>
                 <Badge
                   variant="secondary"
@@ -472,7 +456,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  T2{t2 ? `: ${t2.initials}` : ''}
+                  {t2 ? t2.initials : 'T2'}
                 </Badge>
               </>
             ) : (
@@ -486,41 +470,11 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                 title="Click to assign T1 and T2 for the job"
               >
                 <User className="h-3 w-3" />
-                {step.technician === "T1" ? (t1 ? `T1: ${t1.initials}` : 'T1') : (t2 ? `T2: ${t2.initials}` : 'T2')}
+                {step.technician === "T1" ? (t1 ? t1.initials : 'T1') : (t2 ? t2.initials : 'T2')}
               </Badge>
-            )}
-
-            {/* T3 (Trainee) Badge and Add Button */}
-            {step.hasT3 && step.t3Initials ? (
-              <Badge
-                variant="secondary"
-                className="text-xs bg-amber-500/90 hover:bg-amber-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
-                onClick={() => setShowT3Modal(true)}
-                title="T3 (Trainee) - Click to change or remove"
-              >
-                <User className="h-3 w-3" />
-                T3: {step.t3Initials}
-              </Badge>
-            ) : (
-              <button
-                onClick={() => setShowT3Modal(true)}
-                className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 hover:border-amber-500 transition-colors"
-                title="Add T3 (Trainee) to this step"
-              >
-                <Plus className="h-3.5 w-3.5 text-amber-600" />
-              </button>
             )}
           </div>
         </div>
-
-        {/* T3 Selection Modal */}
-        <TechnicianSelectModal
-          open={showT3Modal}
-          onOpenChange={setShowT3Modal}
-          onSelect={handleT3Select}
-          title="Select T3 (Trainee)"
-          currentSelection={step.t3Id ? { id: step.t3Id, initials: step.t3Initials || '', first_name: '', last_name: '', email: '', team_name: '', team_color: '#000000' } as any : null}
-        />
 
         {/* Step Content - Task list with scroll if needed */}
         <div className="flex-1 flex flex-col min-h-0 mt-2">
@@ -1217,6 +1171,9 @@ function FlowchartEditorInner({
   selectedT1,
   selectedT2
 }: FlowchartEditorProps) {
+  // Debug: Log selectedT1 and selectedT2 on every render
+  console.log('[FlowchartEditorInner RENDER] selectedT1:', selectedT1?.initials, 'selectedT2:', selectedT2?.initials);
+
   // Get React Flow instance to access fitView and zoom functions
   const { fitView, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
 
@@ -1291,6 +1248,9 @@ function FlowchartEditorInner({
 
       const isActive = activeStepIds.includes(step.id);
 
+      // Add a version key to force re-render when technicians change
+      const techVersion = `${selectedT1?.id || 'none'}-${selectedT2?.id || 'none'}`;
+
       return {
         id: step.id,
         type: 'stepNode',
@@ -1310,6 +1270,7 @@ function FlowchartEditorInner({
           onOpenTechnicianPairModal,
           selectedT1,
           selectedT2,
+          techVersion, // Force re-render key
         },
         draggable: isEditMode,
       };
@@ -1327,6 +1288,12 @@ function FlowchartEditorInner({
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
+
+  // Update nodes when initialNodes changes (e.g., when technicians change)
+  useEffect(() => {
+    console.log('[FlowchartEditor] initialNodes changed, updating all nodes');
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
 
   // Update nodes when activeStepIds changes
   useEffect(() => {
@@ -1357,6 +1324,7 @@ function FlowchartEditorInner({
       updateNodeInternals(nodeId);
     });
   }, [activeStepIds, setNodes, updateNodeInternals]);
+
 
   // Track if auto-layout has been triggered
   const autoLayoutTriggered = useRef(false);

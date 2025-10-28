@@ -235,7 +235,7 @@ export default function FlowchartsPage() {
                               <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground">Duration</p>
+                              <p className="text-xs text-muted-foreground">Downtime</p>
                               <p className="font-semibold">{flowchart.duration}</p>
                             </div>
                           </div>

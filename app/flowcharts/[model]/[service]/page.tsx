@@ -102,6 +102,12 @@ export default function FlowchartViewerPage() {
   const [jobStarted, setJobStarted] = useState<string | null>(null);
   const [jobFinished, setJobFinished] = useState<string | null>(null);
 
+  // State for test completion percentage
+  const [testCompletionPercent, setTestCompletionPercent] = useState<number>(100);
+
+  // Force update key for flowchart re-render
+  const [flowchartKey, setFlowchartKey] = useState<number>(0);
+
   // Check if all steps are completed
   useEffect(() => {
     if (!jobStarted || jobFinished) return;
@@ -2142,25 +2148,80 @@ ${fullLayoutData.map(step =>
                   <Trash2 className="h-3 w-3" />
                 </Button>
 
-                {/* Test: Complete All Tasks */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const updatedSteps = steps.map(step => ({
-                      ...step,
-                      tasks: step.tasks.map(task => ({ ...task, completed: true }))
-                    }));
-                    setSteps(updatedSteps);
-                    setToastMessage('✅ All tasks completed (test mode)');
-                    setShowToast(true);
-                  }}
-                  className="h-6 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300 dark:hover:bg-green-950"
-                  title="Complete All Tasks (Test)"
-                >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  <span className="text-xs">Test 100%</span>
-                </Button>
+                {/* Test: Completion Slider */}
+                <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-green-50/50 dark:bg-green-950/50 border-green-300 dark:border-green-700">
+                  <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={testCompletionPercent}
+                    onChange={(e) => setTestCompletionPercent(Number(e.target.value))}
+                    className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-green-600"
+                    title="Test completion percentage"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // Calculate how many tasks to complete based on percentage
+                      const allTasks: any[] = [];
+                      steps.forEach((step, stepIndex) => {
+                        step.tasks.forEach((task, taskIndex) => {
+                          allTasks.push({ stepIndex, taskIndex, task });
+                        });
+                      });
+
+                      const tasksToComplete = Math.floor((allTasks.length * testCompletionPercent) / 100);
+
+                      // Create completely new step objects with new task objects
+                      const updatedSteps = steps.map((step, stepIndex) => ({
+                        ...step,
+                        tasks: step.tasks.map((task, taskIndex) => {
+                          // Find if this task should be completed
+                          const taskGlobalIndex = allTasks.findIndex(
+                            t => t.stepIndex === stepIndex && t.taskIndex === taskIndex
+                          );
+                          return {
+                            ...task,
+                            completed: taskGlobalIndex < tasksToComplete
+                          };
+                        })
+                      }));
+
+                      setSteps(updatedSteps);
+                      // Force flowchart to re-render
+                      setFlowchartKey(prev => prev + 1);
+                      setToastMessage(`✅ ${testCompletionPercent}% tasks completed (test mode)`);
+                      setShowToast(true);
+                    }}
+                    className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900"
+                    title={`Complete ${testCompletionPercent}% of tasks`}
+                  >
+                    Test {testCompletionPercent}%
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // Create completely new step objects with new task objects
+                      const updatedSteps = steps.map(step => ({
+                        ...step,
+                        tasks: step.tasks.map(task => ({ ...task, completed: false }))
+                      }));
+                      setSteps(updatedSteps);
+                      // Force flowchart to re-render
+                      setFlowchartKey(prev => prev + 1);
+                      setToastMessage('🔄 All tasks reset');
+                      setShowToast(true);
+                    }}
+                    className="h-6 px-2 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    title="Reset all tasks"
+                  >
+                    Reset
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -2187,6 +2248,7 @@ ${fullLayoutData.map(step =>
           <FlowchartInfoDropdown flowchart={flowchartData} steps={steps} />
 
           <FlowchartEditor
+            key={flowchartKey}
             flowchart={flowchartData}
             steps={steps}
             onStepsChange={setSteps}
@@ -2240,6 +2302,8 @@ ${fullLayoutData.map(step =>
         onOpenTechnicianPairModal={() => setTechnicianPairModalOpen(true)}
         onAddAdditionalTechnician={handleAddAdditionalTechnician}
         onRemoveAdditionalTechnician={handleRemoveAdditionalTechnician}
+        selectedT1={selectedT1}
+        selectedT2={selectedT2}
       />
 
       {/* Step Editor Dialog */}

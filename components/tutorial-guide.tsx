@@ -354,10 +354,8 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
     const hasSeenTutorial = localStorage.getItem('tutorial-completed');
     console.log('Tutorial: Checking on mount. hasSeenTutorial:', hasSeenTutorial);
 
-    if (hasSeenTutorial) {
-      console.log('Tutorial: Already completed, showing icon group');
-      setIsMinimized(true);
-    }
+    // Always show icons (skip tutorial requirement)
+    setIsMinimized(true);
   }, []);
 
   // Listen for auto-open event after initial animation
@@ -372,11 +370,9 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
           setIsOpen(true);
           console.log('Tutorial: Dialog opened!');
         }, 2500); // 2.5 seconds after info dropdown opens
-      } else {
-        // If tutorial was completed, ensure icon group is shown
-        console.log('Tutorial: Already completed, ensuring icon group is visible');
-        setIsMinimized(true);
       }
+
+      // Icons are always shown (set in mount effect)
     };
 
     window.addEventListener('tutorial-auto-open', handleAutoOpen);

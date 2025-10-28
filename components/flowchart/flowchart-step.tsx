@@ -15,9 +15,11 @@ interface FlowchartStepProps {
   onClick: () => void;
   completedTasks: number;
   totalTasks: number;
+  selectedT1Initials?: string;
+  selectedT2Initials?: string;
 }
 
-export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: FlowchartStepProps) {
+export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selectedT1Initials, selectedT2Initials }: FlowchartStepProps) {
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
   const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
@@ -126,22 +128,22 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks }: Flo
           <>
             <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
               <User className="h-3 w-3 text-white" />
-              <span className="text-xs font-bold text-white">T1</span>
+              <span className="text-xs font-bold text-white">{selectedT1Initials || 'T1'}</span>
             </div>
             <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
               <User className="h-3 w-3 text-white" />
-              <span className="text-xs font-bold text-white">T2</span>
+              <span className="text-xs font-bold text-white">{selectedT2Initials || 'T2'}</span>
             </div>
           </>
         ) : step.technician === "T1" ? (
           <div className="bg-blue-500/90 px-2 py-1 rounded-md flex items-center gap-1">
             <User className="h-3 w-3 text-white" />
-            <span className="text-xs font-bold text-white">T1</span>
+            <span className="text-xs font-bold text-white">{selectedT1Initials || 'T1'}</span>
           </div>
         ) : (
           <div className="bg-purple-500/90 px-2 py-1 rounded-md flex items-center gap-1">
             <User className="h-3 w-3 text-white" />
-            <span className="text-xs font-bold text-white">T2</span>
+            <span className="text-xs font-bold text-white">{selectedT2Initials || 'T2'}</span>
           </div>
         )}
       </div>
