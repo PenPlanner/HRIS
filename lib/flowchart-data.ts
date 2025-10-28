@@ -301,7 +301,7 @@ export const ENVENTUS_MK0_1Y: FlowchartData = {
     {
       id: "step-5-1",
       title: "8.5.2 Replace CubePower air filters\n10.5.1 Yaw control panel ++68\n10.5.2.1-5.2.4 Yaw system\n10.5.2.5 Spring packs\n10.5.2.6-5.2.7 Lubrication pumps\n6.5.1.1 Battery Inspection\n4. 5.2.7.12 M6 bolts rotation transfer\n6.5.1.2 Replace backup batteries\n6.5.1.3 Check heater\n10.5.2.1.1 Clean yaw grease",
-      duration: "3h + (2Y)1h 45m + (4y)45m + (+)4h",
+      duration: "180m + (3Y)60m + (4Y)60m",
       durationMinutes: 180,
       color: getServiceTypeColor("Multi"),
       colorCode: "Multi",
