@@ -359,7 +359,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                   {formatToHM(targetDurationMinutes)}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-green-500 transition-all"
                   style={{ width: `${targetProgressPercent}%` }}
@@ -367,62 +367,72 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
               </div>
             </div>
 
-            {/* Time Progress - Actual with Arrow Indicator */}
+            {/* Time Progress - Actual with Smart Color Coding */}
             <div className="mb-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-600 dark:text-gray-300">Actual</span>
-                <div className="flex items-center gap-1">
-                  {totalActualTimeMinutes > 0 && targetDurationMinutes > 0 && (
-                    <>
-                      {isAheadOfSchedule ? (
-                        <ArrowUp className="h-3 w-3 text-green-600" />
-                      ) : (
-                        <ArrowDown className="h-3 w-3 text-red-600" />
-                      )}
-                      <span className={cn(
-                        "text-[10px] font-bold",
-                        isAheadOfSchedule ? "text-green-600" : "text-red-600"
-                      )}>
-                        {isAheadOfSchedule ? '-' : '+'}{formatToHM(Math.abs(timeDifferenceMinutes))}
-                      </span>
-                    </>
-                  )}
+                <div className="flex items-center gap-2">
                   <span className={cn(
                     "text-[10px] font-bold",
-                    isOvertime && targetDurationMinutes > 0 ? "text-red-600" : "text-yellow-600"
+                    totalActualTimeMinutes === 0 ? "text-gray-500" :
+                    isOvertime && targetDurationMinutes > 0 ? "text-red-600" : "text-green-600"
                   )}>
                     {formatToHM(totalActualTimeMinutes)}
                   </span>
+                  {totalActualTimeMinutes > 0 && targetDurationMinutes > 0 && (
+                    <>
+                      {timeDifferenceMinutes < 0 && (
+                        <span className="text-[10px] font-bold text-green-600">
+                          − {formatToHM(Math.abs(timeDifferenceMinutes))}
+                        </span>
+                      )}
+                      {timeDifferenceMinutes > 0 && (
+                        <span className="text-[10px] font-bold text-red-600">
+                          + {formatToHM(timeDifferenceMinutes)}
+                        </span>
+                      )}
+                      {timeDifferenceMinutes === 0 && (
+                        <span className="text-[10px] font-bold text-gray-600">on target</span>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    isOvertime && targetDurationMinutes > 0 ? "bg-red-500" : "bg-yellow-500"
+              <div className="relative">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden relative">
+                  {/* Green part (up to target) */}
+                  {totalActualTimeMinutes > 0 && (
+                    <div
+                      className="absolute h-full bg-green-500 transition-all"
+                      style={{
+                        width: `${Math.min(targetProgressPercent, actualProgressPercent)}%`
+                      }}
+                    />
                   )}
-                  style={{ width: `${Math.min(100, actualProgressPercent)}%` }}
-                />
+                  {/* Red part (overtime) */}
+                  {isOvertime && targetDurationMinutes > 0 && (
+                    <div
+                      className="absolute h-full bg-red-500 transition-all"
+                      style={{
+                        left: `${targetProgressPercent}%`,
+                        width: `${Math.min(100 - targetProgressPercent, actualProgressPercent - targetProgressPercent)}%`
+                      }}
+                    />
+                  )}
+                </div>
+                {/* Target marker */}
+                {targetDurationMinutes > 0 && targetProgressPercent < 100 && (
+                  <div
+                    className="absolute top-[-2px] w-0.5 h-3 bg-gray-800 dark:bg-gray-300"
+                    style={{ left: `${targetProgressPercent}%` }}
+                  >
+                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                      target
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Overtime bar if applicable */}
-            {isOvertime && targetDurationMinutes > 0 && (
-              <div className="mt-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-red-600 dark:text-red-400">Overtime</span>
-                  <span className="text-[10px] font-bold text-red-600">
-                    +{formatToHM(totalActualTimeMinutes - targetDurationMinutes)}
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-red-500 transition-all"
-                    style={{ width: `${Math.min(100, ((totalActualTimeMinutes - targetDurationMinutes) / totalTargetMinutes) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Service Type Legend */}

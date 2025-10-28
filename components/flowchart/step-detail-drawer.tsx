@@ -48,11 +48,12 @@ interface StepDetailDrawerProps {
   onStepUpdate?: (step: FlowchartStep) => void;
   selectedServiceType?: string;
   isEditMode?: boolean;
-  onOpenTechnicianPairModal?: () => void;
+  onOpenTechnicianModal?: (step: FlowchartStep) => void;
   onAddAdditionalTechnician?: (technicianId: string, role: 'T1' | 'T2' | 'T3') => void;
   onRemoveAdditionalTechnician?: (technicianId: string) => void;
   selectedT1?: Technician | null;
   selectedT2?: Technician | null;
+  selectedT3?: Technician | null;
 }
 
 export function StepDetailDrawer({
@@ -77,11 +78,12 @@ export function StepDetailDrawer({
   onStepUpdate,
   selectedServiceType = "all",
   isEditMode = false,
-  onOpenTechnicianPairModal,
+  onOpenTechnicianModal,
   onAddAdditionalTechnician,
   onRemoveAdditionalTechnician,
   selectedT1,
-  selectedT2
+  selectedT2,
+  selectedT3
 }: StepDetailDrawerProps) {
   // State for "Show All" toggle
   const [showAllTasks, setShowAllTasks] = useState(false);
@@ -97,9 +99,10 @@ export function StepDetailDrawer({
   // Offline PDF management
   const { downloadPDF, isAvailable, loading: offlineLoading } = useOfflinePDFs();
 
-  // Use selected technicians from props (synced from header/Start Service)
-  const t1 = selectedT1;
-  const t2 = selectedT2;
+  // Use step-specific technicians if available, otherwise use global selections
+  const t1 = step?.t1Id ? getTechnicianById(step.t1Id) : selectedT1;
+  const t2 = step?.t2Id ? getTechnicianById(step.t2Id) : selectedT2;
+  const t3 = step?.t3Id ? getTechnicianById(step.t3Id) : selectedT3;
 
   // State for adding additional technicians
   const [showAddTechModal, setShowAddTechModal] = useState(false);
@@ -270,53 +273,40 @@ export function StepDetailDrawer({
 
           {/* Header - Improved Layout */}
           <div className="space-y-3 mb-4">
-            {/* Row 1: Technicians - Click to assign T1 and T2 for the job */}
+            {/* Row 1: Technicians - Click to assign technicians for this step */}
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-gray-400 flex-shrink-0" />
               <div className="flex items-center gap-2 flex-1 flex-wrap">
-                {/* Primary technician(s) for this step */}
-                {step.technician === "both" ? (
-                  <>
-                    <button
-                      onClick={() => onOpenTechnicianPairModal?.()}
-                      className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
-                      title="Click to assign T1 and T2 for the job"
-                    >
-                      <span className="text-xs font-bold text-white">T1</span>
-                      <span className="text-xs text-white/90">{t1 ? t1.initials : 'Not assigned'}</span>
-                    </button>
-                    <button
-                      onClick={() => onOpenTechnicianPairModal?.()}
-                      className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
-                      title="Click to assign T1 and T2 for the job"
-                    >
-                      <span className="text-xs font-bold text-white">T2</span>
-                      <span className="text-xs text-white/90">{t2 ? t2.initials : 'Not assigned'}</span>
-                    </button>
-                  </>
-                ) : step.technician === "T1" ? (
-                  <button
-                    onClick={() => onOpenTechnicianPairModal?.()}
-                    className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
-                    title="Click to assign T1 and T2 for the job"
-                  >
-                    <span className="text-xs font-bold text-white">T1</span>
-                    <span className="text-xs text-white/90">
-                      {t1 ? t1.initials : 'Not assigned'}
-                    </span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => onOpenTechnicianPairModal?.()}
-                    className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
-                    title="Click to assign T1 and T2 for the job"
-                  >
-                    <span className="text-xs font-bold text-white">T2</span>
-                    <span className="text-xs text-white/90">
-                      {t2 ? t2.initials : 'Not assigned'}
-                    </span>
-                  </button>
-                )}
+                {/* Technician buttons - always show T1, T2, T3 */}
+                <button
+                  onClick={() => step && onOpenTechnicianModal?.(step)}
+                  className="group bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  title={step?.t1Id ? "Step-specific T1 (click to change for this step only)" : "T1 from global selection (click to set step-specific)"}
+                >
+                  <span className="text-xs font-bold text-white">T1</span>
+                  <span className="text-xs text-white/90">{t1 ? t1.initials : 'Not assigned'}</span>
+                  {step?.t1Id && <span className="text-[10px] text-white/70">*</span>}
+                </button>
+
+                <button
+                  onClick={() => step && onOpenTechnicianModal?.(step)}
+                  className="group bg-purple-500 hover:bg-purple-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  title={step?.t2Id ? "Step-specific T2 (click to change for this step only)" : "T2 from global selection (click to set step-specific)"}
+                >
+                  <span className="text-xs font-bold text-white">T2</span>
+                  <span className="text-xs text-white/90">{t2 ? t2.initials : 'Not assigned'}</span>
+                  {step?.t2Id && <span className="text-[10px] text-white/70">*</span>}
+                </button>
+
+                <button
+                  onClick={() => step && onOpenTechnicianModal?.(step)}
+                  className="group bg-amber-500 hover:bg-amber-600 px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-colors"
+                  title={step?.t3Id ? "Step-specific T3 (click to change for this step only)" : "T3 from global selection (click to set step-specific)"}
+                >
+                  <span className="text-xs font-bold text-white">T3</span>
+                  <span className="text-xs text-white/90">{t3 ? t3.initials : 'Optional'}</span>
+                  {step?.t3Id && <span className="text-[10px] text-white/70">*</span>}
+                </button>
 
                 {/* Additional technicians */}
                 {step.additionalTechnicians && step.additionalTechnicians.length > 0 && step.additionalTechnicians.map((tech) => (
@@ -353,50 +343,96 @@ export function StepDetailDrawer({
               </div>
             </div>
 
-            {/* Row 2: Target Time and Progress */}
-            <div className="flex items-center gap-4">
+            {/* Row 2: Target Time, Actual Time and Progress */}
+            <div className="flex items-center gap-3">
               {/* Target Time */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg px-4 py-2 flex items-center gap-3 flex-1">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg px-4 py-3 flex items-center gap-3 min-h-[72px]">
                 <div className="bg-white dark:bg-gray-900 rounded-full p-2">
                   <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div>
-                  <div className="text-xs text-green-700 dark:text-green-400 font-semibold uppercase tracking-wide">Target Time</div>
-                  <div className="text-2xl font-bold font-mono text-green-900 dark:text-green-100">
+                  <div className="text-[10px] text-green-700 dark:text-green-400 font-semibold uppercase tracking-wide">
+                    TARGET TIME
+                  </div>
+                  <div className="text-xl font-bold font-mono text-green-900 dark:text-green-100">
                     {formatDurationTarget(step.duration)}
                   </div>
                 </div>
               </div>
 
+              {/* Actual Time */}
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg px-4 py-3 flex items-center gap-3 min-h-[72px]">
+                <div className="flex items-center gap-2">
+                  <div>
+                    <div className="text-[10px] text-yellow-700 dark:text-yellow-400 font-semibold uppercase tracking-wide">
+                      ACTUAL TIME
+                    </div>
+                    <div className="text-xl font-bold font-mono text-yellow-900 dark:text-yellow-100">
+                      {formatTime(totalStepTimeMinutes)}
+                    </div>
+                  </div>
+                  {(() => {
+                    const targetMinutes = step.durationMinutes || 0;
+                    const diff = totalStepTimeMinutes - targetMinutes;
+
+                    // Only show comparison if actual time has been logged
+                    if (totalStepTimeMinutes === 0 || targetMinutes === 0) return null;
+
+                    if (diff === 0) {
+                      return (
+                        <div className="text-xs font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                          on target
+                        </div>
+                      );
+                    }
+
+                    const isAhead = diff < 0;
+                    const absDiff = Math.abs(diff);
+                    return (
+                      <div className={cn(
+                        "text-xs font-semibold px-1.5 py-0.5 rounded",
+                        isAhead
+                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                      )}>
+                        {isAhead ? '−' : '+'} {formatTime(absDiff)}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {/* Tasks Progress */}
               <div className={cn(
-                "border-2 rounded-lg px-4 py-2 flex items-center gap-3 min-w-[180px]",
-                isComplete ? "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700" : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                "border-2 rounded-lg px-4 py-3 flex items-center gap-3 min-w-[160px] min-h-[72px]",
+                isComplete
+                  ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800"
+                  : "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 border-gray-200 dark:border-gray-700"
               )}>
-                <div className="relative w-12 h-12 flex-shrink-0">
+                <div className="relative w-10 h-10 flex-shrink-0">
                   {/* Background Circle */}
-                  <svg className="w-12 h-12 transform -rotate-90">
+                  <svg className="w-10 h-10 transform -rotate-90">
                     <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
+                      cx="20"
+                      cy="20"
+                      r="16"
                       stroke="currentColor"
-                      strokeWidth="4"
+                      strokeWidth="3"
                       fill="none"
                       className={cn(
-                        isComplete ? "text-green-200 dark:text-green-900" : "text-gray-200 dark:text-gray-700"
+                        isComplete ? "text-blue-200 dark:text-blue-900" : "text-gray-200 dark:text-gray-700"
                       )}
                     />
                     {/* Progress Circle */}
                     <circle
-                      cx="24"
-                      cy="24"
-                      r="20"
+                      cx="20"
+                      cy="20"
+                      r="16"
                       stroke="currentColor"
-                      strokeWidth="4"
+                      strokeWidth="3"
                       fill="none"
-                      strokeDasharray={`${2 * Math.PI * 20}`}
-                      strokeDashoffset={`${2 * Math.PI * 20 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
+                      strokeDasharray={`${2 * Math.PI * 16}`}
+                      strokeDashoffset={`${2 * Math.PI * 16 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
                       className={cn(
                         "transition-all duration-500",
                         isComplete ? "text-green-500" : "text-blue-500"
@@ -408,18 +444,22 @@ export function StepDetailDrawer({
                   {/* Center Content */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     {isComplete ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
                     ) : (
-                      <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{Math.round((totalTasks > 0 ? completedTasks / totalTasks : 0) * 100)}%</span>
+                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{Math.round((totalTasks > 0 ? completedTasks / totalTasks : 0) * 100)}%</span>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">Tasks</div>
+                  <div className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold uppercase tracking-wide">
+                    TASKS
+                  </div>
                   <div className={cn(
                     "text-xl font-bold font-mono",
-                    isComplete ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-gray-100"
+                    isComplete
+                      ? "text-blue-900 dark:text-blue-100"
+                      : "text-gray-900 dark:text-gray-100"
                   )}>
                     {completedTasks}/{totalTasks}
                   </div>

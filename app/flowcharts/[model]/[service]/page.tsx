@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users, GraduationCap, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, ChevronRight, ChevronLeft, Edit, Eye, Save, Plus, FileDown, FileUp, Wand2, Clock, Trash2, Grid3x3, Users, GraduationCap, CheckCircle2, PlayCircle } from "lucide-react";
 import { getAllFlowcharts, FlowchartData, FlowchartStep, saveFlowchart, exportFlowchartJSON, generateStepId, generateTaskId, loadCustomFlowcharts, resetToDefaultLayout } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes, SERVICE_TYPE_LEGEND } from "@/lib/service-colors";
 import { FlowchartStep as FlowchartStepComponent } from "@/components/flowchart/flowchart-step";
@@ -24,8 +24,7 @@ import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
 import { TutorialGuide } from "@/components/tutorial-guide";
 import { saveCompletedFlowchart, isFlowchartFullyCompleted, getEarliestStartTime } from "@/lib/completed-flowcharts";
 import { getSelectedTechnicians, getTechnicianById, getActiveTechnicians, saveSelectedTechnician, Technician } from "@/lib/technicians-data";
-import { TechnicianSelectModal } from "@/components/technician-select-modal";
-import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
+import { TechnicianGroupSelectModal } from "@/components/technician-group-select-modal";
 import { logTechnicianActivity, updateTechnicianActivity } from "@/lib/technician-activity";
 import { FlowchartSearch } from "@/components/flowchart/flowchart-search";
 import { RevisionHistoryDialog } from "@/components/flowchart/revision-history-dialog";
@@ -73,6 +72,9 @@ export default function FlowchartViewerPage() {
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [pendingTimeMinutes, setPendingTimeMinutes] = useState<number | undefined>(undefined);
 
+  // State for service not started dialog
+  const [serviceNotStartedDialogOpen, setServiceNotStartedDialogOpen] = useState(false);
+
   // State for service type filtering (empty string = show all, but no filter active)
   const [selectedServiceType, setSelectedServiceType] = useState<string>("");
 
@@ -93,7 +95,8 @@ export default function FlowchartViewerPage() {
   const [selectedT2, setSelectedT2] = useState<Technician | null>(null);
   const [selectedT3, setSelectedT3] = useState<Technician | null>(null); // Trainee
   const [technicianModalOpen, setTechnicianModalOpen] = useState(false);
-  const [technicianModalRole, setTechnicianModalRole] = useState<'T1' | 'T2' | 'T3'>('T1');
+  const [technicianModalMode, setTechnicianModalMode] = useState<'global' | 'step'>('global');
+  const [editingStepForTechnicians, setEditingStepForTechnicians] = useState<FlowchartStep | null>(null);
 
   // State for revision history dialog
   const [revisionHistoryOpen, setRevisionHistoryOpen] = useState(false);
@@ -129,9 +132,8 @@ export default function FlowchartViewerPage() {
   // State for service type selection modal
   const [serviceTypeModalOpen, setServiceTypeModalOpen] = useState(false);
 
-  // State for technician pair selection modal
-  const [technicianPairModalOpen, setTechnicianPairModalOpen] = useState(false);
-  const [isFromStartService, setIsFromStartService] = useState(false); // Track if modal was opened from Start Service
+  // Track if modal was opened from Start Service (determines if we show service type modal after)
+  const [isFromStartService, setIsFromStartService] = useState(false);
 
   // State for service start animation
   const [serviceStartAnimationOpen, setServiceStartAnimationOpen] = useState(false);
@@ -546,6 +548,12 @@ export default function FlowchartViewerPage() {
     const task = selectedStep.tasks.find(t => t.id === taskId);
     if (!task) return;
 
+    // Check if service has been started - prevent checking tasks if not started
+    if (!jobStarted && !task.completed) {
+      setServiceNotStartedDialogOpen(true);
+      return;
+    }
+
     // If checking off a task (completing it) and no time is logged, show reminder
     if (!task.completed && !task.actualTimeMinutes) {
       setPendingTaskId(taskId);
@@ -835,40 +843,89 @@ export default function FlowchartViewerPage() {
     handleStepUpdate(updatedStep);
   };
 
-  // Handle technician selection from modal
-  const handleSelectTechnician = (technician: any) => {
+  // Handle technician selection from modal (now handles T1, T2, and T3)
+  const handleSelectTechnicians = (t1: any | null, t2: any | null, t3?: any | null) => {
     // Convert from API format to local format
-    const localTech: Technician = {
-      id: technician.id,
-      firstName: technician.first_name,
-      lastName: technician.last_name,
-      initials: technician.initials,
-      email: technician.email,
-      isActive: true
+    const convertToLocal = (tech: any): Technician | null => {
+      if (!tech) return null;
+      return {
+        id: tech.id,
+        firstName: tech.first_name,
+        lastName: tech.last_name,
+        initials: tech.initials,
+        email: tech.email,
+        isActive: true
+      };
     };
 
-    if (technicianModalRole === 'T1') {
-      setSelectedT1(localTech);
-      saveSelectedTechnician('T1', localTech);
-    } else if (technicianModalRole === 'T2') {
-      setSelectedT2(localTech);
-      saveSelectedTechnician('T2', localTech);
-    } else if (technicianModalRole === 'T3') {
-      setSelectedT3(localTech);
-      localStorage.setItem('flowchart-technician-t3', JSON.stringify(localTech));
+    const localT1 = convertToLocal(t1);
+    const localT2 = convertToLocal(t2);
+    const localT3 = convertToLocal(t3 || null);
+
+    // Check if we're in step mode (editing specific step)
+    if (technicianModalMode === 'step' && editingStepForTechnicians) {
+      // Update the specific step's technicians
+      const updatedStep: FlowchartStep = {
+        ...editingStepForTechnicians,
+        t1Id: localT1?.id,
+        t1Initials: localT1?.initials,
+        t2Id: localT2?.id,
+        t2Initials: localT2?.initials,
+        t3Id: localT3?.id,
+        t3Initials: localT3?.initials,
+        hasT3: !!localT3
+      };
+
+      // Update the step in the steps array
+      const updatedSteps = steps.map(s =>
+        s.id === updatedStep.id ? updatedStep : s
+      );
+      setSteps(updatedSteps);
+
+      // Save the updated flowchart
+      if (flowchartData) {
+        const updatedFlowchart = {
+          ...flowchartData,
+          steps: updatedSteps
+        };
+        saveFlowchart(updatedFlowchart);
+      }
+
+      // Reset editing state
+      setEditingStepForTechnicians(null);
+    } else {
+      // Global mode - update global selections
+      if (localT1) {
+        setSelectedT1(localT1);
+        saveSelectedTechnician('T1', localT1);
+      }
+      if (localT2) {
+        setSelectedT2(localT2);
+        saveSelectedTechnician('T2', localT2);
+      }
+      if (localT3) {
+        setSelectedT3(localT3);
+        localStorage.setItem('flowchart-technician-t3', JSON.stringify(localT3));
+      } else if (t3 === null) {
+        // Explicitly clear T3 if null was passed
+        setSelectedT3(null);
+        localStorage.removeItem('flowchart-technician-t3');
+      }
+
+      // Only open service type selection modal if we came from Start Service
+      if (isFromStartService) {
+        setServiceTypeModalOpen(true);
+        setIsFromStartService(false); // Reset the flag
+      }
     }
   };
 
-  const openTechnicianModal = (role: 'T1' | 'T2' | 'T3') => {
-    if (role === 'T3') {
-      // T3 is trainee - use single selection modal
-      setTechnicianModalRole(role);
-      setTechnicianModalOpen(true);
-    } else {
-      // T1 or T2 - open pair selection modal (NOT from Start Service)
-      setIsFromStartService(false);
-      setTechnicianPairModalOpen(true);
+  const openTechnicianModal = (mode: 'global' | 'step' = 'global', step?: FlowchartStep) => {
+    setTechnicianModalMode(mode);
+    if (mode === 'step' && step) {
+      setEditingStepForTechnicians(step);
     }
+    setTechnicianModalOpen(true);
   };
 
   // Find next active steps after completing a step
@@ -910,9 +967,9 @@ export default function FlowchartViewerPage() {
   const handleStartService = () => {
     // Check if both technicians are assigned
     if (!selectedT1 || !selectedT2) {
-      // Open technician pair selection modal (FROM Start Service)
+      // Open technician group selection modal (FROM Start Service)
       setIsFromStartService(true);
-      setTechnicianPairModalOpen(true);
+      openTechnicianModal('global');
       return;
     }
 
@@ -920,39 +977,6 @@ export default function FlowchartViewerPage() {
     setServiceTypeModalOpen(true);
   };
 
-  // Handle technician pair selection
-  const handleTechnicianPairSelect = (t1: any, t2: any) => {
-    // Convert from API format to local format
-    const localT1: Technician = {
-      id: t1.id,
-      firstName: t1.first_name,
-      lastName: t1.last_name,
-      initials: t1.initials,
-      email: t1.email,
-      isActive: true
-    };
-
-    const localT2: Technician = {
-      id: t2.id,
-      firstName: t2.first_name,
-      lastName: t2.last_name,
-      initials: t2.initials,
-      email: t2.email,
-      isActive: true
-    };
-
-    // Save selections
-    setSelectedT1(localT1);
-    setSelectedT2(localT2);
-    saveSelectedTechnician('T1', localT1);
-    saveSelectedTechnician('T2', localT2);
-
-    // Only open service type selection modal if we came from Start Service
-    if (isFromStartService) {
-      setServiceTypeModalOpen(true);
-      setIsFromStartService(false); // Reset the flag
-    }
-  };
 
   // Handle service type selection and start job
   const handleServiceTypeStart = (serviceType: string) => {
@@ -1910,7 +1934,7 @@ ${fullLayoutData.map(step =>
                 <div className="flex items-center gap-1">
                   <Users className="h-3 w-3 text-muted-foreground" />
                   <button
-                    onClick={() => openTechnicianModal('T1')}
+                    onClick={() => openTechnicianModal('global')}
                     className={cn(
                       "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
                       selectedT1
@@ -1922,7 +1946,7 @@ ${fullLayoutData.map(step =>
                   </button>
                   <span className="text-muted-foreground">/</span>
                   <button
-                    onClick={() => openTechnicianModal('T2')}
+                    onClick={() => openTechnicianModal('global')}
                     className={cn(
                       "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
                       selectedT2
@@ -1934,7 +1958,7 @@ ${fullLayoutData.map(step =>
                   </button>
                   <span className="text-muted-foreground">/</span>
                   <button
-                    onClick={() => openTechnicianModal('T3')}
+                    onClick={() => openTechnicianModal('global')}
                     className={cn(
                       "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
                       selectedT3
@@ -2329,14 +2353,12 @@ ${fullLayoutData.map(step =>
         onTaskIndentToggle={handleTaskIndentToggle}
         onStepUpdate={handleStepUpdate}
         isEditMode={isEditMode}
-        onOpenTechnicianPairModal={() => {
-          setIsFromStartService(false);
-          setTechnicianPairModalOpen(true);
-        }}
+        onOpenTechnicianModal={(step) => openTechnicianModal('step', step)}
         onAddAdditionalTechnician={handleAddAdditionalTechnician}
         onRemoveAdditionalTechnician={handleRemoveAdditionalTechnician}
         selectedT1={selectedT1}
         selectedT2={selectedT2}
+        selectedT3={selectedT3}
       />
 
       {/* Step Editor Dialog */}
@@ -2515,6 +2537,46 @@ ${fullLayoutData.map(step =>
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Service Not Started Dialog */}
+      <AlertDialog
+        open={serviceNotStartedDialogOpen}
+        onOpenChange={setServiceNotStartedDialogOpen}
+      >
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+                <PlayCircle className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg">Service inte startad</AlertDialogTitle>
+              </div>
+            </div>
+            <AlertDialogDescription className="text-sm leading-relaxed">
+              Du måste starta servicen innan du kan checka ut checklistor. Klicka på <strong>Start Service</strong> för att börja.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2 flex-col sm:flex-row">
+            <AlertDialogCancel
+              onClick={() => setServiceNotStartedDialogOpen(false)}
+              className="sm:flex-1"
+            >
+              Avbryt
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setServiceNotStartedDialogOpen(false);
+                handleStartService();
+              }}
+              className="sm:flex-1 bg-green-600 hover:bg-green-700"
+            >
+              <PlayCircle className="h-4 w-4 mr-2" />
+              Start Service
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Toast Notification */}
       {showToast && (
         <div
@@ -2534,21 +2596,29 @@ ${fullLayoutData.map(step =>
       <TutorialGuide />
 
       {/* Technician Selection Modal (for individual selection from header) */}
-      <TechnicianSelectModal
+      {/* Technician Group Selection Modal (for all technician selections) */}
+      <TechnicianGroupSelectModal
         open={technicianModalOpen}
         onOpenChange={setTechnicianModalOpen}
-        onSelect={handleSelectTechnician}
-        title={technicianModalRole === 'T1' ? "Select Technician 1" : technicianModalRole === 'T2' ? "Select Technician 2" : "Select Trainee (T3)"}
-        currentSelection={technicianModalRole === 'T1' ? selectedT1 : technicianModalRole === 'T2' ? selectedT2 : selectedT3}
-      />
-
-      {/* Technician Pair Selection Modal (for Start Service) */}
-      <TechnicianPairSelectModal
-        open={technicianPairModalOpen}
-        onOpenChange={setTechnicianPairModalOpen}
-        onSelect={handleTechnicianPairSelect}
-        currentT1={selectedT1}
-        currentT2={selectedT2}
+        onSelect={handleSelectTechnicians}
+        currentT1={
+          technicianModalMode === 'step' && editingStepForTechnicians?.t1Id
+            ? getTechnicianById(editingStepForTechnicians.t1Id)
+            : selectedT1
+        }
+        currentT2={
+          technicianModalMode === 'step' && editingStepForTechnicians?.t2Id
+            ? getTechnicianById(editingStepForTechnicians.t2Id)
+            : selectedT2
+        }
+        currentT3={
+          technicianModalMode === 'step' && editingStepForTechnicians?.t3Id
+            ? getTechnicianById(editingStepForTechnicians.t3Id)
+            : selectedT3
+        }
+        mode={technicianModalMode}
+        stepId={editingStepForTechnicians?.id}
+        includeT3={true}
       />
 
       {/* Revision History Dialog */}

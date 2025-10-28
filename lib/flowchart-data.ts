@@ -64,6 +64,11 @@ export interface FlowchartStep {
   assignedTechnicianId?: string; // ID of technician assigned to this specific step
   assignedTechnicianInitials?: string; // Initials of assigned technician for display
   displaySettings?: StepDisplaySettings; // Custom display settings for this step
+  // Step-specific technician assignments (override global selections)
+  t1Id?: string; // ID of T1 technician for this step (overrides global T1)
+  t1Initials?: string; // Initials of T1 for display
+  t2Id?: string; // ID of T2 technician for this step (overrides global T2)
+  t2Initials?: string; // Initials of T2 for display
   // T3 (trainee) support
   hasT3?: boolean; // Whether T3 is assigned to this step
   t3Id?: string; // ID of T3 technician

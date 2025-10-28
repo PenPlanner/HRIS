@@ -57,6 +57,9 @@ const STORAGE_KEY = 'completed-flowcharts';
 
 // Get all completed flowcharts from localStorage
 export function getCompletedFlowcharts(): CompletedFlowchart[] {
+  // Check if we're on the client side
+  if (typeof window === 'undefined') return [];
+
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
@@ -129,9 +132,11 @@ export function saveCompletedFlowchart(
   };
 
   // Save to localStorage
-  const existing = getCompletedFlowcharts();
-  existing.push(completedFlowchart);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  if (typeof window !== 'undefined') {
+    const existing = getCompletedFlowcharts();
+    existing.push(completedFlowchart);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  }
 
   return completedFlowchart;
 }
@@ -143,6 +148,8 @@ export function getCompletedFlowchartsById(flowchartId: string): CompletedFlowch
 
 // Delete a completed flowchart
 export function deleteCompletedFlowchart(id: string): void {
+  if (typeof window === 'undefined') return;
+
   const existing = getCompletedFlowcharts();
   const filtered = existing.filter(cf => cf.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
@@ -220,6 +227,8 @@ export function getBugsByWTG(wtgNumber: string): BugReport[] {
 
 // Update bug status
 export function updateBugStatus(bugId: string, status: "open" | "investigating" | "crushed", resolvedBy?: string): void {
+  if (typeof window === 'undefined') return;
+
   const allFlowcharts = getCompletedFlowcharts();
 
   for (const flowchart of allFlowcharts) {
