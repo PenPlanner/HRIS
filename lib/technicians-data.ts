@@ -6,7 +6,11 @@ export interface Technician {
   initials: string; // 5 characters: positions 0,2 from first + first 3 from last
   email?: string;
   phone?: string;
-  active: boolean;
+  active?: boolean;
+  isActive?: boolean; // Alternative field name for API compatibility
+  vestas_level?: string;
+  competency_level?: string;
+  team?: string;
 }
 
 // Generate initials from name (positions 0,2 from first + first 3 from last)
@@ -110,13 +114,42 @@ export const STORAGE_KEYS = {
 // Get selected technicians from localStorage
 export function getSelectedTechnicians(): { t1: Technician | null, t2: Technician | null } {
   try {
-    const t1Id = localStorage.getItem(STORAGE_KEYS.T1_SELECTION);
-    const t2Id = localStorage.getItem(STORAGE_KEYS.T2_SELECTION);
+    const t1Data = localStorage.getItem(STORAGE_KEYS.T1_SELECTION);
+    const t2Data = localStorage.getItem(STORAGE_KEYS.T2_SELECTION);
 
-    return {
-      t1: t1Id ? getTechnicianById(t1Id) || null : null,
-      t2: t2Id ? getTechnicianById(t2Id) || null : null
-    };
+    let t1: Technician | null = null;
+    let t2: Technician | null = null;
+
+    // Try to parse as JSON object first (new format)
+    if (t1Data) {
+      try {
+        const parsed = JSON.parse(t1Data);
+        // Ensure initials field exists (could be missing if saved from older code)
+        t1 = {
+          ...parsed,
+          initials: parsed.initials || generateInitials(parsed.firstName || '', parsed.lastName || '')
+        };
+      } catch {
+        // If parsing fails, treat as ID (old format) and look up in TECHNICIANS
+        t1 = getTechnicianById(t1Data) || null;
+      }
+    }
+
+    if (t2Data) {
+      try {
+        const parsed = JSON.parse(t2Data);
+        // Ensure initials field exists (could be missing if saved from older code)
+        t2 = {
+          ...parsed,
+          initials: parsed.initials || generateInitials(parsed.firstName || '', parsed.lastName || '')
+        };
+      } catch {
+        // If parsing fails, treat as ID (old format) and look up in TECHNICIANS
+        t2 = getTechnicianById(t2Data) || null;
+      }
+    }
+
+    return { t1, t2 };
   } catch (e) {
     console.error('Failed to load technician selections:', e);
     return { t1: null, t2: null };
@@ -124,7 +157,7 @@ export function getSelectedTechnicians(): { t1: Technician | null, t2: Technicia
 }
 
 // Save technician selection to localStorage
-export function saveSelectedTechnician(role: 'T1' | 'T2', technicianId: string) {
+export function saveSelectedTechnician(role: 'T1' | 'T2', technician: Technician) {
   const key = role === 'T1' ? STORAGE_KEYS.T1_SELECTION : STORAGE_KEYS.T2_SELECTION;
-  localStorage.setItem(key, technicianId);
+  localStorage.setItem(key, JSON.stringify(technician));
 }

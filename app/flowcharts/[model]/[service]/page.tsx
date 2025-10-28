@@ -119,7 +119,6 @@ export default function FlowchartViewerPage() {
     });
 
     if (allStepsCompleted && steps.length > 0) {
-      console.log('[Job Tracking] All steps completed! Marking job as finished.');
       const finishTime = new Date().toISOString();
       setJobFinished(finishTime);
       setToastMessage('🎉 Service Complete! All steps finished.');
@@ -132,6 +131,7 @@ export default function FlowchartViewerPage() {
 
   // State for technician pair selection modal
   const [technicianPairModalOpen, setTechnicianPairModalOpen] = useState(false);
+  const [isFromStartService, setIsFromStartService] = useState(false); // Track if modal was opened from Start Service
 
   // State for service start animation
   const [serviceStartAnimationOpen, setServiceStartAnimationOpen] = useState(false);
@@ -189,10 +189,16 @@ export default function FlowchartViewerPage() {
     setSelectedT2(t2);
 
     // Load T3 (trainee) from localStorage
-    const t3Id = localStorage.getItem('flowchart-technician-t3');
-    if (t3Id) {
-      const t3 = getTechnicianById(t3Id);
-      setSelectedT3(t3);
+    const t3Data = localStorage.getItem('flowchart-technician-t3');
+    if (t3Data) {
+      try {
+        const t3 = JSON.parse(t3Data);
+        setSelectedT3(t3);
+      } catch {
+        // If parsing fails, treat as ID (old format)
+        const t3 = getTechnicianById(t3Data);
+        setSelectedT3(t3);
+      }
     }
   }, []);
 
@@ -843,13 +849,13 @@ export default function FlowchartViewerPage() {
 
     if (technicianModalRole === 'T1') {
       setSelectedT1(localTech);
-      saveSelectedTechnician('T1', localTech.id);
+      saveSelectedTechnician('T1', localTech);
     } else if (technicianModalRole === 'T2') {
       setSelectedT2(localTech);
-      saveSelectedTechnician('T2', localTech.id);
+      saveSelectedTechnician('T2', localTech);
     } else if (technicianModalRole === 'T3') {
       setSelectedT3(localTech);
-      localStorage.setItem('flowchart-technician-t3', localTech.id);
+      localStorage.setItem('flowchart-technician-t3', JSON.stringify(localTech));
     }
   };
 
@@ -859,7 +865,8 @@ export default function FlowchartViewerPage() {
       setTechnicianModalRole(role);
       setTechnicianModalOpen(true);
     } else {
-      // T1 or T2 - open pair selection modal
+      // T1 or T2 - open pair selection modal (NOT from Start Service)
+      setIsFromStartService(false);
       setTechnicianPairModalOpen(true);
     }
   };
@@ -903,7 +910,8 @@ export default function FlowchartViewerPage() {
   const handleStartService = () => {
     // Check if both technicians are assigned
     if (!selectedT1 || !selectedT2) {
-      // Open technician pair selection modal
+      // Open technician pair selection modal (FROM Start Service)
+      setIsFromStartService(true);
       setTechnicianPairModalOpen(true);
       return;
     }
@@ -936,11 +944,14 @@ export default function FlowchartViewerPage() {
     // Save selections
     setSelectedT1(localT1);
     setSelectedT2(localT2);
-    saveSelectedTechnician('T1', localT1.id);
-    saveSelectedTechnician('T2', localT2.id);
+    saveSelectedTechnician('T1', localT1);
+    saveSelectedTechnician('T2', localT2);
 
-    // Open service type selection modal
-    setServiceTypeModalOpen(true);
+    // Only open service type selection modal if we came from Start Service
+    if (isFromStartService) {
+      setServiceTypeModalOpen(true);
+      setIsFromStartService(false); // Reset the flag
+    }
   };
 
   // Handle service type selection and start job
@@ -974,14 +985,11 @@ export default function FlowchartViewerPage() {
     const firstStep = sortedSteps[0];
 
     if (firstStep) {
-      console.log('[handleAnimationComplete] Setting first step as active:', firstStep.id, 'Position:', firstStep.position);
-      console.log('[handleAnimationComplete] All steps:', steps.map(s => ({ id: s.id, pos: s.position })));
       // Set first step as active (highlight it)
       setActiveStepIds([firstStep.id]);
 
       // Small delay to ensure state updates before zooming
       setTimeout(() => {
-        console.log('[handleAnimationComplete] Zooming to first step');
         // Zoom camera to Step 1
         if ((window as any).__flowchartZoomToStep) {
           (window as any).__flowchartZoomToStep(firstStep.id);
@@ -1249,12 +1257,26 @@ export default function FlowchartViewerPage() {
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const defaultLayoutKey = `default-layout-${serviceId}`;
     const animationShownKey = `flowchart-animation-shown-${flowchartData.id}`;
+    const makeYearKey = `make-year-${flowchartData?.id}`;
 
     localStorage.removeItem(storageKey);
     localStorage.removeItem(defaultLayoutKey);
     localStorage.removeItem(animationShownKey);
+    localStorage.removeItem(makeYearKey);
 
-    console.log(`Cleared cache keys: ${storageKey}, ${defaultLayoutKey}, ${animationShownKey}`);
+    // Clear technician selections
+    localStorage.removeItem('flowchart-technician-t1');
+    localStorage.removeItem('flowchart-technician-t2');
+    localStorage.removeItem('flowchart-technician-t3');
+
+    // Clear job tracking
+    localStorage.removeItem('flowchart-job-started');
+    localStorage.removeItem('flowchart-job-finished');
+
+    // Clear WTG number
+    localStorage.removeItem('flowchart-wtg-number');
+
+    console.log('Cleared all flowchart-related cache including technician selections');
 
     // Reload the page to fresh state
     window.location.reload();
@@ -1890,38 +1912,38 @@ ${fullLayoutData.map(step =>
                   <button
                     onClick={() => openTechnicianModal('T1')}
                     className={cn(
-                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap",
+                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
                       selectedT1
-                        ? "bg-blue-50 dark:bg-blue-950 text-blue-600 border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900"
-                        : "bg-background border-border hover:bg-accent"
+                        ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                     )}
                   >
-                    {selectedT1 ? `T1: ${selectedT1.initials}` : 'T1'}
+                    T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
                   </button>
                   <span className="text-muted-foreground">/</span>
                   <button
                     onClick={() => openTechnicianModal('T2')}
                     className={cn(
-                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap",
+                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
                       selectedT2
-                        ? "bg-purple-50 dark:bg-purple-950 text-purple-600 border-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900"
-                        : "bg-background border-border hover:bg-accent"
+                        ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                     )}
                   >
-                    {selectedT2 ? `T2: ${selectedT2.initials}` : 'T2'}
+                    T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
                   </button>
                   <span className="text-muted-foreground">/</span>
                   <button
                     onClick={() => openTechnicianModal('T3')}
                     className={cn(
-                      "h-6 px-2 text-xs font-bold rounded border transition-colors whitespace-nowrap flex items-center gap-1",
+                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
                       selectedT3
-                        ? "bg-orange-50 dark:bg-orange-950 text-orange-600 border-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900"
-                        : "bg-background border-border hover:bg-accent"
+                        ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                     )}
                   >
                     <GraduationCap className="h-3 w-3" />
-                    {selectedT3 ? `T3: ${selectedT3.initials}` : 'T3'}
+                    T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
                   </button>
                 </div>
 
@@ -2274,7 +2296,10 @@ ${fullLayoutData.map(step =>
             freePositioning={freePositioning}
             layoutMode={layoutMode}
             activeStepIds={activeStepIds}
-            onOpenTechnicianPairModal={() => setTechnicianPairModalOpen(true)}
+            onOpenTechnicianPairModal={() => {
+              setIsFromStartService(false);
+              setTechnicianPairModalOpen(true);
+            }}
             selectedT1={selectedT1}
             selectedT2={selectedT2}
           />
@@ -2304,7 +2329,10 @@ ${fullLayoutData.map(step =>
         onTaskIndentToggle={handleTaskIndentToggle}
         onStepUpdate={handleStepUpdate}
         isEditMode={isEditMode}
-        onOpenTechnicianPairModal={() => setTechnicianPairModalOpen(true)}
+        onOpenTechnicianPairModal={() => {
+          setIsFromStartService(false);
+          setTechnicianPairModalOpen(true);
+        }}
         onAddAdditionalTechnician={handleAddAdditionalTechnician}
         onRemoveAdditionalTechnician={handleRemoveAdditionalTechnician}
         selectedT1={selectedT1}

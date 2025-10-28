@@ -148,9 +148,8 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const [editingStepName, setEditingStepName] = useState(false);
 
 
-  // Use technicians passed from parent (synced from header/Start Service)
-  const t1 = selectedT1;
-  const t2 = selectedT2;
+  // Get selected technicians directly from localStorage (same as info-dropdown)
+  const { t1, t2 } = getSelectedTechnicians();
 
   // Count ALL tasks
   const completedTasks = step.tasks.filter(t => t.completed).length;
@@ -424,38 +423,37 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
           <div className="flex gap-1 items-center relative">
             {step.technician === "both" ? (
               <>
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
+                <div
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   onClick={() => onOpenTechnicianPairModal?.()}
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  {t1 ? t1.initials : 'T1'}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 flex items-center gap-1 cursor-pointer transition-colors"
+                  T1{t1?.initials ? `: ${t1.initials}` : ''}
+                </div>
+                <div
+                  className="bg-purple-500 hover:bg-purple-600 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                   onClick={() => onOpenTechnicianPairModal?.()}
                   title="Click to assign T1 and T2 for the job"
                 >
                   <User className="h-3 w-3" />
-                  {t2 ? t2.initials : 'T2'}
-                </Badge>
+                  T2{t2?.initials ? `: ${t2.initials}` : ''}
+                </div>
               </>
             ) : (
-              <Badge
-                variant="secondary"
+              <div
                 className={cn(
-                  "text-xs text-white border-0 flex items-center gap-1 cursor-pointer transition-colors",
-                  step.technician === "T1" ? "bg-blue-500/90 hover:bg-blue-600/90" : "bg-purple-500/90 hover:bg-purple-600/90"
+                  "text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors",
+                  step.technician === "T1" ? "bg-blue-500 hover:bg-blue-600" : "bg-purple-500 hover:bg-purple-600"
                 )}
                 onClick={() => onOpenTechnicianPairModal?.()}
                 title="Click to assign T1 and T2 for the job"
               >
                 <User className="h-3 w-3" />
-                {step.technician === "T1" ? (t1 ? t1.initials : 'T1') : (t2 ? t2.initials : 'T2')}
-              </Badge>
+                {step.technician === "T1"
+                  ? `T1${t1?.initials ? `: ${t1.initials}` : ''}`
+                  : `T2${t2?.initials ? `: ${t2.initials}` : ''}`}
+              </div>
             )}
           </div>
         </div>
@@ -1195,8 +1193,6 @@ function FlowchartEditorInner({
   selectedT1,
   selectedT2
 }: FlowchartEditorProps) {
-  // Debug: Log selectedT1 and selectedT2 on every render
-
   // Get React Flow instance to access fitView and zoom functions
   const { fitView, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
 
