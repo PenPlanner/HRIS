@@ -729,34 +729,75 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
 
           {/* Bottom Section - Duration & Progress - Fixed at bottom */}
           <div className="pt-2 border-t border-gray-700/30 space-y-2 flex-shrink-0">
-            {/* Duration and Status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3 text-gray-400" />
-                <span className="text-xs text-gray-300 font-medium">{step.duration}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                {totalNotesCount > 0 && (
-                  <div className="flex items-center gap-1 bg-amber-500/20 border border-amber-500/40 rounded-md px-2 py-0.5">
-                    <StickyNote className="h-3 w-3 text-amber-400" />
-                    <span className="text-xs font-semibold text-amber-300">{totalNotesCount}</span>
+            {/* Service Time Summary */}
+            {step.duration && (() => {
+              const serviceTimes = parseServiceTimes(step.duration);
+              const hasAdditionalTimes = Object.entries(serviceTimes).some(([key, minutes]) => key !== "1Y" && minutes > 0);
+
+              // Helper function to format time compactly
+              const formatTime = (totalMinutes: number) => {
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
+                if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+                if (hours > 0) return `${hours}h`;
+                return `${minutes}m`;
+              };
+
+              return (
+                <div className="space-y-1.5">
+                  {/* Base Time (1Y) */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-400">Base (1Y):</span>
+                      <span className="text-xs font-bold text-gray-200">
+                        {formatTime(serviceTimes["1Y"])}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {totalNotesCount > 0 && (
+                        <div className="flex items-center gap-1 bg-amber-500/20 border border-amber-500/40 rounded-md px-2 py-0.5">
+                          <StickyNote className="h-3 w-3 text-amber-400" />
+                          <span className="text-xs font-semibold text-amber-300">{totalNotesCount}</span>
+                        </div>
+                      )}
+                      {isComplete && (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          {step.completedByInitials && (
+                            <div className={cn(
+                              "px-2 py-0.5 rounded text-[10px] font-bold text-white",
+                              step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
+                            )}>
+                              {step.completedByInitials}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-                {isComplete && (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-400" />
-                    {step.completedByInitials && (
-                      <div className={cn(
-                        "px-2 py-0.5 rounded text-[10px] font-bold text-white",
-                        step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
-                      )}>
-                        {step.completedByInitials}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+
+                  {/* Additional Times */}
+                  {hasAdditionalTimes && (
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="text-xs text-gray-400">Additional:</span>
+                      {Object.entries(serviceTimes)
+                        .filter(([key, minutes]) => key !== "1Y" && minutes > 0)
+                        .map(([serviceType, minutes]) => (
+                          <div
+                            key={serviceType}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-white text-xs font-medium"
+                            style={{ backgroundColor: SERVICE_TYPE_COLORS[serviceType] }}
+                          >
+                            <span>{serviceType}:</span>
+                            <span>+{formatTime(minutes)}</span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Progress Bar */}
             <div className="space-y-1">
@@ -1294,6 +1335,40 @@ function FlowchartEditorInner({
     console.log('[FlowchartEditor] initialNodes changed, updating all nodes');
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
+
+  // CRITICAL: Force update nodes when technicians change
+  useEffect(() => {
+    console.log('[FlowchartEditor] Technicians changed! T1:', selectedT1?.initials, 'T2:', selectedT2?.initials);
+
+    // Update all nodes with new technician data
+    setNodes((prevNodes) => {
+      const updatedNodes = prevNodes.map((node) => {
+        if (node.type === 'stepNode') {
+          // Force update by creating new object
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              selectedT1,
+              selectedT2,
+            },
+          };
+        }
+        return node;
+      });
+
+      // Force React Flow to re-render nodes after state update
+      setTimeout(() => {
+        updatedNodes.forEach((node) => {
+          if (node.type === 'stepNode') {
+            updateNodeInternals(node.id);
+          }
+        });
+      }, 50);
+
+      return updatedNodes;
+    });
+  }, [selectedT1, selectedT2, setNodes, updateNodeInternals]);
 
   // Update nodes when activeStepIds changes
   useEffect(() => {
@@ -2504,6 +2579,7 @@ function FlowchartEditorInner({
       )} */}
 
       <ReactFlow
+        key={`rf-${selectedT1?.id || 'no-t1'}-${selectedT2?.id || 'no-t2'}`}
         nodes={nodes as any}
         edges={edges}
         onNodesChange={handleNodesChange}

@@ -684,6 +684,360 @@ const example3: CompletedFlowchart = {
   }
 };
 
+// Example 4: V136 Mk3 - 2Y Service (Blade bearing service)
+const example4: CompletedFlowchart = {
+  id: 'v136-mk3-2y-1733840000000',
+  flowchartId: 'v136-mk3-2y',
+  wtgNumber: 'V136-001',
+  flowchartData: {
+    id: 'v136-mk3-2y',
+    model: 'V136 Mk3',
+    serviceType: '2Y Service',
+    totalMinutes: 240,
+    description: '2-year service - V136 model',
+    steps: []
+  },
+  steps: [
+    {
+      id: 'step-v136-1',
+      title: 'Blade Bearing\nInspection & Greasing',
+      duration: '150m',
+      durationMinutes: 150,
+      color: '#10b981',
+      colorCode: '1',
+      technician: 'T1',
+      position: { x: 0, y: 5 },
+      completedAt: '2024-12-10T10:30:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-12-10T08:00:00Z',
+      tasks: [
+        {
+          id: 'task-v136-1-1',
+          description: 'Blade 1 bearing inspection and greasing',
+          completed: true,
+          completedAt: '2024-12-10T08:50:00Z',
+          actualTimeMinutes: 50,
+          notes: [
+            {
+              id: 'note-v136-1',
+              timestamp: '2024-12-10T08:50:00Z',
+              note: 'V136 larger blade bearing - 3.5kg grease per bearing. Blade 1 completed.'
+            }
+          ]
+        },
+        {
+          id: 'task-v136-1-2',
+          description: 'Blade 2 bearing inspection and greasing',
+          completed: true,
+          completedAt: '2024-12-10T09:40:00Z',
+          actualTimeMinutes: 50
+        },
+        {
+          id: 'task-v136-1-3',
+          description: 'Blade 3 bearing inspection and greasing',
+          completed: true,
+          completedAt: '2024-12-10T10:30:00Z',
+          actualTimeMinutes: 50
+        }
+      ]
+    },
+    {
+      id: 'step-v136-2',
+      title: 'Hub Inspection\n& Bolt Check',
+      duration: '90m',
+      durationMinutes: 90,
+      color: '#f59e0b',
+      colorCode: '2',
+      technician: 'T1',
+      position: { x: 14, y: 5 },
+      completedAt: '2024-12-10T12:00:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-12-10T10:30:00Z',
+      tasks: [
+        {
+          id: 'task-v136-2-1',
+          description: 'Hub bolt torque verification',
+          completed: true,
+          completedAt: '2024-12-10T11:15:00Z',
+          actualTimeMinutes: 45
+        },
+        {
+          id: 'task-v136-2-2',
+          description: 'Hub surface inspection',
+          completed: true,
+          completedAt: '2024-12-10T12:00:00Z',
+          actualTimeMinutes: 45,
+          notes: [
+            {
+              id: 'note-v136-2',
+              timestamp: '2024-12-10T12:00:00Z',
+              note: 'All hub bolts within torque spec. Surface clean, no cracks detected.'
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  startedAt: '2024-12-10T08:00:00Z',
+  completedAt: '2024-12-10T12:00:00Z',
+  totalDurationMinutes: 240,
+  technicians: {
+    t1: { id: '1', name: 'Markus Anderson', initials: 'MRADR' }
+  },
+  bugs: [],
+  summary: {
+    totalSteps: 2,
+    completedSteps: 2,
+    totalTasks: 5,
+    completedTasks: 5,
+    totalNotes: 2,
+    totalBugs: 0,
+    openBugs: 0,
+    crushedBugs: 0,
+    targetTimeMinutes: 240,
+    actualTimeMinutes: 240,
+    timeVariance: 0
+  }
+};
+
+// Example 5: V150-4.2 MW - 3Y Service (Pitch system overhaul)
+const example5: CompletedFlowchart = {
+  id: 'v150-4.2mw-3y-1728720000000',
+  flowchartId: 'v150-4.2mw-3y',
+  wtgNumber: 'V150-001',
+  flowchartData: {
+    id: 'v150-4.2mw-3y',
+    model: 'V150-4.2 MW',
+    serviceType: '3Y Service',
+    totalMinutes: 330,
+    description: '3-year major service - V150 model',
+    steps: []
+  },
+  steps: [
+    {
+      id: 'step-v150-1',
+      title: 'Pitch System\nComprehensive Check',
+      duration: '180m',
+      durationMinutes: 180,
+      color: '#ec4899',
+      colorCode: '1',
+      technician: 'T1',
+      position: { x: 0, y: 5 },
+      completedAt: '2024-10-12T11:00:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-10-12T08:00:00Z',
+      tasks: [
+        {
+          id: 'task-v150-1-1',
+          description: 'Pitch motor 1 test and calibration',
+          completed: true,
+          completedAt: '2024-10-12T09:00:00Z',
+          actualTimeMinutes: 60,
+          notes: [
+            {
+              id: 'note-v150-1',
+              timestamp: '2024-10-12T09:00:00Z',
+              note: '3Y service - Pitch motor 1 tested at various speeds. Response time: 1.8s (spec: <2.5s).'
+            }
+          ]
+        },
+        {
+          id: 'task-v150-1-2',
+          description: 'Pitch motor 2 test and calibration',
+          completed: true,
+          completedAt: '2024-10-12T10:00:00Z',
+          actualTimeMinutes: 60
+        },
+        {
+          id: 'task-v150-1-3',
+          description: 'Pitch motor 3 test and calibration',
+          completed: true,
+          completedAt: '2024-10-12T11:00:00Z',
+          actualTimeMinutes: 60
+        }
+      ]
+    },
+    {
+      id: 'step-v150-2',
+      title: 'Main Shaft Bearing\nExtended Inspection',
+      duration: '150m',
+      durationMinutes: 150,
+      color: '#06b6d4',
+      colorCode: '2',
+      technician: 'T1',
+      position: { x: 14, y: 5 },
+      completedAt: '2024-10-12T13:30:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-10-12T11:00:00Z',
+      tasks: [
+        {
+          id: 'task-v150-2-1',
+          description: 'Bearing temperature monitoring',
+          completed: true,
+          completedAt: '2024-10-12T12:00:00Z',
+          actualTimeMinutes: 60,
+          notes: [
+            {
+              id: 'note-v150-2',
+              timestamp: '2024-10-12T12:00:00Z',
+              note: 'Temperature stable at 45°C during load test. Normal range 35-55°C.'
+            }
+          ]
+        },
+        {
+          id: 'task-v150-2-2',
+          description: 'Vibration analysis and wear check',
+          completed: true,
+          completedAt: '2024-10-12T13:30:00Z',
+          actualTimeMinutes: 90
+        }
+      ]
+    }
+  ],
+  startedAt: '2024-10-12T08:00:00Z',
+  completedAt: '2024-10-12T13:30:00Z',
+  totalDurationMinutes: 330,
+  technicians: {
+    t1: { id: '1', name: 'Markus Anderson', initials: 'MRADR' }
+  },
+  bugs: [],
+  summary: {
+    totalSteps: 2,
+    completedSteps: 2,
+    totalTasks: 5,
+    completedTasks: 5,
+    totalNotes: 2,
+    totalBugs: 0,
+    openBugs: 0,
+    crushedBugs: 0,
+    targetTimeMinutes: 330,
+    actualTimeMinutes: 330,
+    timeVariance: 0
+  }
+};
+
+// Example 6: V162-6.2 MW - 2Y Service (Large generator inspection)
+const example6: CompletedFlowchart = {
+  id: 'v162-6.2mw-2y-1734192000000',
+  flowchartId: 'v162-6.2mw-2y',
+  wtgNumber: 'V162-001',
+  flowchartData: {
+    id: 'v162-6.2mw-2y',
+    model: 'V162-6.2 MW',
+    serviceType: '2Y Service',
+    totalMinutes: 315,
+    description: '2-year service - V162 large model',
+    steps: []
+  },
+  steps: [
+    {
+      id: 'step-v162-1',
+      title: 'Generator Bearing\nInspection & Service',
+      duration: '180m',
+      durationMinutes: 180,
+      color: '#8b5cf6',
+      colorCode: '1',
+      technician: 'T1',
+      position: { x: 0, y: 5 },
+      completedAt: '2024-12-15T11:00:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-12-15T08:00:00Z',
+      tasks: [
+        {
+          id: 'task-v162-1-1',
+          description: 'Generator bearing inspection (drive end)',
+          completed: true,
+          completedAt: '2024-12-15T09:30:00Z',
+          actualTimeMinutes: 90,
+          notes: [
+            {
+              id: 'note-v162-1',
+              timestamp: '2024-12-15T09:30:00Z',
+              note: '6.2MW generator - larger bearings require extended inspection time. Drive end bearing OK.'
+            }
+          ]
+        },
+        {
+          id: 'task-v162-1-2',
+          description: 'Generator bearing inspection (non-drive end)',
+          completed: true,
+          completedAt: '2024-12-15T11:00:00Z',
+          actualTimeMinutes: 90
+        }
+      ]
+    },
+    {
+      id: 'step-v162-2',
+      title: 'Gearbox Oil Analysis\n& System Check',
+      duration: '135m',
+      durationMinutes: 135,
+      color: '#10b981',
+      colorCode: '2',
+      technician: 'T1',
+      position: { x: 14, y: 5 },
+      completedAt: '2024-12-15T13:15:00Z',
+      completedBy: '1',
+      completedByInitials: 'MRADR',
+      startedAt: '2024-12-15T11:00:00Z',
+      tasks: [
+        {
+          id: 'task-v162-2-1',
+          description: 'Oil sample collection and analysis',
+          completed: true,
+          completedAt: '2024-12-15T11:45:00Z',
+          actualTimeMinutes: 45,
+          notes: [
+            {
+              id: 'note-v162-2',
+              timestamp: '2024-12-15T11:45:00Z',
+              note: 'Oil sample sent to lab. Visual inspection shows clean oil, no metal particles.'
+            }
+          ]
+        },
+        {
+          id: 'task-v162-2-2',
+          description: 'Filter replacement',
+          completed: true,
+          completedAt: '2024-12-15T12:15:00Z',
+          actualTimeMinutes: 30
+        },
+        {
+          id: 'task-v162-2-3',
+          description: 'Vibration analysis',
+          completed: true,
+          completedAt: '2024-12-15T13:15:00Z',
+          actualTimeMinutes: 60
+        }
+      ]
+    }
+  ],
+  startedAt: '2024-12-15T08:00:00Z',
+  completedAt: '2024-12-15T13:15:00Z',
+  totalDurationMinutes: 315,
+  technicians: {
+    t1: { id: '1', name: 'Markus Anderson', initials: 'MRADR' }
+  },
+  bugs: [],
+  summary: {
+    totalSteps: 2,
+    completedSteps: 2,
+    totalTasks: 5,
+    completedTasks: 5,
+    totalNotes: 2,
+    totalBugs: 0,
+    openBugs: 0,
+    crushedBugs: 0,
+    targetTimeMinutes: 315,
+    actualTimeMinutes: 315,
+    timeVariance: 0
+  }
+};
+
 /**
  * Seeds example completed flowcharts to localStorage
  * This provides realistic test data for development and demonstration
@@ -703,26 +1057,41 @@ export function seedCompletedFlowcharts(): void {
   }
 
   // Add examples if they don't already exist
-  const exampleIds = [example1.id, example2.id, example3.id];
+  const exampleIds = [example1.id, example2.id, example3.id, example4.id, example5.id, example6.id];
   const existingIds = flowcharts.map(f => f.id);
 
   if (!existingIds.includes(example1.id)) {
     flowcharts.push(example1);
-    console.log('✅ Added example 1: WTG-248024 (1Y Service - Minor issues)');
+    console.log('✅ Added example 1: WTG-248024 (EnVentus Mk 0, 1Y Service - Minor issues)');
   }
 
   if (!existingIds.includes(example2.id)) {
     flowcharts.push(example2);
-    console.log('✅ Added example 2: WTG-156782 (2Y Service - All issues resolved)');
+    console.log('✅ Added example 2: WTG-156782 (EnVentus Mk 0, 2Y Service - All issues resolved)');
   }
 
   if (!existingIds.includes(example3.id)) {
     flowcharts.push(example3);
-    console.log('✅ Added example 3: WTG-392045 (1Y Service - Critical bearing damage)');
+    console.log('✅ Added example 3: WTG-392045 (EnVentus Mk 0, 1Y Service - Critical bearing damage)');
+  }
+
+  if (!existingIds.includes(example4.id)) {
+    flowcharts.push(example4);
+    console.log('✅ Added example 4: WTG-V136-001 (V136 Mk3, 2Y Service - Blade bearing service)');
+  }
+
+  if (!existingIds.includes(example5.id)) {
+    flowcharts.push(example5);
+    console.log('✅ Added example 5: WTG-V150-001 (V150-4.2 MW, 3Y Service - Pitch system overhaul)');
+  }
+
+  if (!existingIds.includes(example6.id)) {
+    flowcharts.push(example6);
+    console.log('✅ Added example 6: WTG-V162-001 (V162-6.2 MW, 2Y Service - Generator inspection)');
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(flowcharts));
-  console.log('🎉 Seed data complete! 3 example completed flowcharts added.');
+  console.log('🎉 Seed data complete! 6 example completed flowcharts added (5 different turbine models).');
 }
 
 /**

@@ -14,7 +14,10 @@ import { KompetensmatrisForm } from "@/components/technician/kompetensmatris-for
 import { TrainingNeedsManager } from "@/components/technician/training-needs-manager";
 import { AssessmentHistory } from "@/components/technician/assessment-history";
 import { getTechnicianWorkHistory, TechnicianWorkHistory, TechnicianActivity } from "@/lib/technician-activity";
+import { getTechnicianVehicle, TechnicianVehicle } from "@/lib/technician-vehicle";
 import { cn } from "@/lib/utils";
+import { Car, Calendar as CalendarIcon, Gauge, CreditCard, FileText, Filter, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type VestasLevel = 'D' | 'C' | 'B' | 'A' | 'Field Trainer';
 
@@ -103,15 +106,24 @@ export default function TechnicianProfilePage({
   const { id } = use(params);
   const [selectedLevelInfo, setSelectedLevelInfo] = useState<typeof COMPETENCY_LEVELS[0] | null>(null);
   const [workHistory, setWorkHistory] = useState<TechnicianWorkHistory | null>(null);
+  const [vehicle, setVehicle] = useState<TechnicianVehicle | null>(null);
+
+  // Work history filters
+  const [filterTurbine, setFilterTurbine] = useState<string>('all');
+  const [filterServiceType, setFilterServiceType] = useState<string>('all');
+  const [filterTask, setFilterTask] = useState<string>('all');
 
   // In real app, fetch tech by ID
   const tech = mockTechnician;
   const currentLevelInfo = COMPETENCY_LEVELS.find(l => l.level === tech.competency_level);
 
-  // Load work history
+  // Load work history and vehicle
   useEffect(() => {
     const history = getTechnicianWorkHistory(id);
     setWorkHistory(history);
+
+    const vehicleData = getTechnicianVehicle(id);
+    setVehicle(vehicleData);
   }, [id]);
 
   // Helper functions for work history
@@ -149,8 +161,21 @@ export default function TechnicianProfilePage({
     }
   };
 
-  // Group activities by turbine/service
-  const activitiesByService = workHistory?.activities.reduce((acc, activity) => {
+  // Filter activities based on selected filters
+  const filteredActivities = workHistory?.activities.filter((activity) => {
+    if (filterTurbine !== 'all' && activity.turbineModel !== filterTurbine) return false;
+    if (filterServiceType !== 'all' && activity.serviceType !== filterServiceType) return false;
+    if (filterTask !== 'all' && activity.stepTitle !== filterTask) return false;
+    return true;
+  }) || [];
+
+  // Get unique values for filters
+  const uniqueTurbines = Array.from(new Set(workHistory?.activities.map(a => a.turbineModel) || [])).sort();
+  const uniqueServiceTypes = Array.from(new Set(workHistory?.activities.map(a => a.serviceType) || [])).sort();
+  const uniqueTasks = Array.from(new Set(workHistory?.activities.map(a => a.stepTitle) || [])).sort();
+
+  // Group activities by turbine/service (using filtered activities)
+  const activitiesByService = filteredActivities.reduce((acc, activity) => {
     const key = `${activity.turbineModel}-${activity.serviceType}`;
     if (!acc[key]) {
       acc[key] = {
@@ -163,7 +188,20 @@ export default function TechnicianProfilePage({
     acc[key].activities.push(activity);
     acc[key].totalMinutes += activity.durationMinutes || 0;
     return acc;
-  }, {} as Record<string, { turbineModel: string; serviceType: string; activities: TechnicianActivity[]; totalMinutes: number }>) || {};
+  }, {} as Record<string, { turbineModel: string; serviceType: string; activities: TechnicianActivity[]; totalMinutes: number }>);
+
+  // Calculate filtered stats
+  const filteredTotalMinutes = filteredActivities.reduce((sum, a) => sum + (a.durationMinutes || 0), 0);
+  const filteredTurbinesCount = new Set(filteredActivities.map(a => a.turbineModel)).size;
+  const filteredStepsCount = new Set(filteredActivities.map(a => a.stepId)).size;
+
+  const hasActiveFilters = filterTurbine !== 'all' || filterServiceType !== 'all' || filterTask !== 'all';
+
+  const clearFilters = () => {
+    setFilterTurbine('all');
+    setFilterServiceType('all');
+    setFilterTask('all');
+  };
 
   return (
     <MainLayout>
@@ -438,16 +476,127 @@ export default function TechnicianProfilePage({
           </TabsContent>
 
           <TabsContent value="vehicle">
-            <Card>
-              <CardHeader>
-                <CardTitle>Assigned Vehicle</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Vehicle assignment information
-                </p>
-              </CardContent>
-            </Card>
+            {!vehicle ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Car className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+                  <p className="text-sm text-muted-foreground">No vehicle assigned</p>
+                  <p className="text-xs text-muted-foreground mt-1">Vehicle information will appear here once assigned</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {/* Vehicle Header Card */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 rounded-lg bg-primary/10">
+                          <Car className="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-2xl">{vehicle.vehicleMake} {vehicle.vehicleModel}</CardTitle>
+                          <p className="text-sm text-muted-foreground mt-1">Registered {vehicle.vehicleYear}</p>
+                        </div>
+                      </div>
+                      <Badge className="text-lg px-3 py-1 font-mono">{vehicle.vehicleRegistration}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <Car className="h-3.5 w-3.5" />
+                            Vehicle Type
+                          </p>
+                          <p className="font-semibold mt-1">{vehicle.vehicleType}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground flex items-center gap-2">
+                            <CalendarIcon className="h-3.5 w-3.5" />
+                            Assigned Date
+                          </p>
+                          <p className="font-semibold mt-1">
+                            {new Date(vehicle.assignedDate).toLocaleDateString('sv-SE', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        {vehicle.mileage && (
+                          <div>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <Gauge className="h-3.5 w-3.5" />
+                              Current Mileage
+                            </p>
+                            <p className="font-semibold mt-1">{vehicle.mileage.toLocaleString('sv-SE')} km</p>
+                          </div>
+                        )}
+                        {vehicle.fuelCard && (
+                          <div>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <CreditCard className="h-3.5 w-3.5" />
+                              Fuel Card
+                            </p>
+                            <p className="font-mono font-semibold mt-1">{vehicle.fuelCard}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Service Information */}
+                {(vehicle.nextServiceDate || vehicle.nextServiceMileage) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Service Schedule</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {vehicle.nextServiceDate && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Next Service Date</p>
+                            <p className="font-semibold mt-1">
+                              {new Date(vehicle.nextServiceDate).toLocaleDateString('sv-SE', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                        )}
+                        {vehicle.nextServiceMileage && (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Next Service Mileage</p>
+                            <p className="font-semibold mt-1">{vehicle.nextServiceMileage.toLocaleString('sv-SE')} km</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Notes */}
+                {vehicle.notes && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Notes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{vehicle.notes}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="work-history" className="space-y-4">
@@ -467,11 +616,16 @@ export default function TechnicianProfilePage({
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                         <Clock className="h-3.5 w-3.5" />
-                        <span>Total Hours Worked</span>
+                        <span>Total Hours {hasActiveFilters && '(Filtered)'}</span>
                       </div>
                       <div className="text-2xl font-bold">
-                        {formatDuration(workHistory.totalMinutesWorked)}
+                        {formatDuration(hasActiveFilters ? filteredTotalMinutes : workHistory.totalMinutesWorked)}
                       </div>
+                      {hasActiveFilters && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          of {formatDuration(workHistory.totalMinutesWorked)} total
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -479,14 +633,16 @@ export default function TechnicianProfilePage({
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                         <TrendingUp className="h-3.5 w-3.5" />
-                        <span>Turbines Worked On</span>
+                        <span>Turbines {hasActiveFilters && '(Filtered)'}</span>
                       </div>
                       <div className="text-2xl font-bold">
-                        {workHistory.turbinesWorkedOn.length}
+                        {hasActiveFilters ? filteredTurbinesCount : workHistory.turbinesWorkedOn.length}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {workHistory.turbinesWorkedOn.join(', ')}
-                      </p>
+                      {hasActiveFilters && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          of {workHistory.turbinesWorkedOn.length} total
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -494,14 +650,104 @@ export default function TechnicianProfilePage({
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                         <Briefcase className="h-3.5 w-3.5" />
-                        <span>Steps Completed</span>
+                        <span>Steps {hasActiveFilters && '(Filtered)'}</span>
                       </div>
                       <div className="text-2xl font-bold">
-                        {workHistory.stepsCompleted}
+                        {hasActiveFilters ? filteredStepsCount : workHistory.stepsCompleted}
                       </div>
+                      {hasActiveFilters && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          of {workHistory.stepsCompleted} total
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Filters */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4" />
+                        <CardTitle className="text-base">Filters</CardTitle>
+                      </div>
+                      {hasActiveFilters && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearFilters}
+                          className="h-7 gap-1"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Clear filters
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">Turbine Model</label>
+                        <Select value={filterTurbine} onValueChange={setFilterTurbine}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All turbines" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All turbines ({uniqueTurbines.length})</SelectItem>
+                            {uniqueTurbines.map((turbine) => (
+                              <SelectItem key={turbine} value={turbine}>
+                                {turbine}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">Service Type</label>
+                        <Select value={filterServiceType} onValueChange={setFilterServiceType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All services" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All services ({uniqueServiceTypes.length})</SelectItem>
+                            {uniqueServiceTypes.map((service) => (
+                              <SelectItem key={service} value={service}>
+                                {service}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-muted-foreground">Task/Step</label>
+                        <Select value={filterTask} onValueChange={setFilterTask}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="All tasks" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All tasks ({uniqueTasks.length})</SelectItem>
+                            {uniqueTasks.map((task) => (
+                              <SelectItem key={task} value={task}>
+                                {task.split('\n')[0]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {hasActiveFilters && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-xs text-muted-foreground">
+                          Showing <span className="font-semibold">{filteredActivities.length}</span> of {workHistory.activities.length} activities
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Activities grouped by service */}
                 <div className="space-y-4">

@@ -10,6 +10,7 @@
  */
 
 import { logTechnicianActivity, clearAllActivities } from './technician-activity';
+import { assignVehicle } from './technician-vehicle';
 
 /**
  * Seeds realistic work history data for technicians
@@ -21,6 +22,30 @@ export function seedWorkHistory(): void {
 
   // Clear existing data (optional - comment out to keep existing data)
   // clearAllActivities();
+
+  // ===========================================
+  // SEED VEHICLES
+  // ===========================================
+
+  console.log('🚗 Seeding vehicle data for Markus Anderson...');
+
+  // Markus Anderson's assigned vehicle
+  assignVehicle({
+    technicianId: '1', // Markus Anderson
+    vehicleRegistration: 'ABC 123',
+    vehicleMake: 'Volkswagen',
+    vehicleModel: 'Transporter T6.1',
+    vehicleYear: 2022,
+    vehicleType: 'Van',
+    assignedDate: '2022-03-15T00:00:00Z',
+    mileage: 87430,
+    nextServiceDate: '2025-12-01T00:00:00Z',
+    nextServiceMileage: 100000,
+    fuelCard: 'FC-2022-0315',
+    notes: 'Equipped with full toolset and spare parts inventory. Regular service vehicle for northern region turbines.',
+  });
+
+  console.log('✅ Vehicle seeded for Markus Anderson');
 
   // ===========================================
   // EXAMPLE 1: WTG-248024 - 1Y Service (2025-01-15)
@@ -665,14 +690,209 @@ export function seedWorkHistory(): void {
     durationMinutes: 45,
   });
 
+  // ===========================================
+  // V136 Mk3 TURBINES - Different turbine model
+  // ===========================================
+
+  // WTG-V136-001 - V136 Mk3 - 2Y Service (Dec 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V136 Mk3',
+    serviceType: '2Y Service',
+    stepId: 'step-v136-1',
+    stepTitle: 'Blade bearing inspection\nV136 specific',
+    taskId: 'v136-1-1',
+    taskDescription: 'Blade bearing greasing and inspection',
+    checkInTime: '2024-12-10T08:00:00Z',
+    checkOutTime: '2024-12-10T10:30:00Z',
+    durationMinutes: 150,
+    notes: 'V136 has larger blade bearings - took extra time. All 3 bearings re-greased successfully.',
+  });
+
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V136 Mk3',
+    serviceType: '2Y Service',
+    stepId: 'step-v136-2',
+    stepTitle: 'Hub inspection\nBolt torque check',
+    taskId: 'v136-2-1',
+    taskDescription: 'Hub bolt torque verification',
+    checkInTime: '2024-12-10T10:30:00Z',
+    checkOutTime: '2024-12-10T12:00:00Z',
+    durationMinutes: 90,
+  });
+
+  // WTG-V136-002 - V136 Mk3 - 1Y Service (Nov 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T2',
+    turbineModel: 'V136 Mk3',
+    serviceType: '1Y Service',
+    stepId: 'step-v136-1y-1',
+    stepTitle: 'Generator inspection\nCooling system',
+    taskId: 'v136-1y-1-1',
+    taskDescription: 'Generator cooling system check',
+    checkInTime: '2024-11-20T09:00:00Z',
+    checkOutTime: '2024-11-20T10:15:00Z',
+    durationMinutes: 75,
+    notes: 'Cooling fins cleaned, airflow verified. Generator running cool.',
+  });
+
+  // ===========================================
+  // V150-4.2 MW TURBINES
+  // ===========================================
+
+  // WTG-V150-001 - V150-4.2 MW - 3Y Service (Oct 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V150-4.2 MW',
+    serviceType: '3Y Service',
+    stepId: 'step-v150-1',
+    stepTitle: 'Pitch system\nComprehensive check',
+    taskId: 'v150-1-1',
+    taskDescription: 'Pitch system hydraulics and motors',
+    checkInTime: '2024-10-12T08:00:00Z',
+    checkOutTime: '2024-10-12T11:00:00Z',
+    durationMinutes: 180,
+    notes: '3Y major service on V150 pitch system. All 3 pitch motors tested and calibrated. Hydraulic pressure adjusted.',
+  });
+
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V150-4.2 MW',
+    serviceType: '3Y Service',
+    stepId: 'step-v150-2',
+    stepTitle: 'Main shaft bearing\nExtended inspection',
+    taskId: 'v150-2-1',
+    taskDescription: 'Main shaft bearing comprehensive check',
+    checkInTime: '2024-10-12T11:00:00Z',
+    checkOutTime: '2024-10-12T13:30:00Z',
+    durationMinutes: 150,
+    notes: 'Bearing temperatures normal. No abnormal wear patterns detected.',
+  });
+
+  // WTG-V150-002 - V150-4.2 MW - 1Y Service (Nov 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T2',
+    turbineModel: 'V150-4.2 MW',
+    serviceType: '1Y Service',
+    stepId: 'step-v150-1y-1',
+    stepTitle: 'Yaw system\nBrake pads check',
+    taskId: 'v150-1y-1-1',
+    taskDescription: 'Yaw brake inspection',
+    checkInTime: '2024-11-05T08:30:00Z',
+    checkOutTime: '2024-11-05T09:45:00Z',
+    durationMinutes: 75,
+  });
+
+  // ===========================================
+  // V162-6.2 MW TURBINES - Largest model
+  // ===========================================
+
+  // WTG-V162-001 - V162-6.2 MW - 2Y Service (Dec 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V162-6.2 MW',
+    serviceType: '2Y Service',
+    stepId: 'step-v162-1',
+    stepTitle: 'Generator bearing\nInspection and service',
+    taskId: 'v162-1-1',
+    taskDescription: 'Generator bearing inspection - V162',
+    checkInTime: '2024-12-15T08:00:00Z',
+    checkOutTime: '2024-12-15T11:00:00Z',
+    durationMinutes: 180,
+    notes: 'Large 6.2MW generator - extended inspection time. All bearings within spec.',
+  });
+
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V162-6.2 MW',
+    serviceType: '2Y Service',
+    stepId: 'step-v162-2',
+    stepTitle: 'Gearbox oil analysis\nFull system check',
+    taskId: 'v162-2-1',
+    taskDescription: 'Gearbox comprehensive inspection',
+    checkInTime: '2024-12-15T11:00:00Z',
+    checkOutTime: '2024-12-15T13:15:00Z',
+    durationMinutes: 135,
+    notes: 'Oil sample sent to lab. Filter replaced. Vibration analysis completed.',
+  });
+
+  // ===========================================
+  // V120-2.2 MW TURBINES - Older model
+  // ===========================================
+
+  // WTG-V120-001 - V120-2.2 MW - 4Y Service (Nov 2024)
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V120-2.2 MW',
+    serviceType: '4Y Service',
+    stepId: 'step-v120-1',
+    stepTitle: 'Tower bolts\n4Y major re-torque',
+    taskId: 'v120-1-1',
+    taskDescription: 'Complete tower bolt inspection and re-torque',
+    checkInTime: '2024-11-25T08:00:00Z',
+    checkOutTime: '2024-11-25T14:00:00Z',
+    durationMinutes: 360,
+    notes: '4Y service - all tower section bolts checked and re-torqued. Full day job on older V120 model.',
+  });
+
+  logTechnicianActivity({
+    technicianId: '1',
+    technicianInitials: 'MRADR',
+    technicianName: 'Markus Anderson',
+    technicianRole: 'T1',
+    turbineModel: 'V120-2.2 MW',
+    serviceType: '4Y Service',
+    stepId: 'step-v120-2',
+    stepTitle: 'Electrical cabinet\nUpgrade and inspection',
+    taskId: 'v120-2-1',
+    taskDescription: 'Electrical system comprehensive check',
+    checkInTime: '2024-11-25T14:00:00Z',
+    checkOutTime: '2024-11-25T16:30:00Z',
+    durationMinutes: 150,
+    notes: 'Older V120 model - replaced aging components. All electrical systems tested.',
+  });
+
   console.log('✅ Work history seed data created!');
+  console.log('✅ Vehicle data seeded!');
   console.log('');
   console.log('📊 Created activities for:');
-  console.log('   🌟 Markus Anderson (MRADR) - 13 turbines, 50+ activities!');
-  console.log('      • WTG-248024, 156782, 392045, 501234 (from completed flowcharts)');
-  console.log('      • WTG-675432, 123789, 908765, 445566, 334455, 778899, 112233, 998877');
+  console.log('   🌟 Markus Anderson (MRADR) - 60+ activities across 18+ turbines!');
+  console.log('      • EnVentus Mk 0: WTG-248024, 156782, 392045, 501234, 675432, 123789, 908765, 445566, 334455, 778899, 112233, 998877');
+  console.log('      • V136 Mk3: WTG-V136-001, V136-002');
+  console.log('      • V150-4.2 MW: WTG-V150-001, V150-002');
+  console.log('      • V162-6.2 MW: WTG-V162-001');
+  console.log('      • V120-2.2 MW: WTG-V120-001');
   console.log('      • Services: 1Y, 2Y, 3Y, 4Y, 5Y (full range!)');
-  console.log('      • Roles: T1 and T2 (versatile)');
+  console.log('      • Roles: T1 and T2 (versatile technician)');
+  console.log('      • Vehicle: VW Transporter T6.1 (ABC 123)');
   console.log('   - Sarah Miller (SAMIL) - WTG-248024');
   console.log('   - Lisa Kim (LIKIM) - WTG-156782');
   console.log('   - Mike Garcia (MIGAR) - WTG-392045');
@@ -690,11 +910,13 @@ export function seedWorkHistory(): void {
   console.log('   🏗️  Major services (4Y bolt check: 7 hours, 5Y generator overhaul: 9 hours)');
   console.log('   ⚠️  Problem scenarios (worn brake pads, accumulator pressure issues)');
   console.log('   ✅ Efficient services (under budget, clean inspections)');
+  console.log('   🌍 Multiple turbine models (EnVentus, V136, V150, V162, V120)');
   console.log('');
   console.log('📈 Markus Anderson Work Summary:');
-  console.log('   • Total activities: ~50');
-  console.log('   • Total hours: ~100+ hours');
+  console.log('   • Total activities: ~65');
+  console.log('   • Total hours: ~125+ hours');
   console.log('   • Timespan: Oct 2024 - Jan 2025');
+  console.log('   • Turbine models: 5 different types (EnVentus, V136, V150, V162, V120)');
   console.log('   • Shortest job: 45 minutes (LDST check)');
   console.log('   • Longest job: 540 minutes (9 hours, 5Y generator overhaul)');
 }
