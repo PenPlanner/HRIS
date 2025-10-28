@@ -108,6 +108,12 @@ export function StepDetailDrawer({
   const [showAddTechModal, setShowAddTechModal] = useState(false);
   const [availableTechnicians, setAvailableTechnicians] = useState<Technician[]>([]);
 
+  // State for adding new task
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskServiceType, setNewTaskServiceType] = useState("1Y");
+  const [newTaskDuration, setNewTaskDuration] = useState(30);
+
   // Load available technicians
   useEffect(() => {
     const techs = getActiveTechnicians();
@@ -444,9 +450,9 @@ export function StepDetailDrawer({
                   {/* Center Content */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     {isComplete ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
                     ) : (
-                      <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{Math.round((totalTasks > 0 ? completedTasks / totalTasks : 0) * 100)}%</span>
+                      <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{Math.round((totalTasks > 0 ? completedTasks / totalTasks : 0) * 100)}%</span>
                     )}
                   </div>
                 </div>
@@ -492,6 +498,21 @@ export function StepDetailDrawer({
                     />
                     <span className="text-xs text-blue-700 font-medium">Show All Tasks</span>
                   </label>
+                </div>
+              )}
+
+              {/* Add Task Button - Only visible in edit mode */}
+              {isEditMode && (
+                <div className="mb-3">
+                  <Button
+                    onClick={() => setShowAddTaskModal(true)}
+                    size="sm"
+                    variant="outline"
+                    className="w-full border-dashed border-2 hover:bg-gray-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Additional Task
+                  </Button>
                 </div>
               )}
 
@@ -1507,6 +1528,104 @@ export function StepDetailDrawer({
                   </Card>
                 );
               })}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Task Dialog */}
+      <Dialog open={showAddTaskModal} onOpenChange={setShowAddTaskModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Additional Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="task-desc">Task Description</Label>
+              <Input
+                id="task-desc"
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                placeholder="Enter task description..."
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label>Service Type</Label>
+              <div className="grid grid-cols-3 gap-2 mt-1">
+                {["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "10Y", "12Y"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setNewTaskServiceType(type)}
+                    className={cn(
+                      "h-12 rounded-lg border-2 text-xs font-bold text-white transition-all flex items-center justify-center hover:scale-105",
+                      newTaskServiceType === type ? "border-blue-500 scale-105 ring-2 ring-blue-300" : "border-transparent"
+                    )}
+                    style={{ backgroundColor: SERVICE_TYPE_COLORS[type as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default }}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="task-duration">Duration (minutes)</Label>
+              <Input
+                id="task-duration"
+                type="number"
+                value={newTaskDuration}
+                onChange={(e) => setNewTaskDuration(parseInt(e.target.value) || 0)}
+                min="0"
+                className="mt-1"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddTaskModal(false);
+                  setNewTaskDescription("");
+                  setNewTaskServiceType("1Y");
+                  setNewTaskDuration(30);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (newTaskDescription && onStepUpdate) {
+                    const newTask: FlowchartTask = {
+                      id: `custom-task-${Date.now()}`,
+                      description: newTaskDescription,
+                      serviceType: newTaskServiceType,
+                      completed: false,
+                      actualTimeMinutes: 0
+                    };
+
+                    const updatedStep = {
+                      ...step,
+                      tasks: [...step.tasks, newTask],
+                      // Update duration to include new task time
+                      durationMinutes: step.durationMinutes + newTaskDuration,
+                      duration: `${step.durationMinutes + newTaskDuration}m`
+                    };
+
+                    onStepUpdate(updatedStep);
+
+                    // Reset form
+                    setShowAddTaskModal(false);
+                    setNewTaskDescription("");
+                    setNewTaskServiceType("1Y");
+                    setNewTaskDuration(30);
+                  }
+                }}
+                disabled={!newTaskDescription}
+              >
+                Add Task
+              </Button>
             </div>
           </div>
         </DialogContent>
