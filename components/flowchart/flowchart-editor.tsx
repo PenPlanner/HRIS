@@ -159,10 +159,11 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const t2 = selectedT2;
 
   // Debug logging for technicians - log on EVERY render
+  const dataKeys = Object.keys(data);
   console.log(`[StepNode ${step.id}] RENDER - t1:`, t1?.initials, 't2:', t2?.initials, 'from data:', data.selectedT1?.initials, data.selectedT2?.initials);
-  console.log(`[StepNode ${step.id}] Full data keys:`, Object.keys(data));
-  console.log(`[StepNode ${step.id}] selectedT1 full object:`, data.selectedT1);
-  console.log(`[StepNode ${step.id}] selectedT2 full object:`, data.selectedT2);
+  console.log(`[StepNode ${step.id}] Full data keys (${dataKeys.length}):`, dataKeys.join(', '));
+  console.log(`[StepNode ${step.id}] selectedT1 in keys?`, dataKeys.includes('selectedT1'), 'value:', data.selectedT1);
+  console.log(`[StepNode ${step.id}] selectedT2 in keys?`, dataKeys.includes('selectedT2'), 'value:', data.selectedT2);
 
   // Debug logging for technicians in useEffect
   useEffect(() => {
@@ -502,15 +503,16 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
               const taskServiceType = task.serviceType || "All";
               let isTaskIrrelevant = false;
 
-              if (!isEditMode && selectedServiceType && selectedServiceType !== "all") {
+              if (!isEditMode && selectedServiceType && selectedServiceType !== "all" && selectedServiceType !== "") {
                 const includedTypes = getIncludedServiceTypes(selectedServiceType);
                 // Mark as irrelevant if it doesn't match the selected service type
                 isTaskIrrelevant = !includedTypes.includes(taskServiceType);
               }
 
-              // Get service type color
-              const badgeColor = serviceType === "All"
-                ? SERVICE_TYPE_COLORS.All
+              // Get service type color - explicit check for "All" or missing serviceType to ensure purple color
+              const isExtTask = !task.serviceType || task.serviceType === "All";
+              const badgeColor = isExtTask
+                ? "#A855F7" // Purple for Ext
                 : (SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default);
 
               // Split reference number and description
@@ -1092,7 +1094,7 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
           <div className="pt-3 border-t nodrag">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-gray-600">Service Filter</span>
-              {selectedServiceType !== "all" && onServiceTypeChange && (
+              {selectedServiceType !== "all" && selectedServiceType !== "" && onServiceTypeChange && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1343,6 +1345,13 @@ function FlowchartEditorInner({
   useEffect(() => {
     console.log('[FlowchartEditor] initialNodes changed, updating all nodes. T1:', selectedT1?.initials, 'T2:', selectedT2?.initials);
 
+    // Debug: Check what's actually in initialNodes[0].data
+    if (initialNodes.length > 0 && initialNodes[0].type === 'stepNode') {
+      console.log('[FlowchartEditor] initialNodes[0].data keys:', Object.keys(initialNodes[0].data));
+      console.log('[FlowchartEditor] initialNodes[0].data.selectedT1:', initialNodes[0].data.selectedT1);
+      console.log('[FlowchartEditor] initialNodes[0].data.selectedT2:', initialNodes[0].data.selectedT2);
+    }
+
     // Create completely new array reference and new object references for each node
     // to force React Flow to recognize the change
     const timestamp = Date.now();
@@ -1355,6 +1364,10 @@ function FlowchartEditorInner({
     }));
 
     console.log('[FlowchartEditor] Setting nodes with forced update timestamp:', timestamp);
+    console.log('[FlowchartEditor] forcedNodes[0].data keys:', forcedNodes.length > 0 ? Object.keys(forcedNodes[0].data) : 'no nodes');
+    console.log('[FlowchartEditor] forcedNodes[0].data.selectedT1:', forcedNodes.length > 0 ? forcedNodes[0].data.selectedT1 : 'no nodes');
+    console.log('[FlowchartEditor] forcedNodes[0].data.selectedT2:', forcedNodes.length > 0 ? forcedNodes[0].data.selectedT2 : 'no nodes');
+
     setNodes(forcedNodes);
 
     // Force React Flow to re-render nodes after state update

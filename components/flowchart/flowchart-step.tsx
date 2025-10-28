@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { parseSIIReference, SII_DOCUMENTS } from "@/lib/sii-documents";
 import { getSectionPage } from "@/lib/sii-page-mapping";
 import { useState } from "react";
-import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface FlowchartStepProps {
@@ -174,6 +173,11 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
             const refNumber = refMatch ? refMatch[1] : '';
             const description = refMatch ? refMatch[2] : text;
 
+            // Determine if this is an external/extra task
+            const isExtTask = !task.serviceType || task.serviceType === "All";
+            const taskColor = isExtTask ? "#A855F7" : step.color;
+            const taskLabel = isExtTask ? "Ext" : task.serviceType;
+
             return (
               <div
                 key={task.id}
@@ -183,16 +187,16 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
                   isIndented && "ml-6 text-muted-foreground"
                 )}
                 style={{
-                  backgroundColor: !isIndented ? `${task.serviceType === "All" ? SERVICE_TYPE_COLORS.All : step.color}10` : 'transparent'
+                  backgroundColor: !isIndented ? `${taskColor}10` : 'transparent'
                 }}
               >
                 {!isIndented && (
                   <div
-                    style={{ backgroundColor: task.serviceType === "All" ? SERVICE_TYPE_COLORS.All : step.color }}
+                    style={{ backgroundColor: taskColor }}
                     className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                   >
                     <span className="text-[9px] font-mono font-bold text-white">
-                      {task.serviceType === "All" ? "Ext" : task.serviceType}
+                      {taskLabel}
                     </span>
                   </div>
                 )}

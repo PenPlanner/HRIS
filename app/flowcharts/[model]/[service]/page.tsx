@@ -73,8 +73,8 @@ export default function FlowchartViewerPage() {
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [pendingTimeMinutes, setPendingTimeMinutes] = useState<number | undefined>(undefined);
 
-  // State for service type filtering
-  const [selectedServiceType, setSelectedServiceType] = useState<string>("all");
+  // State for service type filtering (empty string = show all, but no filter active)
+  const [selectedServiceType, setSelectedServiceType] = useState<string>("");
 
   // State for free positioning (disables grid snap)
   const [freePositioning, setFreePositioning] = useState(false);

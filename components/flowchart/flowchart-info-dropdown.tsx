@@ -83,7 +83,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
   // Calculate additional time for a specific service type
   const calculateAdditionalTime = (serviceType?: string): number => {
     const targetServiceType = serviceType || selectedServiceType;
-    if (!targetServiceType || targetServiceType === "1Y" || targetServiceType === "all") return 0;
+    if (!targetServiceType || targetServiceType === "" || targetServiceType === "1Y" || targetServiceType === "all") return 0;
 
     let totalAdditionalMinutes = 0;
 
@@ -322,7 +322,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
               </div>
               <div className="font-bold">
                 {formatToHM(flowchart.totalMinutes)}
-                {additionalTimeMinutes > 0 && selectedServiceType && (
+                {additionalTimeMinutes > 0 && selectedServiceType && selectedServiceType !== "" && selectedServiceType !== "all" && (
                   <span className="text-green-600 dark:text-green-400 text-[10px] block mt-0.5">
                     + {formatTime(additionalTimeMinutes)} ({selectedServiceType})
                   </span>
@@ -442,20 +442,24 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                 { code: "All", label: "Ext" },
               ].map(({ code, label }) => {
                 const additionalTime = code !== "1Y" && code !== "All" ? calculateAdditionalTime(code) : 0;
-                const isSelected = selectedServiceType === code || (code === "All" && selectedServiceType === "all");
                 const isExtButton = code === "All";
+                // isSelected: true if this button's filter is active
+                // For Ext: only selected if explicitly set to "all" (not empty string)
+                const isSelected = isExtButton
+                  ? selectedServiceType === "all"
+                  : selectedServiceType === code;
 
                 return (
                   <button
                     key={code}
                     onClick={() => {
-                      // For "Ext" (All): always set to "all", can't toggle off
+                      // For "Ext" (All): toggle between "all" and "" (show all without active filter)
                       if (isExtButton) {
-                        onServiceTypeChange?.("all");
+                        onServiceTypeChange?.(isSelected ? "" : "all");
                       } else {
-                        // For other buttons: toggle on/off
+                        // For other buttons: toggle on/off (off = empty string)
                         if (isSelected) {
-                          onServiceTypeChange?.("all");
+                          onServiceTypeChange?.("");
                         } else {
                           onServiceTypeChange?.(code);
                         }

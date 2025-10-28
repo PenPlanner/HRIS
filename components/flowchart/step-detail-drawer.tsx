@@ -120,8 +120,8 @@ export function StepDetailDrawer({
     // If "Show All" is enabled, return all tasks
     if (showAllTasks) return step.tasks;
 
-    // If service filter is "all", return all tasks
-    if (selectedServiceType === "all") return step.tasks;
+    // If service filter is "all" or empty, return all tasks
+    if (selectedServiceType === "all" || selectedServiceType === "") return step.tasks;
 
     const includedTypes = getIncludedServiceTypes(selectedServiceType);
     const filtered = step.tasks.filter(task => {
@@ -441,7 +441,7 @@ export function StepDetailDrawer({
             <div className="flex-1 min-w-0">
 
               {/* Service Filter Toggle */}
-              {selectedServiceType !== "all" && (
+              {selectedServiceType !== "all" && selectedServiceType !== "" && (
                 <div className="mb-3 flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
                   <Info className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
                   <span className="text-xs text-blue-700">
@@ -873,7 +873,7 @@ export function StepDetailDrawer({
           {/* CHECKLIST TAB - SII References with Checkboxes */}
           <TabsContent value="checklist" className="space-y-3">
             {/* Service Filter Toggle - Show at top of checklist */}
-            {selectedServiceType !== "all" && (
+            {selectedServiceType !== "all" && selectedServiceType !== "" && (
               <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
                 <span className="text-xs text-blue-700">
