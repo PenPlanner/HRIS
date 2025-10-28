@@ -13,10 +13,8 @@ const STATIC_ASSETS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => {
       return self.skipWaiting(); // Activate immediately
@@ -26,14 +24,12 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
           .filter((name) => name.startsWith('hris-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE && name !== PDF_CACHE)
           .map((name) => {
-            console.log('[Service Worker] Deleting old cache:', name);
             return caches.delete(name);
           })
       );
@@ -64,7 +60,6 @@ self.addEventListener('fetch', (event) => {
       caches.open(PDF_CACHE).then((cache) => {
         return cache.match(request).then((cachedResponse) => {
           if (cachedResponse) {
-            console.log('[Service Worker] Serving PDF from cache:', url.pathname);
             return cachedResponse;
           }
 
@@ -120,7 +115,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
-        console.log('[Service Worker] Serving from cache:', url.pathname);
         return cachedResponse;
       }
 
@@ -156,8 +150,6 @@ self.addEventListener('fetch', (event) => {
 
 // Background sync event - sync data when back online
 self.addEventListener('sync', (event) => {
-  console.log('[Service Worker] Background sync triggered:', event.tag);
-
   if (event.tag === 'sync-flowchart-data') {
     event.waitUntil(syncFlowchartData());
   }
@@ -187,8 +179,6 @@ async function syncFlowchartData() {
         console.error('[Service Worker] Failed to sync change:', error);
       }
     }
-
-    console.log('[Service Worker] Sync completed');
   } catch (error) {
     console.error('[Service Worker] Sync failed:', error);
   }
@@ -211,8 +201,6 @@ function openDB(name, version) {
 
 // Message event - handle commands from the app
 self.addEventListener('message', (event) => {
-  console.log('[Service Worker] Message received:', event.data);
-
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }

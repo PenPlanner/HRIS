@@ -2305,7 +2305,6 @@ function FlowchartEditorInner({
       });
       setEdges(validEdges);
       hasLoadedInitialEdges.current = true;
-      console.log(`✅ Loaded ${validEdges.length} edges from initialEdges`);
     }
   }, [initialEdges]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -2319,12 +2318,10 @@ function FlowchartEditorInner({
 
       // Only show animation on first visit
       if (isFirstVisit.current) {
-        console.log('🎯 Starting auto-layout with animation (first visit)...');
         // TEMPORARILY DISABLED: Loading overlay animation
         // setShowLoadingOverlay(true);
 
         // Run layout immediately
-        console.log('   Running handleRealignToGridCentered()...');
         handleRealignToGridCentered();
 
         // TESTING: Disable all camera movements to see if layout is correct from start
@@ -2338,7 +2335,6 @@ function FlowchartEditorInner({
         setTimeout(() => {
           const firstStep = steps.find(s => s.id.includes('step-1') || s.position.x === 0);
           if (firstStep) {
-            console.log('   Zooming to first step:', firstStep.id);
             const nodeId = firstStep.id;
             fitView({
               nodes: [{ id: nodeId }],
@@ -2354,7 +2350,6 @@ function FlowchartEditorInner({
         localStorage.setItem(`flowchart-animation-shown-${flowchart.id}`, 'true');
       } else {
         // No animation, just run layout
-        console.log('🎯 Running auto-layout without animation (already visited)...');
         handleRealignToGridCentered();
         // TESTING: Also disable for non-first-visit
         // setTimeout(() => {

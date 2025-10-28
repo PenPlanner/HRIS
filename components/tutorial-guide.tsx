@@ -352,7 +352,6 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
   // Check on mount if tutorial was completed - show icon group immediately
   useEffect(() => {
     const hasSeenTutorial = localStorage.getItem('tutorial-completed');
-    console.log('Tutorial: Checking on mount. hasSeenTutorial:', hasSeenTutorial);
 
     // Always show icons (skip tutorial requirement)
     setIsMinimized(true);
@@ -362,13 +361,10 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
   useEffect(() => {
     const handleAutoOpen = () => {
       const hasSeenTutorial = localStorage.getItem('tutorial-completed');
-      console.log('Tutorial: Received auto-open event. hasSeenTutorial:', hasSeenTutorial);
 
       if (!hasSeenTutorial) {
-        console.log('Tutorial: Auto-opening welcome dialog in 2500ms...');
         setTimeout(() => {
           setIsOpen(true);
-          console.log('Tutorial: Dialog opened!');
         }, 2500); // 2.5 seconds after info dropdown opens
       }
 
