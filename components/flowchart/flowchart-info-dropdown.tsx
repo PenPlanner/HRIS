@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { FlowchartData } from "@/lib/flowchart-data";
+import { FlowchartData, parseServiceTimes } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import { getSelectedTechnicians } from "@/lib/technicians-data";
 import { Users, Clock, Timer, ChevronDown, ChevronUp, Pin, X, GripVertical, FileText, ArrowUp, ArrowDown } from "lucide-react";
@@ -10,9 +10,11 @@ import { cn } from "@/lib/utils";
 interface FlowchartInfoDropdownProps {
   flowchart: FlowchartData;
   steps?: any[]; // Optional steps array for progress tracking
+  selectedServiceType?: string; // Selected service type to show additional time
+  onServiceTypeChange?: (serviceType: string) => void; // Callback to change service type filter
 }
 
-export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDropdownProps) {
+export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceType, onServiceTypeChange }: FlowchartInfoDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -68,6 +70,35 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
     if (mins === 0) return `${hours}H`;
     return `${hours}H ${mins}M`;
   };
+
+  // Helper to format time compactly
+  const formatTime = (totalMinutes: number): string => {
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
+  };
+
+  // Calculate additional time for a specific service type
+  const calculateAdditionalTime = (serviceType?: string): number => {
+    const targetServiceType = serviceType || selectedServiceType;
+    if (!targetServiceType || targetServiceType === "1Y" || targetServiceType === "all") return 0;
+
+    let totalAdditionalMinutes = 0;
+
+    steps.forEach(step => {
+      if (step.duration) {
+        const serviceTimes = parseServiceTimes(step.duration);
+        const additionalMinutes = serviceTimes[targetServiceType] || 0;
+        totalAdditionalMinutes += additionalMinutes;
+      }
+    });
+
+    return totalAdditionalMinutes;
+  };
+
+  const additionalTimeMinutes = calculateAdditionalTime();
 
   const durationMinutes = flowchart.totalMinutes / flowchart.technicians;
   const durationFormatted = formatToHM(Math.round(durationMinutes));
@@ -289,7 +320,14 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
                 <Timer className="h-3 w-3" />
                 <span>Total time</span>
               </div>
-              <div className="font-bold">{formatToHM(flowchart.totalMinutes)}</div>
+              <div className="font-bold">
+                {formatToHM(flowchart.totalMinutes)}
+                {additionalTimeMinutes > 0 && selectedServiceType && (
+                  <span className="text-green-600 dark:text-green-400 text-[10px] block mt-0.5">
+                    + {formatTime(additionalTimeMinutes)} ({selectedServiceType})
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -389,7 +427,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
 
           {/* Service Type Legend */}
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold">SERVICE TYPES</div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold">SERVICE TYPES (FILTER)</div>
             <div className="grid grid-cols-5 gap-1">
               {[
                 { code: "1Y", label: "1Y" },
@@ -402,19 +440,47 @@ export function FlowchartInfoDropdown({ flowchart, steps = [] }: FlowchartInfoDr
                 { code: "10Y", label: "10Y" },
                 { code: "12Y", label: "12Y" },
                 { code: "All", label: "Ext" },
-              ].map(({ code, label }) => (
-                <div
-                  key={code}
-                  className="flex items-center justify-center px-1 py-1 rounded font-bold text-[9px] shadow-sm"
-                  style={{
-                    backgroundColor: SERVICE_TYPE_COLORS[code as keyof typeof SERVICE_TYPE_COLORS],
-                    color: code === "7Y" || code === "10Y" ? "black" : "white"
-                  }}
-                  title={code}
-                >
-                  {label}
-                </div>
-              ))}
+              ].map(({ code, label }) => {
+                const additionalTime = code !== "1Y" && code !== "All" ? calculateAdditionalTime(code) : 0;
+                const isSelected = selectedServiceType === code || (code === "All" && selectedServiceType === "all");
+                const isExtButton = code === "All";
+
+                return (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      // For "Ext" (All): always set to "all", can't toggle off
+                      if (isExtButton) {
+                        onServiceTypeChange?.("all");
+                      } else {
+                        // For other buttons: toggle on/off
+                        if (isSelected) {
+                          onServiceTypeChange?.("all");
+                        } else {
+                          onServiceTypeChange?.(code);
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "flex flex-col items-center justify-center px-1 py-1 rounded font-bold text-[9px] shadow-sm transition-all cursor-pointer hover:scale-110",
+                      isSelected && "ring-2 ring-white ring-offset-1 ring-offset-gray-800"
+                    )}
+                    style={{
+                      backgroundColor: SERVICE_TYPE_COLORS[code as keyof typeof SERVICE_TYPE_COLORS],
+                      color: code === "7Y" || code === "10Y" ? "black" : "white",
+                      opacity: isSelected ? 1 : 0.7
+                    }}
+                    title={isExtButton ? "Show all service types" : (isSelected ? `Click to reset filter` : `Filter by ${code}`)}
+                  >
+                    <span>{label}</span>
+                    {additionalTime > 0 && (
+                      <span className="text-[8px] font-semibold opacity-90 mt-0.5">
+                        +{formatTime(additionalTime)}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

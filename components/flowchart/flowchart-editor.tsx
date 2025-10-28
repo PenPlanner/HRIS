@@ -158,9 +158,15 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   const t1 = selectedT1;
   const t2 = selectedT2;
 
-  // Debug logging for technicians
+  // Debug logging for technicians - log on EVERY render
+  console.log(`[StepNode ${step.id}] RENDER - t1:`, t1?.initials, 't2:', t2?.initials, 'from data:', data.selectedT1?.initials, data.selectedT2?.initials);
+  console.log(`[StepNode ${step.id}] Full data keys:`, Object.keys(data));
+  console.log(`[StepNode ${step.id}] selectedT1 full object:`, data.selectedT1);
+  console.log(`[StepNode ${step.id}] selectedT2 full object:`, data.selectedT2);
+
+  // Debug logging for technicians in useEffect
   useEffect(() => {
-    console.log(`[StepNode ${step.id}] t1:`, t1?.initials, 't2:', t2?.initials);
+    console.log(`[StepNode ${step.id}] useEffect - t1:`, t1?.initials, 't2:', t2?.initials);
   }, [t1, t2, step.id]);
 
   // Count ALL tasks
@@ -503,7 +509,9 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
               }
 
               // Get service type color
-              const badgeColor = SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default;
+              const badgeColor = serviceType === "All"
+                ? SERVICE_TYPE_COLORS.All
+                : (SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS.default);
 
               // Split reference number and description
               // Matches patterns like: "13.5.1.Lift", "13.5.1 Lift", "3.5.1-4.71 ResQ", "6.5.2.11 Visual"
@@ -1331,44 +1339,34 @@ function FlowchartEditorInner({
   const updateNodeInternals = useUpdateNodeInternals();
 
   // Update nodes when initialNodes changes (e.g., when technicians change)
+  // initialNodes already includes selectedT1 and selectedT2 in the data, so this is sufficient
   useEffect(() => {
-    console.log('[FlowchartEditor] initialNodes changed, updating all nodes');
-    setNodes(initialNodes);
-  }, [initialNodes, setNodes]);
+    console.log('[FlowchartEditor] initialNodes changed, updating all nodes. T1:', selectedT1?.initials, 'T2:', selectedT2?.initials);
 
-  // CRITICAL: Force update nodes when technicians change
-  useEffect(() => {
-    console.log('[FlowchartEditor] Technicians changed! T1:', selectedT1?.initials, 'T2:', selectedT2?.initials);
+    // Create completely new array reference and new object references for each node
+    // to force React Flow to recognize the change
+    const timestamp = Date.now();
+    const forcedNodes = initialNodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        _forceUpdate: timestamp,
+      }
+    }));
 
-    // Update all nodes with new technician data
-    setNodes((prevNodes) => {
-      const updatedNodes = prevNodes.map((node) => {
+    console.log('[FlowchartEditor] Setting nodes with forced update timestamp:', timestamp);
+    setNodes(forcedNodes);
+
+    // Force React Flow to re-render nodes after state update
+    setTimeout(() => {
+      console.log('[FlowchartEditor] Forcing React Flow to update node internals');
+      forcedNodes.forEach((node) => {
         if (node.type === 'stepNode') {
-          // Force update by creating new object
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              selectedT1,
-              selectedT2,
-            },
-          };
+          updateNodeInternals(node.id);
         }
-        return node;
       });
-
-      // Force React Flow to re-render nodes after state update
-      setTimeout(() => {
-        updatedNodes.forEach((node) => {
-          if (node.type === 'stepNode') {
-            updateNodeInternals(node.id);
-          }
-        });
-      }, 50);
-
-      return updatedNodes;
-    });
-  }, [selectedT1, selectedT2, setNodes, updateNodeInternals]);
+    }, 50);
+  }, [initialNodes, setNodes, updateNodeInternals, selectedT1, selectedT2]);
 
   // Update nodes when activeStepIds changes
   useEffect(() => {
@@ -2579,7 +2577,6 @@ function FlowchartEditorInner({
       )} */}
 
       <ReactFlow
-        key={`rf-${selectedT1?.id || 'no-t1'}-${selectedT2?.id || 'no-t2'}`}
         nodes={nodes as any}
         edges={edges}
         onNodesChange={handleNodesChange}

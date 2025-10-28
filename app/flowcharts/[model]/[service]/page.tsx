@@ -2245,7 +2245,12 @@ ${fullLayoutData.map(step =>
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
         <div className="flex-1 overflow-hidden relative">
           {/* Info Legend Dropdown - Top Left */}
-          <FlowchartInfoDropdown flowchart={flowchartData} steps={steps} />
+          <FlowchartInfoDropdown
+            flowchart={flowchartData}
+            steps={steps}
+            selectedServiceType={selectedServiceType}
+            onServiceTypeChange={setSelectedServiceType}
+          />
 
           <FlowchartEditor
             key={flowchartKey}

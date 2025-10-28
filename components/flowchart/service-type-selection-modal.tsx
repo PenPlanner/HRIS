@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Zap, CheckCircle2 } from "lucide-react";
-import { FlowchartStep, FlowchartData } from "@/lib/flowchart-data";
+import { FlowchartStep, FlowchartData, parseServiceTimes } from "@/lib/flowchart-data";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 
@@ -59,26 +59,47 @@ export function ServiceTypeSelectionModal({
     }
   }, [open, makeYear]);
 
-  // Calculate total target time from flowchartData
-  // flowchartData.totalMinutes is the total work hours for 2 technicians (e.g., 2280 = 38h)
-  let totalHours = 0;
-  let totalMinutes = 0;
+  // Calculate total base time (1Y) - this is the 38h base
+  let baseHours = 0;
+  let baseMinutes = 0;
 
   if (flowchartData?.totalMinutes) {
-    // totalMinutes already includes work for 2 technicians (e.g., 2280 minutes = 38 hours)
-    totalHours = Math.floor(flowchartData.totalMinutes / 60);
-    totalMinutes = flowchartData.totalMinutes % 60;
-
-    console.log('[ServiceTypeModal] Total Minutes:', flowchartData.totalMinutes, 'Display:', totalHours + 'h ' + totalMinutes + 'm');
+    baseHours = Math.floor(flowchartData.totalMinutes / 60);
+    baseMinutes = flowchartData.totalMinutes % 60;
   } else {
-    // Fallback: calculate from steps (downtime × 2 for 2 technicians)
     const downtimeMinutes = steps.reduce((sum, step) => {
       return sum + (step.durationMinutes || 0);
     }, 0);
     const totalTargetMinutes = downtimeMinutes * 2;
-    totalHours = Math.floor(totalTargetMinutes / 60);
-    totalMinutes = totalTargetMinutes % 60;
+    baseHours = Math.floor(totalTargetMinutes / 60);
+    baseMinutes = totalTargetMinutes % 60;
   }
+
+  // Calculate additional time for each service type
+  const calculateAdditionalTime = (serviceType: string): number => {
+    if (serviceType === "1Y") return 0; // No additional time for base service
+
+    let totalAdditionalMinutes = 0;
+
+    steps.forEach(step => {
+      if (step.duration) {
+        const serviceTimes = parseServiceTimes(step.duration);
+        const additionalMinutes = serviceTimes[serviceType] || 0;
+        totalAdditionalMinutes += additionalMinutes;
+      }
+    });
+
+    return totalAdditionalMinutes;
+  };
+
+  // Helper to format time compactly
+  const formatTime = (totalMinutes: number): string => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${minutes}m`;
+  };
 
   const handleStart = () => {
     if (selectedServiceType) {
@@ -89,23 +110,23 @@ export function ServiceTypeSelectionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Zap className="h-5 w-5 text-green-600" />
+          <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <Zap className="h-4 w-4 text-green-600" />
             Start Service Program
           </DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription className="text-xs">
             Select the service type for this turbine
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Auto-highlight indicator */}
           {makeYear && (
-            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+              <div className="flex items-center gap-2 text-xs">
+                <CheckCircle2 className="h-3 w-3 text-blue-600" />
                 <span className="text-blue-900 dark:text-blue-100">
                   Turbine Year: <span className="font-bold">{makeYear}</span>
                   {selectedServiceType && (
@@ -119,61 +140,98 @@ export function ServiceTypeSelectionModal({
           )}
 
           {/* Service type grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {SERVICE_TYPES.map((serviceType) => (
-              <button
-                key={serviceType.value}
-                onClick={() => setSelectedServiceType(serviceType.value)}
-                className={cn(
-                  "relative p-4 rounded-lg border-2 transition-all duration-200",
-                  selectedServiceType === serviceType.value
-                    ? "border-green-500 bg-green-50 dark:bg-green-950 shadow-lg scale-105"
-                    : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md"
-                )}
-              >
-                {/* Selected indicator */}
-                {selectedServiceType === serviceType.value && (
-                  <div className="absolute -top-2 -right-2 h-6 w-6 bg-green-600 rounded-full flex items-center justify-center shadow-md">
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  </div>
-                )}
+          <div className="grid grid-cols-2 gap-2">
+            {SERVICE_TYPES.map((serviceType) => {
+              const additionalMinutes = calculateAdditionalTime(serviceType.value);
 
-                {/* Service badge */}
-                <div
-                  className="inline-block px-3 py-1 rounded-md font-bold text-sm mb-2 shadow-sm"
-                  style={{
-                    backgroundColor: serviceType.color,
-                    color: serviceType.value === "7Y" || serviceType.value === "10Y" ? "#000000" : "#FFFFFF"
-                  }}
+              return (
+                <button
+                  key={serviceType.value}
+                  onClick={() => setSelectedServiceType(serviceType.value)}
+                  className={cn(
+                    "relative p-3 rounded-lg border-2 transition-all duration-200",
+                    selectedServiceType === serviceType.value
+                      ? "border-green-500 bg-green-50 dark:bg-green-950 shadow-lg scale-105"
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md"
+                  )}
                 >
-                  {serviceType.value}
-                </div>
+                  {/* Selected indicator */}
+                  {selectedServiceType === serviceType.value && (
+                    <div className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-green-600 rounded-full flex items-center justify-center shadow-md">
+                      <CheckCircle2 className="h-3 w-3 text-white" />
+                    </div>
+                  )}
 
-                {/* Service label */}
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {serviceType.label}
-                </p>
-              </button>
-            ))}
+                  {/* Service badge */}
+                  <div
+                    className="inline-block px-2 py-0.5 rounded-md font-bold text-xs mb-1.5 shadow-sm"
+                    style={{
+                      backgroundColor: serviceType.color,
+                      color: serviceType.value === "7Y" || serviceType.value === "10Y" ? "#000000" : "#FFFFFF"
+                    }}
+                  >
+                    {serviceType.value}
+                  </div>
+
+                  {/* Service label */}
+                  <p className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1">
+                    {serviceType.label}
+                  </p>
+
+                  {/* Time info */}
+                  <div className="text-[11px] text-gray-600 dark:text-gray-400">
+                    {serviceType.value === "1Y" ? (
+                      <span className="font-semibold">{baseHours}h</span>
+                    ) : (
+                      <>
+                        <span className="font-semibold">{baseHours}h</span>
+                        {additionalMinutes > 0 && (
+                          <span className="text-green-600 dark:text-green-400 font-semibold">
+                            {" "}+ {formatTime(additionalMinutes)}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Target time overview */}
-          <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-2 border-green-600/50 rounded-lg p-4">
+          <div className="bg-gradient-to-br from-green-900/20 to-emerald-900/20 border-2 border-green-600/50 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-green-600" />
-                <span className="text-xs font-semibold text-green-600 uppercase tracking-wide">
+                <Clock className="h-4 w-4 text-green-600" />
+                <span className="text-[10px] font-semibold text-green-600 uppercase tracking-wide">
                   Target Time
                 </span>
               </div>
-              <div className="text-3xl font-bold font-mono text-white">
-                {totalHours > 0 && <span>{totalHours}h</span>}
-                {totalMinutes > 0 && totalHours > 0 && <span> </span>}
-                {totalMinutes > 0 && <span>{totalMinutes}m</span>}
+              <div className="text-2xl font-bold font-mono text-white">
+                {selectedServiceType ? (
+                  <>
+                    <span>{baseHours}h</span>
+                    {(() => {
+                      const additionalMinutes = calculateAdditionalTime(selectedServiceType);
+                      return additionalMinutes > 0 && (
+                        <span className="text-green-400 text-lg">
+                          {" "}+ {formatTime(additionalMinutes)}
+                        </span>
+                      );
+                    })()}
+                  </>
+                ) : (
+                  <span>{baseHours}h</span>
+                )}
               </div>
             </div>
-            <p className="text-xs text-green-400 mt-2">
+            <p className="text-[10px] text-green-400 mt-1.5">
               {steps.length} steps • Total work time for 2 technicians
+              {selectedServiceType && selectedServiceType !== "1Y" && (
+                <span className="block mt-0.5 text-green-300">
+                  Base: {baseHours}h + Additional for {selectedServiceType}
+                </span>
+              )}
             </p>
           </div>
         </div>

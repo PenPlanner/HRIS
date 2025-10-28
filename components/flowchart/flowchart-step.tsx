@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { parseSIIReference, SII_DOCUMENTS } from "@/lib/sii-documents";
 import { getSectionPage } from "@/lib/sii-page-mapping";
 import { useState } from "react";
+import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface FlowchartStepProps {
@@ -182,12 +183,12 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
                   isIndented && "ml-6 text-muted-foreground"
                 )}
                 style={{
-                  backgroundColor: !isIndented ? `${step.color}10` : 'transparent'
+                  backgroundColor: !isIndented ? `${task.serviceType === "All" ? SERVICE_TYPE_COLORS.All : step.color}10` : 'transparent'
                 }}
               >
                 {!isIndented && (
                   <div
-                    style={{ backgroundColor: step.color }}
+                    style={{ backgroundColor: task.serviceType === "All" ? SERVICE_TYPE_COLORS.All : step.color }}
                     className="px-2 py-1 flex items-center justify-center flex-shrink-0 self-stretch w-[42px]"
                   >
                     <span className="text-[9px] font-mono font-bold text-white">
