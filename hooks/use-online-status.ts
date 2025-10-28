@@ -12,9 +12,12 @@ export function useOnlineStatus() {
       setWasOffline(true);
 
       // Trigger background sync when coming back online
-      if ('serviceWorker' in navigator && 'sync' in ServiceWorkerRegistration.prototype) {
-        navigator.serviceWorker.ready.then((registration) => {
-          return registration.sync.register('sync-flowchart-data');
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration: any) => {
+          if (registration && registration.sync && typeof registration.sync.register === 'function') {
+            return registration.sync.register('sync-flowchart-data');
+          }
+          return null;
         }).catch((error) => {
           console.error('Background sync registration failed:', error);
         });

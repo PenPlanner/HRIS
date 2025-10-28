@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Clock, Grid3x3, Gauge } from "lucide-react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CircularTimeSlider } from "./circular-time-slider";
 
 interface TimeInputProps {
   value?: number; // Actual time in minutes
@@ -21,193 +17,161 @@ export function TimeInput({ value, targetMinutes, onChange, disabled }: TimeInpu
   const [hours, setHours] = useState(Math.floor((value || 0) / 60));
   const [minutes, setMinutes] = useState((value || 0) % 60);
 
-  // Common time presets in minutes
-  const presets = [5, 10, 15, 30, 45, 60, 90, 120];
-
   const formatTime = (totalMinutes?: number): string => {
-    if (!totalMinutes) return "–";
-
+    if (!totalMinutes) return "0m";
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
-
     if (h === 0) return `${m}m`;
     if (m === 0) return `${h}h`;
     return `${h}h ${m}m`;
   };
 
-  const handlePresetClick = (minutes: number) => {
-    onChange(minutes);
+  const quickTimes = [5, 10, 15, 30, 45, 60, 90, 120];
+
+  const handleQuickTime = (mins: number) => {
+    onChange(mins);
+    setHours(Math.floor(mins / 60));
+    setMinutes(mins % 60);
     setOpen(false);
   };
 
-  const handleCustomSet = () => {
+  const handleCustomTime = () => {
     const totalMinutes = hours * 60 + minutes;
-    onChange(totalMinutes || undefined);
-    setOpen(false);
+    if (totalMinutes > 0) {
+      onChange(totalMinutes);
+      setOpen(false);
+    }
   };
 
-  const handleClear = () => {
-    onChange(undefined);
-    setHours(0);
-    setMinutes(0);
-    setOpen(false);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleCustomTime();
+    }
   };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           disabled={disabled}
           className={cn(
-            "h-7 px-2.5 text-xs font-mono gap-1.5 min-w-[80px] justify-start",
-            value
+            "inline-flex items-center h-5 px-1.5 rounded text-[10px] font-mono transition-colors",
+            "hover:bg-gray-100 dark:hover:bg-gray-800",
+            value && value > 0
               ? value <= (targetMinutes || Infinity)
-                ? "text-green-600 bg-green-900/20 border-green-600/50 hover:bg-green-900/30 hover:border-green-500"
-                : "text-red-600 bg-red-900/20 border-red-600/50 hover:bg-red-900/30 hover:border-red-500"
-              : "text-gray-400 bg-gray-800/50 border-gray-600/50 hover:bg-gray-700/50 hover:border-gray-500"
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+              : "text-gray-400 dark:text-gray-500",
+            disabled && "opacity-50 cursor-not-allowed"
           )}
         >
-          <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="flex-1 text-left">{value ? formatTime(value) : "Log time"}</span>
-        </Button>
+          <Clock className="h-3 w-3 mr-1" />
+          {formatTime(value)}
+        </button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-72 p-0"
-        align="end"
-        side="bottom"
-        sideOffset={8}
-        avoidCollisions={false}
-        collisionPadding={0}
-      >
-        <Tabs defaultValue="grid" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 rounded-none border-b h-10 bg-gradient-to-b from-gray-100 to-gray-50 p-1">
-            <TabsTrigger
-              value="grid"
-              className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 font-semibold transition-all text-xs"
-            >
-              <Grid3x3 className="h-4 w-4" />
-              Quick
-            </TabsTrigger>
-            <TabsTrigger
-              value="slider"
-              className="gap-1.5 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600 font-semibold transition-all text-xs"
-            >
-              <Gauge className="h-4 w-4" />
-              Slider
-            </TabsTrigger>
-          </TabsList>
 
-          {/* Circular Slider Tab */}
-          <TabsContent value="slider" className="p-3 m-0 h-[280px] overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-auto">
-              <CircularTimeSlider
-                value={value || 0}
-                onChange={(minutes) => {
-                  onChange(minutes);
-                  setHours(Math.floor(minutes / 60));
-                  setMinutes(minutes % 60);
-                }}
-                maxMinutes={180}
-                step={5}
-              />
+      <PopoverContent
+        className="w-52 p-2"
+        align="end"
+        side="left"
+        sideOffset={5}
+      >
+        <div className="space-y-2">
+          {/* Quick select buttons */}
+          <div>
+            <p className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Quick
+            </p>
+            <div className="grid grid-cols-4 gap-0.5">
+              {quickTimes.map((time) => (
+                <button
+                  key={time}
+                  onClick={() => handleQuickTime(time)}
+                  className={cn(
+                    "h-5 text-[9px] rounded border transition-colors",
+                    "hover:bg-blue-50 dark:hover:bg-blue-900/20",
+                    value === time
+                      ? "bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600 text-blue-700 dark:text-blue-300"
+                      : "border-gray-200 dark:border-gray-700"
+                  )}
+                >
+                  {formatTime(time)}
+                </button>
+              ))}
             </div>
-            <div className="flex gap-2 mt-2 flex-shrink-0">
-              <Button
-                size="sm"
-                onClick={() => setOpen(false)}
-                className="flex-1 h-8 text-xs"
+          </div>
+
+          {/* Custom time input with hours and minutes */}
+          <div className="pt-1.5 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-[9px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Custom
+            </p>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                max="23"
+                value={hours}
+                onChange={(e) => setHours(parseInt(e.target.value) || 0)}
+                onKeyDown={handleKeyDown}
+                className={cn(
+                  "w-9 h-5 px-1 text-[9px] rounded border text-center",
+                  "border-gray-200 dark:border-gray-700",
+                  "bg-white dark:bg-gray-800",
+                  "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                )}
+                placeholder="0"
+              />
+              <span className="text-[9px] text-gray-500">h</span>
+
+              <input
+                type="number"
+                min="0"
+                max="59"
+                value={minutes}
+                onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
+                onKeyDown={handleKeyDown}
+                className={cn(
+                  "w-9 h-5 px-1 text-[9px] rounded border text-center",
+                  "border-gray-200 dark:border-gray-700",
+                  "bg-white dark:bg-gray-800",
+                  "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                )}
+                placeholder="0"
+              />
+              <span className="text-[9px] text-gray-500">m</span>
+
+              <button
+                onClick={handleCustomTime}
+                className={cn(
+                  "h-5 px-2 text-[9px] rounded ml-1",
+                  "bg-blue-600 text-white hover:bg-blue-700",
+                  "transition-colors"
+                )}
               >
-                Done
-              </Button>
-              {value && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleClear}
-                  className="h-8 text-xs"
+                Set
+              </button>
+
+              {value && value > 0 && (
+                <button
+                  onClick={() => {
+                    onChange(undefined);
+                    setHours(0);
+                    setMinutes(0);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "h-5 px-2 text-[9px] rounded",
+                    "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+                    "transition-colors"
+                  )}
                 >
                   Clear
-                </Button>
+                </button>
               )}
             </div>
-          </TabsContent>
-
-          {/* Grid/Presets Tab */}
-          <TabsContent value="grid" className="p-3 m-0 h-[280px] overflow-auto">
-            <div className="space-y-2.5">
-              {/* Quick presets */}
-              <div>
-                <p className="text-xs text-muted-foreground mb-1.5">Quick select:</p>
-                <div className="grid grid-cols-4 gap-1">
-                  {presets.map((preset) => (
-                    <Button
-                      key={preset}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePresetClick(preset)}
-                      className={cn(
-                        "text-xs h-7",
-                        value === preset && "bg-blue-100 border-blue-300"
-                      )}
-                    >
-                      {formatTime(preset)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Custom time input */}
-              <div className="border-t pt-2.5">
-                <p className="text-xs text-muted-foreground mb-1.5">Custom:</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <label className="text-[10px] text-muted-foreground">Hours</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="23"
-                      value={hours}
-                      onChange={(e) => setHours(parseInt(e.target.value) || 0)}
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[10px] text-muted-foreground">Minutes</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="59"
-                      value={minutes}
-                      onChange={(e) => setMinutes(parseInt(e.target.value) || 0)}
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    size="sm"
-                    onClick={handleCustomSet}
-                    className="flex-1 h-7 text-xs"
-                  >
-                    Set
-                  </Button>
-                  {value && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleClear}
-                      className="h-7 text-xs"
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );

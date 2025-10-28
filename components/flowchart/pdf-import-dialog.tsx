@@ -313,7 +313,7 @@ export function PDFImportDialog({ open, onOpenChange, onImport }: PDFImportDialo
         colorCode: arranged.colorCode,
         technician: step.technician || "both",
         position: arranged.position,
-        tasks: step.tasks.map(task => ({
+        tasks: step.tasks.map((task: any) => ({
           id: generateTaskId(),
           description: task.description,
           completed: false,

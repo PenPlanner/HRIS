@@ -348,7 +348,7 @@ export function OfflineStatusIndicator({ flowchart, steps = [] }: OfflineStatusI
                         <span className="font-mono font-semibold">Browser Storage (IndexedDB)</span>
                       </p>
                       <p className="text-xs text-gray-600">
-                        Documents are stored in your browser's local database. Access them anytime, even without internet connection.
+                        Documents are stored in your browser&apos;s local database. Access them anytime, even without internet connection.
                       </p>
                     </div>
                   </div>

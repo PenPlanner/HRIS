@@ -346,7 +346,7 @@ export function StepDetailDrawer({
             {/* Row 2: Target Time, Actual Time and Progress */}
             <div className="flex items-center gap-3">
               {/* Target Time */}
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg px-4 py-3 flex items-center gap-3 min-h-[72px]">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-2 border-green-200 dark:border-green-800 rounded-lg px-4 py-3 flex items-center gap-3 h-[72px]">
                 <div className="bg-white dark:bg-gray-900 rounded-full p-2">
                   <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
                 </div>
@@ -361,7 +361,7 @@ export function StepDetailDrawer({
               </div>
 
               {/* Actual Time */}
-              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg px-4 py-3 flex items-center gap-3 min-h-[72px]">
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-2 border-yellow-200 dark:border-yellow-800 rounded-lg px-4 py-3 flex items-center gap-3 h-[72px]">
                 <div className="flex items-center gap-2">
                   <div>
                     <div className="text-[10px] text-yellow-700 dark:text-yellow-400 font-semibold uppercase tracking-wide">
@@ -404,18 +404,18 @@ export function StepDetailDrawer({
 
               {/* Tasks Progress */}
               <div className={cn(
-                "border-2 rounded-lg px-4 py-3 flex items-center gap-3 min-w-[160px] min-h-[72px]",
+                "border-2 rounded-lg px-4 py-3 flex items-center gap-3 min-w-[160px] h-[72px]",
                 isComplete
                   ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800"
                   : "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 border-gray-200 dark:border-gray-700"
               )}>
-                <div className="relative w-10 h-10 flex-shrink-0">
+                <div className="relative w-9 h-9 flex-shrink-0">
                   {/* Background Circle */}
-                  <svg className="w-10 h-10 transform -rotate-90">
+                  <svg className="w-9 h-9 transform -rotate-90">
                     <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
+                      cx="18"
+                      cy="18"
+                      r="14"
                       stroke="currentColor"
                       strokeWidth="3"
                       fill="none"
@@ -425,14 +425,14 @@ export function StepDetailDrawer({
                     />
                     {/* Progress Circle */}
                     <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
+                      cx="18"
+                      cy="18"
+                      r="14"
                       stroke="currentColor"
                       strokeWidth="3"
                       fill="none"
-                      strokeDasharray={`${2 * Math.PI * 16}`}
-                      strokeDashoffset={`${2 * Math.PI * 16 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
+                      strokeDasharray={`${2 * Math.PI * 14}`}
+                      strokeDashoffset={`${2 * Math.PI * 14 * (1 - (totalTasks > 0 ? completedTasks / totalTasks : 0))}`}
                       className={cn(
                         "transition-all duration-500",
                         isComplete ? "text-green-500" : "text-blue-500"
@@ -1458,7 +1458,7 @@ export function StepDetailDrawer({
                     <CardContent className="pt-3 pb-3">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
-                          <p className="text-sm font-medium">{tech.name}</p>
+                          <p className="text-sm font-medium">{`${(tech as any).first_name ?? ''} ${(tech as any).last_name ?? ''}`.trim()}</p>
                           <p className="text-xs text-muted-foreground">{tech.initials}</p>
                         </div>
                         <div className="flex gap-1.5">

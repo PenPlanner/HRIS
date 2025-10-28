@@ -195,11 +195,11 @@ export default function FlowchartViewerPage() {
     if (t3Data) {
       try {
         const t3 = JSON.parse(t3Data);
-        setSelectedT3(t3);
+        setSelectedT3(t3 || null);
       } catch {
         // If parsing fails, treat as ID (old format)
         const t3 = getTechnicianById(t3Data);
-        setSelectedT3(t3);
+        setSelectedT3(t3 || null);
       }
     }
   }, []);
@@ -710,7 +710,7 @@ export default function FlowchartViewerPage() {
                   logTechnicianActivity({
                     technicianId: t1.id,
                     technicianInitials: t1.initials,
-                    technicianName: `${t1.first_name} ${t1.last_name}`,
+                    technicianName: `${t1.firstName} ${t1.lastName}`,
                     technicianRole: 'T1',
                     turbineModel: flowchartData.model,
                     serviceType: flowchartData.serviceType,
@@ -729,7 +729,7 @@ export default function FlowchartViewerPage() {
                   logTechnicianActivity({
                     technicianId: t2.id,
                     technicianInitials: t2.initials,
-                    technicianName: `${t2.first_name} ${t2.last_name}`,
+                    technicianName: `${t2.firstName} ${t2.lastName}`,
                     technicianRole: 'T2',
                     turbineModel: flowchartData.model,
                     serviceType: flowchartData.serviceType,
@@ -750,7 +750,7 @@ export default function FlowchartViewerPage() {
                     logTechnicianActivity({
                       technicianId: t3.id,
                       technicianInitials: t3.initials,
-                      technicianName: `${t3.first_name} ${t3.last_name}`,
+                      technicianName: `${t3.firstName} ${t3.lastName}`,
                       technicianRole: 'T3',
                       turbineModel: flowchartData.model,
                       serviceType: flowchartData.serviceType,
@@ -1280,8 +1280,8 @@ export default function FlowchartViewerPage() {
     // Clear ALL localStorage keys for this flowchart
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const defaultLayoutKey = `default-layout-${serviceId}`;
-    const animationShownKey = `flowchart-animation-shown-${flowchartData.id}`;
-    const makeYearKey = `make-year-${flowchartData?.id}`;
+    const animationShownKey = `flowchart-animation-shown-${flowchartData?.id ?? ''}`;
+    const makeYearKey = `make-year-${flowchartData?.id ?? ''}`;
 
     localStorage.removeItem(storageKey);
     localStorage.removeItem(defaultLayoutKey);
@@ -2322,7 +2322,7 @@ ${fullLayoutData.map(step =>
             activeStepIds={activeStepIds}
             onOpenTechnicianPairModal={() => {
               setIsFromStartService(false);
-              setTechnicianPairModalOpen(true);
+              setTechnicianModalOpen(true);
             }}
             selectedT1={selectedT1}
             selectedT2={selectedT2}
@@ -2603,18 +2603,18 @@ ${fullLayoutData.map(step =>
         onSelect={handleSelectTechnicians}
         currentT1={
           technicianModalMode === 'step' && editingStepForTechnicians?.t1Id
-            ? getTechnicianById(editingStepForTechnicians.t1Id)
-            : selectedT1
+            ? (getTechnicianById(editingStepForTechnicians.t1Id) as any)
+            : selectedT1 as any
         }
         currentT2={
           technicianModalMode === 'step' && editingStepForTechnicians?.t2Id
-            ? getTechnicianById(editingStepForTechnicians.t2Id)
-            : selectedT2
+            ? (getTechnicianById(editingStepForTechnicians.t2Id) as any)
+            : selectedT2 as any
         }
         currentT3={
           technicianModalMode === 'step' && editingStepForTechnicians?.t3Id
-            ? getTechnicianById(editingStepForTechnicians.t3Id)
-            : selectedT3
+            ? (getTechnicianById(editingStepForTechnicians.t3Id) as any)
+            : selectedT3 as any
         }
         mode={technicianModalMode}
         stepId={editingStepForTechnicians?.id}

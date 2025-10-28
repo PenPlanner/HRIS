@@ -22,7 +22,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down');
-  const timerRef = useRef<NodeJS.Timeout>();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
 
   // Get selected technicians from global state
@@ -35,18 +35,20 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
   }, 0);
   const taskProgressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
-  // Calculate actual time and target time from COMPLETED steps only
-  const completedSteps = steps.filter(step => step.completedAt);
+  // Calculate time from steps that have any time logged
+  const stepsWithTime = steps.filter((step: any) =>
+    step.tasks.some((task: any) => task.actualTimeMinutes && task.actualTimeMinutes > 0)
+  );
 
-  // Sum actual time from completed steps
-  const totalActualTimeMinutes = completedSteps.reduce((sum, step) => {
-    return sum + step.tasks.reduce((taskSum, task) =>
+  // Sum actual time from all steps with logged time
+  const totalActualTimeMinutes = stepsWithTime.reduce((sum: number, step: any) => {
+    return sum + step.tasks.reduce((taskSum: number, task: any) =>
       taskSum + (task.actualTimeMinutes || 0), 0
     );
   }, 0);
 
-  // Sum target time from completed steps only
-  const targetDurationMinutes = completedSteps.reduce((sum, step) => {
+  // Sum target time from steps with logged time
+  const targetDurationMinutes = stepsWithTime.reduce((sum: number, step: any) => {
     return sum + (step.durationMinutes || 0);
   }, 0);
 
@@ -56,17 +58,18 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
 
   const isOvertime = totalActualTimeMinutes > targetDurationMinutes;
   const timeDifferenceMinutes = totalActualTimeMinutes - targetDurationMinutes;
-  const isAheadOfSchedule = timeDifferenceMinutes < 0 && completedSteps.length > 0;
+  const isAheadOfSchedule = timeDifferenceMinutes < 0 && totalActualTimeMinutes > 0;
 
   // Count total notes
   const totalNotes = steps.reduce((sum, step) => {
     return sum + (step.notes ? 1 : 0);
   }, 0);
 
-  // Format to "H M" format (e.g., "38H", "19H 30M")
+  // Format to "H M" format (e.g., "38H", "19H 30M", "30M")
   const formatToHM = (minutes: number): string => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
+    if (hours === 0) return `${mins}M`;
     if (mins === 0) return `${hours}H`;
     return `${hours}H ${mins}M`;
   };
@@ -307,27 +310,29 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
           </div>
 
           {/* Time Displays */}
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5" title="Turbine downtime - time when turbine is not producing">
-                <Clock className="h-3 w-3" />
-                <span>Downtime</span>
-              </div>
-              <div className="font-bold">{durationFormatted}</div>
+          <div className="flex items-center gap-4 text-[11px]">
+            <div
+              className="flex items-center gap-1.5 cursor-help"
+              title={`Turbine downtime - the time when the turbine is not producing energy (${durationFormatted}). This is the actual duration of the maintenance work.`}
+            >
+              <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+              <span className="text-gray-500 dark:text-gray-400">Downtime:</span>
+              <span className="font-bold">{durationFormatted}</span>
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 mb-0.5" title="Total work time for 2 technicians (downtime × 2)">
-                <Timer className="h-3 w-3" />
-                <span>Total time</span>
-              </div>
-              <div className="font-bold">
+            <div
+              className="flex items-center gap-1.5 cursor-help"
+              title={`Total work hours logged by all technicians. With ${flowchart.technicians} technicians working simultaneously: ${durationFormatted} × ${flowchart.technicians} = ${formatToHM(flowchart.totalMinutes)}`}
+            >
+              <Timer className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+              <span className="text-gray-500 dark:text-gray-400">Total time:</span>
+              <span className="font-bold">
                 {formatToHM(flowchart.totalMinutes)}
                 {additionalTimeMinutes > 0 && selectedServiceType && selectedServiceType !== "" && selectedServiceType !== "all" && (
-                  <span className="text-green-600 dark:text-green-400 text-[10px] block mt-0.5">
-                    + {formatTime(additionalTimeMinutes)} ({selectedServiceType})
+                  <span className="text-green-600 dark:text-green-400 text-[10px] ml-1">
+                    +{formatTime(additionalTimeMinutes)}
                   </span>
                 )}
-              </div>
+              </span>
             </div>
           </div>
 
@@ -351,24 +356,27 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
               </div>
             </div>
 
-            {/* Time Progress - Target */}
-            <div className="mb-2">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-600 dark:text-gray-300">Target</span>
-                <span className="text-[10px] font-bold text-green-600">
-                  {formatToHM(targetDurationMinutes)}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-green-500 transition-all"
-                  style={{ width: `${targetProgressPercent}%` }}
-                />
-              </div>
-            </div>
+            {/* Only show time progress bars if time has been logged */}
+            {stepsWithTime.length > 0 && (
+              <>
+                {/* Time Progress - Target */}
+                <div className="mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-gray-600 dark:text-gray-300">Target</span>
+                    <span className="text-[10px] font-bold text-green-600">
+                      {formatToHM(targetDurationMinutes)}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-green-500 transition-all"
+                      style={{ width: `${targetProgressPercent}%` }}
+                    />
+                  </div>
+                </div>
 
-            {/* Time Progress - Actual with Smart Color Coding */}
-            <div className="mb-1">
+                {/* Time Progress - Actual with Smart Color Coding */}
+                <div className="mb-1">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-gray-600 dark:text-gray-300">Actual</span>
                 <div className="flex items-center gap-2">
@@ -378,24 +386,69 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                     isOvertime && targetDurationMinutes > 0 ? "text-red-600" : "text-green-600"
                   )}>
                     {formatToHM(totalActualTimeMinutes)}
+                    {totalActualTimeMinutes > 0 && targetDurationMinutes > 0 && (
+                      <>
+                        {(() => {
+                          const percentDiff = Math.abs((timeDifferenceMinutes / targetDurationMinutes) * 100);
+                          const timeDiffText = timeDifferenceMinutes < 0
+                            ? ` (−${formatToHM(Math.abs(timeDifferenceMinutes))})`
+                            : ` (+${formatToHM(timeDifferenceMinutes)})`;
+
+                          if (timeDifferenceMinutes === 0) {
+                            return <span className="text-[9px] italic text-gray-500 ml-1.5">Right on schedule!</span>;
+                          } else if (timeDifferenceMinutes < 0) {
+                            // Ahead of schedule
+                            if (percentDiff > 50) {
+                              return (
+                                <>
+                                  <span className="text-green-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">Excellent progress!</span>
+                                </>
+                              );
+                            } else if (percentDiff > 20) {
+                              return (
+                                <>
+                                  <span className="text-green-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">Going well</span>
+                                </>
+                              );
+                            } else {
+                              return (
+                                <>
+                                  <span className="text-green-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">Nice pace</span>
+                                </>
+                              );
+                            }
+                          } else {
+                            // Behind schedule
+                            if (percentDiff > 50) {
+                              return (
+                                <>
+                                  <span className="text-red-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">Take your time, quality matters</span>
+                                </>
+                              );
+                            } else if (percentDiff > 20) {
+                              return (
+                                <>
+                                  <span className="text-red-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">No rush needed</span>
+                                </>
+                              );
+                            } else {
+                              return (
+                                <>
+                                  <span className="text-red-600">{timeDiffText}</span>
+                                  <span className="text-[9px] italic text-gray-500 ml-1.5">Almost there</span>
+                                </>
+                              );
+                            }
+                          }
+                        })()}
+                      </>
+                    )}
                   </span>
-                  {totalActualTimeMinutes > 0 && targetDurationMinutes > 0 && (
-                    <>
-                      {timeDifferenceMinutes < 0 && (
-                        <span className="text-[10px] font-bold text-green-600">
-                          − {formatToHM(Math.abs(timeDifferenceMinutes))}
-                        </span>
-                      )}
-                      {timeDifferenceMinutes > 0 && (
-                        <span className="text-[10px] font-bold text-red-600">
-                          + {formatToHM(timeDifferenceMinutes)}
-                        </span>
-                      )}
-                      {timeDifferenceMinutes === 0 && (
-                        <span className="text-[10px] font-bold text-gray-600">on target</span>
-                      )}
-                    </>
-                  )}
                 </div>
               </div>
               <div className="relative">
@@ -420,19 +473,10 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                     />
                   )}
                 </div>
-                {/* Target marker */}
-                {targetDurationMinutes > 0 && targetProgressPercent < 100 && (
-                  <div
-                    className="absolute top-[-2px] w-0.5 h-3 bg-gray-800 dark:bg-gray-300"
-                    style={{ left: `${targetProgressPercent}%` }}
-                  >
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-[8px] font-bold text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                      target
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
+              </>
+            )}
           </div>
 
           {/* Service Type Legend */}

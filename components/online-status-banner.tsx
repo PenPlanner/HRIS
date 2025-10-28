@@ -35,13 +35,13 @@ export function OnlineStatusBanner() {
           {isOnline ? (
             <>
               <Wifi className="h-4 w-4 animate-pulse" />
-              <span>You're back online! Changes will sync automatically</span>
+              <span>You&apos;re back online! Changes will sync automatically</span>
               <RefreshCw className="h-4 w-4 animate-spin" />
             </>
           ) : (
             <>
               <WifiOff className="h-4 w-4" />
-              <span>You're offline - Changes will sync when connection is restored</span>
+              <span>You&apos;re offline - Changes will sync when connection is restored</span>
             </>
           )}
         </div>

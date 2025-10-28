@@ -90,7 +90,9 @@ export function TechnicianWorkHistoryDialog({
           <DialogTitle className="flex items-center gap-3">
             <User className="h-5 w-5 text-blue-600" />
             <span>
-              {technician.first_name} {technician.last_name}
+              {((technician as any).first_name ?? (technician as any).firstName ?? '')}
+              {" "}
+              {((technician as any).last_name ?? (technician as any).lastName ?? '')}
               <span className="text-sm text-muted-foreground ml-2">({technician.initials})</span>
             </span>
           </DialogTitle>

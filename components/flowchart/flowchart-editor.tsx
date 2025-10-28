@@ -455,6 +455,17 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                   : `T2${t2?.initials ? `: ${t2.initials}` : ''}`}
               </div>
             )}
+
+            {/* T3 Badge - Only show if T3 is assigned for this specific step */}
+            {step.t3Id && (
+              <div
+                className="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1"
+                title="T3 tekniker för detta steg"
+              >
+                <User className="h-3 w-3" />
+                T3: {step.t3Initials || getTechnicianById(step.t3Id)?.initials || ''}
+              </div>
+            )}
           </div>
         </div>
 
@@ -772,7 +783,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                           <div
                             key={serviceType}
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-white text-xs font-medium"
-                            style={{ backgroundColor: SERVICE_TYPE_COLORS[serviceType] }}
+                            style={{ backgroundColor: SERVICE_TYPE_COLORS[serviceType as keyof typeof SERVICE_TYPE_COLORS] }}
                           >
                             <span>{serviceType}:</span>
                             <span>+{formatTime(minutes)}</span>
@@ -1027,7 +1038,7 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
                 <div className="font-bold text-sm">
                   {(() => {
                     // Calculate total actual time from all tasks
-                    const totalActualMinutes = steps.reduce((sum, step) => {
+                    const totalActualMinutes = flowchart.steps.reduce((sum, step) => {
                       return sum + step.tasks.reduce((taskSum, task) =>
                         taskSum + (task.actualTimeMinutes || 0), 0
                       );

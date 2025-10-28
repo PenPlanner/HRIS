@@ -13,9 +13,16 @@ const example1: CompletedFlowchart = {
     id: 'enventus-mk0-1y',
     model: 'EnVentus Mk 0',
     serviceType: '1Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '120m',
     totalMinutes: 120,
-    description: '1-year service inspection',
-    steps: []
+    workHours: '2:00h',
+    duration: '2h',
+    steps: [],
+    edges: []
   },
   steps: [
     {
@@ -236,9 +243,16 @@ const example2: CompletedFlowchart = {
     id: 'enventus-mk0-2y',
     model: 'EnVentus Mk 0',
     serviceType: '2Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '180m',
     totalMinutes: 180,
-    description: '2-year extended service',
-    steps: []
+    workHours: '3:00h',
+    duration: '3h',
+    steps: [],
+    edges: []
   },
   steps: [
     {
@@ -477,9 +491,16 @@ const example3: CompletedFlowchart = {
     id: 'enventus-mk0-1y',
     model: 'EnVentus Mk 0',
     serviceType: '1Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '120m',
     totalMinutes: 120,
-    description: '1-year service inspection',
-    steps: []
+    workHours: '2:00h',
+    duration: '2h',
+    steps: [],
+    edges: []
   },
   steps: [
     {
@@ -693,9 +714,16 @@ const example4: CompletedFlowchart = {
     id: 'v136-mk3-2y',
     model: 'V136 Mk3',
     serviceType: '2Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '240m',
     totalMinutes: 240,
-    description: '2-year service - V136 model',
-    steps: []
+    workHours: '4:00h',
+    duration: '4h',
+    steps: [],
+    edges: []
   },
   steps: [
     {
@@ -811,9 +839,16 @@ const example5: CompletedFlowchart = {
     id: 'v150-4.2mw-3y',
     model: 'V150-4.2 MW',
     serviceType: '3Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '330m',
     totalMinutes: 330,
-    description: '3-year major service - V150 model',
-    steps: []
+    workHours: '5:30h',
+    duration: '5h 30m',
+    steps: [],
+    edges: []
   },
   steps: [
     {
@@ -929,9 +964,16 @@ const example6: CompletedFlowchart = {
     id: 'v162-6.2mw-2y',
     model: 'V162-6.2 MW',
     serviceType: '2Y Service',
+    optimizedSIF: '',
+    referenceDocument: '',
+    revisionDate: '',
+    technicians: 2,
+    totalTime: '315m',
     totalMinutes: 315,
-    description: '2-year service - V162 large model',
-    steps: []
+    workHours: '5:15h',
+    duration: '5h 15m',
+    steps: [],
+    edges: []
   },
   steps: [
     {

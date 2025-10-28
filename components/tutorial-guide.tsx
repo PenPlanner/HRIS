@@ -205,7 +205,7 @@ const tutorialSteps: TutorialStep[] = [
             <div className="flex-1">
               <div className="text-xs font-medium text-amber-900 dark:text-amber-100">Note added</div>
               <div className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-                "Found unusual wear on bearing. Recommend early replacement."
+                &quot;Found unusual wear on bearing. Recommend early replacement.&quot;
               </div>
               <div className="text-[10px] text-amber-600 mt-1">2024-01-15 14:32</div>
             </div>
@@ -327,7 +327,7 @@ const tutorialSteps: TutorialStep[] = [
       <div className="text-center space-y-3">
         <div className="text-6xl">🎉</div>
         <div className="text-lg font-bold text-blue-600">
-          You're all set!
+          You&apos;re all set!
         </div>
         <div className="flex items-center justify-center gap-2 text-xs text-gray-600">
           <Bot className="h-4 w-4" />
@@ -420,7 +420,7 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
                 <Bot className="h-7 w-7 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold">Hi! I'm your AI Guide 👋</DialogTitle>
+                <DialogTitle className="text-xl font-bold">Hi! I&apos;m your AI Guide 👋</DialogTitle>
                 <DialogDescription>Let me show you around!</DialogDescription>
               </div>
             </div>

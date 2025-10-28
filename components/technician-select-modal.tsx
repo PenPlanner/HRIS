@@ -326,7 +326,7 @@ export function TechnicianSelectModal({
       <TechnicianWorkHistoryDialog
         open={showWorkHistory}
         onOpenChange={setShowWorkHistory}
-        technician={selectedTechForHistory}
+        technician={selectedTechForHistory as any}
       />
     </Dialog>
   );

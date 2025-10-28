@@ -67,8 +67,8 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
           type: 'step',
           id: step.id,
           title: step.title,
-          subtitle: `Step ${step.number}`,
-          serviceType: step.serviceType
+          subtitle: `Step ${step.id.replace('step-', '')}`,
+          serviceType: step.colorCode
         });
       }
 
@@ -80,8 +80,8 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
             id: task.id,
             stepId: step.id,
             title: task.description,
-            subtitle: `${step.title} - Step ${step.number}`,
-            serviceType: task.serviceType || step.serviceType
+            subtitle: `${step.title} - Step ${step.id.replace('step-', '')}`,
+            serviceType: task.serviceType || step.colorCode
           });
         }
       });
@@ -281,7 +281,7 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
       {isOpen && query && results.length === 0 && (
         <div className="absolute top-full mt-1 w-full bg-background border rounded-lg shadow-2xl z-[210] p-4">
           <p className="text-sm text-muted-foreground text-center">
-            No results found for "{query}"
+            No results found for &quot;{query}&quot;
           </p>
         </div>
       )}

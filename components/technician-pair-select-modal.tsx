@@ -108,7 +108,7 @@ export function TechnicianPairSelectModal({
 
     // Apply Team filter
     if (selectedTeam !== "all") {
-      filtered = filtered.filter(tech => tech.team === selectedTeam);
+      filtered = filtered.filter(tech => (tech as any).team_name === selectedTeam);
     }
 
     setFilteredTechnicians(filtered);
@@ -361,7 +361,7 @@ export function TechnicianPairSelectModal({
       <TechnicianWorkHistoryDialog
         open={showWorkHistory}
         onOpenChange={setShowWorkHistory}
-        technician={selectedTechForHistory}
+        technician={selectedTechForHistory as any}
       />
     </Dialog>
   );

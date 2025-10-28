@@ -18,7 +18,9 @@
       "Bash(npm start)",
       "Bash(find:*)",
       "Read(//Users/home/Pictures/**)",
-      "Read(//Users/home/**)"
+      "Read(//Users/home/**)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []
