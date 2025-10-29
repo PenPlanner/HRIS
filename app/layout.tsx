@@ -7,17 +7,19 @@ import { Toaster } from "sonner";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { OnlineStatusBanner } from "@/components/online-status-banner";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
+import { AuthProvider } from "@/lib/auth/auth-context";
+import { ExperimentalBadge } from "@/components/experimental-badge";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HRIS - Wind Turbine Service Manager",
-  description: "Offline-capable wind turbine service flowchart and documentation manager",
+  title: "Flowy - Dynamic Flowchart Management",
+  description: "Dynamic flowchart management system for wind turbine service operations",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "HRIS",
+    title: "Flowy",
   },
 };
 
@@ -52,17 +54,22 @@ export default function RootLayout({
           forcedTheme="dark"
           disableTransitionOnChange
         >
-          {/* Service Worker Registration */}
-          <ServiceWorkerRegistration />
+          <AuthProvider>
+            {/* Service Worker Registration */}
+            <ServiceWorkerRegistration />
 
-          {/* Online/Offline Status Banner */}
-          <OnlineStatusBanner />
+            {/* Online/Offline Status Banner */}
+            <OnlineStatusBanner />
 
-          {/* PWA Install Prompt */}
-          <PWAInstallPrompt />
+            {/* PWA Install Prompt */}
+            <PWAInstallPrompt />
 
-          {children}
-          <Toaster position="top-right" />
+            {/* Experimental Badge */}
+            <ExperimentalBadge />
+
+            {children}
+            <Toaster position="top-right" />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

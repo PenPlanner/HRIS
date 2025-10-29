@@ -11,10 +11,23 @@ interface VersionDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const APP_VERSION = "1.3.0";
-const RELEASE_DATE = "2025-01-27";
+const APP_VERSION = "1.4.0";
+const RELEASE_DATE = "2025-10-29";
 
 const versionHistory = [
+  {
+    version: "1.4.0",
+    date: "2025-10-29",
+    type: "major" as const,
+    features: [
+      "Upgraded Next.js to v16.0.1, including Webpack and Turbopack updates",
+      "Updated React, ReactDOM, and ESLint to the latest versions",
+      "Prepared for future Next.js versions by noting the deprecation of middleware.ts"
+    ],
+    fixes: [
+      "Fixed a critical bug preventing Service Worker registration, improving PWA reliability",
+    ]
+  },
   {
     version: "1.3.0",
     date: "2025-01-27",
