@@ -1,0 +1,43 @@
+
+> hris@0.1.0 build
+> next build
+
+   Ôû▓ Next.js 16.0.1 (Turbopack)
+
+ ÔÜá The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+ Ô£ô Compiled successfully in 3.8s
+   Running TypeScript ...
+   Collecting page data ...
+   Generating static pages (0/15) ...
+   Generating static pages (3/15) 
+   Generating static pages (7/15) 
+   Generating static pages (11/15) 
+ Ô£ô Generating static pages (15/15) in 888.9ms
+   Finalizing page optimization ...
+
+Route (app)
+Ôöî Ôùï /
+Ôö£ Ôùï /_not-found
+Ôö£ Ôùï /admin
+Ôö£ Ôùï /admin/courses
+Ôö£ Ôùï /admin/settings
+Ôö£ Ôùï /admin/teams
+Ôö£ ãÆ /api/technicians
+Ôö£ Ôùï /bug-reports
+Ôö£ Ôùï /flowcharts
+Ôö£ ãÆ /flowcharts/[model]/[service]
+Ôö£ Ôùï /login
+Ôö£ Ôùï /loto
+Ôö£ Ôùï /technicians
+Ôö£ ãÆ /technicians/[id]
+Ôö£ Ôùï /training
+Ôö£ Ôùï /vehicles
+Ôöö ãÆ /vehicles/[id]
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

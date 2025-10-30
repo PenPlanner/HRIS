@@ -1,5 +1,5 @@
 // HRIS Service Worker - Full Offline Support
-const CACHE_VERSION = 'hris-v1';
+const CACHE_VERSION = 'hris-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const PDF_CACHE = `${CACHE_VERSION}-pdfs`;
@@ -223,3 +223,4 @@ self.addEventListener('message', (event) => {
     );
   }
 });
+

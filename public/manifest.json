@@ -23,14 +23,36 @@
     }
   ],
   "categories": ["productivity", "utilities"],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/wide-desktop.png",
+      "sizes": "2524x1391",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop dashboard"
+    },
+    {
+      "src": "/screenshots/mobile-narrow.png",
+      "sizes": "919x701",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile flowcharts"
+    }
+  ],
   "shortcuts": [
     {
       "name": "View Flowcharts",
       "short_name": "Flowcharts",
       "description": "Open flowcharts overview",
       "url": "/flowcharts",
-      "icons": []
+      "icons": [
+        {
+          "src": "/icon.svg",
+          "sizes": "512x512",
+          "type": "image/svg+xml",
+          "purpose": "any"
+        }
+      ]
     }
   ],
   "prefer_related_applications": false
