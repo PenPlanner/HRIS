@@ -1,5 +1,7 @@
 # HRIS - Human Resources Information System
 
+> **🤖 För Claude AI:** Starta med att läsa [`README-CLAUDE-START.md`](README-CLAUDE-START.md) för projektöversikt, agent-system och aktuell status!
+
 Modern HRIS system for managing technicians, service vehicles, and training at Vestas.
 
 ## ✨ Features

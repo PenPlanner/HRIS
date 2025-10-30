@@ -24,7 +24,11 @@
       "Bash(npm run clean:*)",
       "Bash(taskkill:*)",
       "Bash(git config:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(curl:*)",
+      "Bash(git log:*)",
+      "Bash(xargs:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,12 +1,108 @@
 # 🚨 PÅGÅENDE ARBETE - LÄS DETTA FÖRST!
 
-**Datum:** 2025-10-27 Kväll
-**Status:** Build-fel måste fixas innan PWA kan testas
-**Nästa steg:** Fixa ALLA TypeScript-fel samtidigt, inte ett i taget!
+**Datum:** 2025-10-31
+**Status:** Agent-system implementerat och klart att använda
+**Nästa steg:** Testa agenterna för olika utvecklingsuppgifter
 
 ---
 
-## 🎯 VAD VI HÖLLER PÅ MED
+## 🤖 NYTT: AGENT-SYSTEM FÖR PARALLELL UTVECKLING
+
+### Översikt
+Vi har skapat **8 specialiserade agenter** för att utveckla olika delar av HRIS-applikationen parallellt utan filkollisioner. Varje agent är expert på sitt område.
+
+### Alla agenter (skapade 2025-10-31):
+
+| Agent | Kommando | Fokusområde |
+|-------|----------|-------------|
+| **Flowchart** | `/flowchart-agent` | React Flow, steg-hantering, grid alignment |
+| **Task** | `/task-agent` | Task management, tidsspårning, notes |
+| **Tech** | `/tech-agent` | Tekniker-data, kompetensmatris, utbildning |
+| **Storage** | `/storage-agent` | Supabase migration, real-time sync |
+| **UI** | `/ui-agent` | UX, responsiv design, animations |
+| **Export** | `/export-agent` | PDF/Excel rapporter, backup |
+| **Test** | `/test-agent` | E2E testing, validering, performance |
+| **Meta** | `/meta-agent` | Koordinerar andra agenter |
+
+### Snabbstart - Exempel på användning:
+
+```bash
+# Enkel användning
+/flowchart-agent "Lägg till undo/redo funktionalitet"
+
+# Parallell körning (undviker kollisioner)
+/flowchart-agent "Implementera drag-drop" &
+/ui-agent "Lägg till animations" &
+/test-agent "Skriv tester"
+
+# Komplex uppgift med meta-agent
+/meta-agent "Implementera real-time collaboration för flowcharts"
+```
+
+### Filägande (för att undvika kollisioner):
+
+**Flowchart-agent äger:**
+- `/app/flowcharts/**`
+- `/components/flowchart/**`
+- `/lib/flowchart-*.ts`
+
+**Task-agent äger:**
+- `step-detail-drawer.tsx`
+- `/lib/completed-flowcharts.ts`
+- `/lib/bug-reports.ts`
+
+**Tech-agent äger:**
+- `/app/technicians/**`
+- `/components/technician/**`
+- `/lib/technicians-data.ts`
+
+**Storage-agent äger:**
+- `/lib/supabase/**`
+- `/supabase/**`
+- Offline/sync-relaterat
+
+**UI-agent äger:**
+- `/components/ui/**`
+- `/components/layout/**`
+- Styling och themes
+
+**Export-agent äger:**
+- `/lib/export-*.ts`
+- `/app/api/export/**`
+- Report templates
+
+**Test-agent äger:**
+- `/__tests__/**`
+- `/e2e/**`
+- Test configs
+
+### Best Practices:
+
+✅ **DO's:**
+- Använd rätt agent för jobbet
+- Kör parallellt när möjligt med `&`
+- Var specifik i instruktioner
+- Använd meta-agent för komplexa workflows
+
+❌ **DON'Ts:**
+- Låt inte agenter modifiera samma fil samtidigt
+- Använd inte fel agent för uppgiften
+- Glöm inte testing efter implementation
+
+### Detaljerad dokumentation:
+Se `.claude/commands/` för fullständig dokumentation om varje agent:
+- `flowchart-agent.md` - Flowchart specialisering
+- `task-agent.md` - Task management
+- `tech-agent.md` - Tekniker-hantering
+- `storage-agent.md` - Database/storage
+- `ui-agent.md` - UI/UX
+- `export-agent.md` - Export/rapporter
+- `test-agent.md` - Testing
+- `meta-agent.md` - Koordinering
+
+---
+
+## 🎯 TIDIGARE: PWA Implementation
 
 Vi försöker bygga **produktionsversionen** (`npm run build`) för att testa PWA-funktionaliteten lokalt innan deployment till Vercel.
 
