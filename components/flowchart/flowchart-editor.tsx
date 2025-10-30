@@ -1159,11 +1159,15 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
 }
 
 // Logo node component - displays Flowy logo (draggable in edit mode)
-interface LogoNodeData {
+interface LogoNodeData extends Record<string, unknown> {
   isEditMode: boolean;
 }
 
-function LogoNode({ data }: NodeProps<LogoNodeData>) {
+interface LogoNodeProps extends NodeProps {
+  data: LogoNodeData;
+}
+
+function LogoNode({ data }: LogoNodeProps) {
   const { isEditMode } = data;
 
   return (
@@ -1190,11 +1194,15 @@ function LogoNode({ data }: NodeProps<LogoNodeData>) {
 }
 
 // Commit hash node component (draggable in edit mode)
-interface CommitNodeData {
+interface CommitNodeData extends Record<string, unknown> {
   isEditMode: boolean;
 }
 
-function CommitNode({ data }: NodeProps<CommitNodeData>) {
+interface CommitNodeProps extends NodeProps {
+  data: CommitNodeData;
+}
+
+function CommitNode({ data }: CommitNodeProps) {
   const { isEditMode } = data;
 
   return (
@@ -1365,22 +1373,24 @@ function FlowchartEditorInner({
     });
 
     // Add logo and commit hash nodes (draggable in edit mode)
+    // Logo positioned to the left of Step 1 (Step 1 is at x: 1*gridSize = 30, y: 2*gridSize = 60)
     const logoNode: Node<LogoNodeData> = {
       id: 'flowy-logo',
       type: 'logoNode',
-      position: { x: -360, y: 60 },
-      style: { width: 300, height: 200 },
+      position: { x: -350, y: 20 },
+      style: { width: 450, height: 300 },  // 50% större (från 300x200)
       data: { isEditMode },
       draggable: isEditMode,
       selectable: isEditMode,
       connectable: false,
     };
 
+    // Commit hash positioned precisely below the PREVIEW badge
     const commitNode: Node<CommitNodeData> = {
       id: 'commit-hash',
       type: 'commitNode',
-      position: { x: -120, y: 180 },
-      style: { width: 100, height: 30 },
+      position: { x: -125, y: 215 },  // 5px under PREVIEW-badgen
+      style: { width: 120, height: 40 },
       data: { isEditMode },
       draggable: isEditMode,
       selectable: isEditMode,
@@ -2207,8 +2217,32 @@ function FlowchartEditorInner({
 
       // Update existing nodes (keep their positions)
       const updatedNodes = nds
-        .filter(node => newStepIds.has(node.id)) // Keep only valid step nodes
+        .filter(node => newStepIds.has(node.id) || node.id === 'flowy-logo' || node.id === 'commit-hash') // Keep valid step nodes + logo/commit
         .map((node) => {
+          // Keep logo and commit nodes with updated properties
+          if (node.id === 'flowy-logo') {
+            return {
+              ...node,
+              style: { width: 450, height: 300 },  // 50% större
+              data: {
+                ...node.data,
+                isEditMode,
+              },
+              draggable: isEditMode,
+            };
+          }
+          if (node.id === 'commit-hash') {
+            return {
+              ...node,
+              style: { width: 120, height: 40 },
+              data: {
+                ...node.data,
+                isEditMode,
+              },
+              draggable: isEditMode,
+            };
+          }
+
           const step = displayedSteps.find((s) => s.id === node.id);
           if (!step) return node;
 
@@ -2267,8 +2301,38 @@ function FlowchartEditorInner({
           };
         });
 
+      // Add logo and commit nodes if they don't exist yet
+      const hasLogo = updatedNodes.some(n => n.id === 'flowy-logo');
+      const hasCommit = updatedNodes.some(n => n.id === 'commit-hash');
+
+      const additionalNodes = [];
+      if (!hasLogo) {
+        additionalNodes.push({
+          id: 'flowy-logo',
+          type: 'logoNode',
+          position: { x: -350, y: 20 },
+          style: { width: 450, height: 300 },  // 50% större (från 300x200)
+          data: { isEditMode },
+          draggable: isEditMode,
+          selectable: isEditMode,
+          connectable: false,
+        });
+      }
+      if (!hasCommit) {
+        additionalNodes.push({
+          id: 'commit-hash',
+          type: 'commitNode',
+          position: { x: -125, y: 215 },  // 5px under PREVIEW-badgen
+          style: { width: 120, height: 40 },
+          data: { isEditMode },
+          draggable: isEditMode,
+          selectable: isEditMode,
+          connectable: false,
+        });
+      }
+
       // Info card is now a dropdown - no longer needed as a node
-      return [...updatedNodes, ...newNodes];
+      return [...updatedNodes, ...newNodes, ...additionalNodes];
     });
 
     // CRITICAL: Update node internals after DOM has rendered
