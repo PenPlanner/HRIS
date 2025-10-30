@@ -62,13 +62,24 @@ Modern HRIS system for managing technicians, service vehicles, and training at V
 - **Upcoming Training** - Lista med planerade kurser
 - **Alerts & Notifications** - System varningar
 
+### 📊 Flowchart System (Flowy)
+- **Interactive Flowcharts** - Smart service program flowcharts for wind turbine maintenance
+- **React Flow Integration** - Drag-and-drop flowchart editor with custom nodes
+- **Real-time Progress Tracking** - Visual step completion with color-coded service types
+- **Technician Assignment** - Dynamic T1/T2/T3 assignments per step or globally
+- **Search Functionality** - Quick search for steps, tasks, and documents (Ctrl+K)
+- **Flow-ID System** - Auto-generated unique identifiers (YYRRNN format: Year-Region-Sequence)
+- **Revision History** - Track changes and updates to flowcharts
+- **Offline Support** - PWA with service worker for offline access
+
 ## 🛠️ Tech Stack
 
 ### Frontend
-- **Next.js 15** - App Router med React Server Components
+- **Next.js 16.0.1** - App Router with React Server Components and Turbopack
 - **TypeScript** - Type-safe development
 - **Tailwind CSS** - Utility-first styling
 - **shadcn/ui** - High-quality UI components
+- **React Flow (@xyflow/react)** - Flowchart visualization and editing
 - **Recharts** - Dashboard charts
 - **next-themes** - Dark mode support
 
@@ -259,4 +270,154 @@ For questions or issues, contact the development team.
 ---
 
 **Status:** Development build - ready for Supabase integration
-**Last Updated:** 2025-10-20
+**Last Updated:** 2025-10-30
+
+---
+
+## 📋 Recent Session Work (2025-10-30)
+
+### Flowchart Header Redesign
+Complete reorganization of the flowchart page header layout for better UX and optimized space usage.
+
+#### Changes Made:
+
+**1. Two-Row Header Layout**
+- **Row 1**: Year input + Flow-ID display (read-only)
+- **Row 2**: Back button + WTG input + Model name + Service Program Rev.4 + T1/T2/T3 + Search field
+
+**2. Flow-ID Format Change** (BREAKING)
+- **Old format**: `YYYYRR-NNN` (e.g., "202501-001") - 9 characters with hyphen
+- **New format**: `YYRRNN` (e.g., "250302") - 6 digits compact
+  - YY = Year (last 2 digits, e.g., 25 for 2025)
+  - RR = Region code (2 digits, default: 03)
+  - NN = Sequential number (2 digits, auto-incremented)
+- **Example**: `250302` = Year 2025, Region 03, ID 02
+
+**3. Input Box Optimization**
+- **WTG**: `w-[70px]` - optimized for 6 digits (e.g., "248024")
+- **Year**: `w-[52px]` - optimized for 4 digits (e.g., "2024")
+- **Flow-ID**: `w-[70px]` - optimized for 6 digits (e.g., "250302")
+- All inputs now use monospace font (`font-mono`) for better number readability
+
+**4. Flow-ID Styling**
+- Removed blue text color
+- Now matches WTG box styling exactly
+- Read-only display with gray background
+- Centered text alignment
+
+**5. Logo Restoration**
+Logo and commit hash were repositioned to be visible next to Step 1:
+- **Logo position**: `x: -360, y: 60` (previously x: -450, too far left)
+- **Logo size**: `300x200` (reduced from 400x240)
+- **Commit hash position**: `x: -120, y: 180` (previously x: -150)
+- Both are draggable in edit mode
+
+**6. Login Page Cleanup**
+Removed 2 bullet points from feature list:
+- ❌ "Smart flowcharts with full revision history"
+- ❌ "Visual workflow to boost efficiency"
+
+Kept focus on key features:
+- ✓ "Target vs actual time comparison live"
+- ✓ "Visual timeline shows if you're ahead or behind"
+- ✓ "Dynamic technician assignments and scheduling"
+
+#### Files Modified:
+
+1. **[app/flowcharts/[model]/[service]/page.tsx](app/flowcharts/[model]/[service]/page.tsx)** (lines 1863-2097)
+   - Complete header redesign with two-row layout
+   - Optimized input widths
+   - WTG alignment with "EnVentus" text
+
+2. **[lib/flowchart-data.ts](lib/flowchart-data.ts)** (lines 853-887, line 179)
+   - `generateUniqueFlowchartId()` rewritten for YYRRNN format
+   - Changed default region from "01" to "03"
+   - Updated ENVENTUS_MK0_1Y example ID
+
+3. **[components/flowchart/flowchart-editor.tsx](components/flowchart/flowchart-editor.tsx)** (lines 1166-1190, 1367-1388)
+   - Logo and commit hash node position adjustments
+   - Reduced logo size for better proportions
+
+4. **[app/login/page.tsx](app/login/page.tsx)** (lines 212-217)
+   - Removed 2 bullet points from feature list
+
+5. **[components/flowchart/flowchart-manager-dialog.tsx](components/flowchart/flowchart-manager-dialog.tsx)** (line 51)
+   - Already correctly uses `generateUniqueFlowchartId()` - no changes needed
+
+#### Known Issues:
+
+**🔴 CRITICAL: Jest Worker Crashes**
+- **Status**: UNRESOLVED
+- **Symptoms**:
+  - Turbopack's Jest workers crash with "2 child process exceptions, exceeding retry limit"
+  - Flowchart page returns 404 errors: `/flowcharts/enventus-mk0/enventus-mk0-1y`
+  - Console shows "missing required error components, refreshing..."
+  - MaxListenersExceededWarning for EventEmitter memory leak
+- **Temporary Fix**:
+  1. Kill all Node processes: `taskkill /F /IM node.exe` (Windows)
+  2. Delete .next folder: `rmdir /s /q ".next"` or `rm -rf .next` (bash)
+  3. Restart dev server fresh: `npm run dev -- --hostname=0.0.0.0`
+- **Root Cause**: Likely Turbopack/Next.js 16.0.1 bug with dynamic routes
+
+**⚠️ Multiple Dev Server Instances**
+- **Problem**: Multiple bash sessions trying to run `npm run dev` simultaneously
+- **Error**: "Unable to acquire lock at .next/dev/lock"
+- **Fix**:
+  ```bash
+  # Kill processes and remove lock
+  taskkill /F /IM node.exe
+  rm -f "d:/Dev folder/HRIS/.next/dev/lock"
+  ```
+
+#### Migration Notes:
+
+**For existing flowcharts with old Flow-ID format:**
+- Old IDs like "202501-001" will still work
+- New flowcharts will use YYRRNN format
+- Consider data migration script if consistency needed:
+  ```typescript
+  // Example migration
+  "202501-001" → "250101" (Year 25, Region 01, Sequence 01)
+  "202503-042" → "250342" (Year 25, Region 03, Sequence 42)
+  ```
+
+#### Testing Checklist:
+
+- [x] Header layout displays correctly on flowchart page
+- [x] Year input accepts 4 digits max
+- [x] Flow-ID displays in YYRRNN format (read-only)
+- [x] WTG input accepts 6 digits max
+- [x] T1/T2/T3 buttons work for technician assignment
+- [x] Search field works after T1/T2/T3
+- [x] Logo visible next to Step 1
+- [x] Commit hash visible below logo
+- [ ] New flowchart creation generates correct Flow-ID (blocked by Jest worker crash)
+- [ ] Flowchart page loads without 404 errors (blocked by Jest worker crash)
+
+#### How to Resume After Crash:
+
+1. **Clean up processes**:
+   ```bash
+   # Windows
+   taskkill /F /IM node.exe
+   rmdir /s /q ".next"
+
+   # Linux/Mac
+   pkill node
+   rm -rf .next
+   ```
+
+2. **Start fresh dev server**:
+   ```bash
+   npm run dev -- --hostname=0.0.0.0
+   ```
+
+3. **Test flowchart page**:
+   - Navigate to http://localhost:3000/flowcharts
+   - Create new flowchart or open existing
+   - Verify header layout and Flow-ID format
+
+4. **If Jest worker crashes persist**:
+   - Check Next.js GitHub issues for Turbopack bugs
+   - Consider downgrading to Next.js 15.x
+   - Try disabling Turbopack: `npm run dev -- --no-turbopack`

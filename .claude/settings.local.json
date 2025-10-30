@@ -20,7 +20,11 @@
       "Read(//Users/home/Pictures/**)",
       "Read(//Users/home/**)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(npm run clean:*)",
+      "Bash(taskkill:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Search, Wind, Clock, Users, FileText, Plus, Settings, FileUp, CheckCircle2, Calendar, TrendingUp, TrendingDown, Bug, AlertCircle, CheckCircle, Eye } from "lucide-react";
+import { Search, Wind, Clock, FileText, Settings, FileUp, CheckCircle2, TrendingUp, TrendingDown, Bug, AlertCircle, CheckCircle, Eye } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { getAllFlowcharts } from "@/lib/flowchart-data";
@@ -97,62 +97,62 @@ export default function FlowchartsPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-5">
+        {/* Stats - Compact */}
+        <div className="grid gap-3 md:grid-cols-5">
           <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Models</p>
-                  <p className="text-3xl font-bold text-blue-900 dark:text-blue-100 mt-1">{allModels.length}</p>
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Total Models</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">{allModels.length}</p>
                 </div>
-                <Wind className="h-12 w-12 text-blue-500 dark:text-blue-400 opacity-60" />
+                <Wind className="h-8 w-8 text-blue-500 dark:text-blue-400 opacity-60" />
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Flowcharts</p>
-                  <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mt-1">
+                  <p className="text-xs font-medium text-purple-600 dark:text-purple-400">Flowcharts</p>
+                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                     {allModels.reduce((sum, model) => sum + model.flowcharts.length, 0)}
                   </p>
                 </div>
-                <FileText className="h-12 w-12 text-purple-500 dark:text-purple-400 opacity-60" />
+                <FileText className="h-8 w-8 text-purple-500 dark:text-purple-400 opacity-60" />
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950 dark:to-green-900/30 border-green-200 dark:border-green-800">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">Completed</p>
-                  <p className="text-3xl font-bold text-green-900 dark:text-green-100 mt-1">{completedFlowcharts.length}</p>
+                  <p className="text-xs font-medium text-green-600 dark:text-green-400">Completed</p>
+                  <p className="text-2xl font-bold text-green-900 dark:text-green-100">{completedFlowcharts.length}</p>
                 </div>
-                <CheckCircle2 className="h-12 w-12 text-green-500 dark:text-green-400 opacity-60" />
+                <CheckCircle2 className="h-8 w-8 text-green-500 dark:text-green-400 opacity-60" />
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Total Bugs</p>
-                  <p className="text-3xl font-bold text-amber-900 dark:text-amber-100 mt-1">{bugStats.total}</p>
+                  <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Total Bugs</p>
+                  <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">{bugStats.total}</p>
                 </div>
-                <Bug className="h-12 w-12 text-amber-500 dark:text-amber-400 opacity-60" />
+                <Bug className="h-8 w-8 text-amber-500 dark:text-amber-400 opacity-60" />
               </div>
             </CardContent>
           </Card>
           <Card className="bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950 dark:to-red-900/30 border-red-200 dark:border-red-800">
-            <CardContent className="pt-6">
+            <CardContent className="pt-3 pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">Open Bugs</p>
-                  <p className="text-3xl font-bold text-red-900 dark:text-red-100 mt-1">{bugStats.open}</p>
+                  <p className="text-xs font-medium text-red-600 dark:text-red-400">Open Bugs</p>
+                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{bugStats.open}</p>
                 </div>
-                <AlertCircle className="h-12 w-12 text-red-500 dark:text-red-400 opacity-60" />
+                <AlertCircle className="h-8 w-8 text-red-500 dark:text-red-400 opacity-60" />
               </div>
             </CardContent>
           </Card>
@@ -202,68 +202,157 @@ export default function FlowchartsPage() {
                 <Badge variant="secondary">{model.flowcharts.length} flowcharts</Badge>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {model.flowcharts.map((flowchart) => (
-                  <Link
-                    key={flowchart.id}
-                    href={`/flowcharts/${model.id}/${flowchart.id}`}
-                  >
-                    <Card className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer h-full border-2 hover:border-blue-500/50">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            {flowchart.serviceType}
-                          </CardTitle>
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            {flowchart.steps.length} steps
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                              <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Technicians</p>
-                              <p className="font-semibold">{flowchart.technicians}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                              <Clock className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Downtime</p>
-                              <p className="font-semibold">{flowchart.duration}</p>
-                            </div>
-                          </div>
-                        </div>
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                {model.flowcharts.map((flowchart) => {
+                  // Check if this flowchart has an active service (mock data for now)
+                  const hasActiveService = false; // TODO: Check from actual active services data
+                  const activeServiceData = hasActiveService ? {
+                    wtgNumber: "00123",
+                    year: "2025",
+                    progress: 35,
+                    timeVariance: -15, // negative = ahead, positive = behind (in minutes)
+                  } : null;
 
-                        <div className="flex items-center gap-2 text-sm p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg">
-                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <span className="font-medium">Total Time: {flowchart.totalTime}</span>
-                        </div>
-
-                        <div className="pt-3 border-t space-y-1">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">SIF:</span>
-                            <span className="font-mono font-semibold">{flowchart.optimizedSIF}</span>
+                  return (
+                    <Link
+                      key={flowchart.id}
+                      href={`/flowcharts/${model.id}/${flowchart.id}`}
+                    >
+                      <Card className="hover:shadow-md hover:scale-[1.01] transition-all duration-200 cursor-pointer h-full border hover:border-blue-500/50">
+                        <CardHeader className="pb-2 pt-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              {hasActiveService && (
+                                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" title="Service In Progress" />
+                              )}
+                              <CardTitle className="text-sm font-bold">
+                                {flowchart.serviceType}
+                              </CardTitle>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Revision:</span>
-                            <span className="font-mono font-semibold">{flowchart.revisionDate}</span>
-                          </div>
-                        </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2 pb-3">
+                          {hasActiveService && activeServiceData ? (
+                            <>
+                              {/* Active Service Info */}
+                              <div className="space-y-1.5 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">WTG:</span>
+                                  <span className="font-mono font-semibold">WTG-{activeServiceData.wtgNumber}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Flow-ID:</span>
+                                  <span className="font-mono font-semibold">{flowchart.flowchartId || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Year:</span>
+                                  <span className="font-mono font-semibold">{activeServiceData.year}</span>
+                                </div>
+                              </div>
 
-                        <Button className="w-full mt-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" size="sm">
-                          Open Flowchart
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+                              {/* Time Info */}
+                              <div className="flex items-center gap-3 text-xs pt-1">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-blue-500" />
+                                  <span className="font-semibold">{Math.floor(flowchart.totalMinutes / 60)}h</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TrendingDown className="h-3 w-3 text-purple-500" />
+                                  <span className="font-semibold">{flowchart.duration}</span>
+                                </div>
+                              </div>
+
+                              {/* Progress Bar */}
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-muted-foreground">Progress</span>
+                                  <span className="font-semibold">{activeServiceData.progress}%</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
+                                    style={{ width: `${activeServiceData.progress}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Time Variance Indicator */}
+                              <div className={`flex items-center justify-between p-1.5 rounded border ${
+                                activeServiceData.timeVariance < 0
+                                  ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800'
+                                  : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'
+                              }`}>
+                                <div className="flex items-center gap-1">
+                                  {activeServiceData.timeVariance < 0 ? (
+                                    <TrendingUp className="h-3 w-3 text-green-600" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3 text-red-600" />
+                                  )}
+                                  <span className={`text-[10px] font-medium ${
+                                    activeServiceData.timeVariance < 0
+                                      ? 'text-green-700 dark:text-green-400'
+                                      : 'text-red-700 dark:text-red-400'
+                                  }`}>
+                                    {activeServiceData.timeVariance < 0 ? 'Ahead' : 'Behind'}
+                                  </span>
+                                </div>
+                                <span className={`text-[10px] font-mono font-bold ${
+                                  activeServiceData.timeVariance < 0
+                                    ? 'text-green-700 dark:text-green-400'
+                                    : 'text-red-700 dark:text-red-400'
+                                }`}>
+                                  {activeServiceData.timeVariance < 0 ? '-' : '+'}{Math.floor(Math.abs(activeServiceData.timeVariance) / 60)}h {Math.abs(activeServiceData.timeVariance) % 60}m
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Inactive/Template Flowchart Info */}
+                              <div className="space-y-1.5 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Flow-ID:</span>
+                                  <span className="font-mono font-semibold">{flowchart.flowchartId || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-muted-foreground">Service Type:</span>
+                                  <span className="font-semibold">{flowchart.serviceType}</span>
+                                </div>
+                              </div>
+
+                              {/* Time Info */}
+                              <div className="flex items-center gap-3 text-xs pt-1">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-blue-500" />
+                                  <span className="font-semibold">{Math.floor(flowchart.totalMinutes / 60)}h</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <TrendingDown className="h-3 w-3 text-purple-500" />
+                                  <span className="font-semibold">{flowchart.duration}</span>
+                                </div>
+                              </div>
+
+                              <div className="pt-2 text-center">
+                                <p className="text-[10px] text-muted-foreground italic">No active service</p>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Metadata - Always visible */}
+                          <div className="pt-1.5 border-t space-y-0.5">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-muted-foreground">Steps:</span>
+                              <span className="font-semibold">{flowchart.steps.length}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px]">
+                              <span className="text-muted-foreground">Technicians:</span>
+                              <span className="font-semibold">{flowchart.technicians}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           ))}

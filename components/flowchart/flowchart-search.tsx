@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react";
-import { Search, FileText, CheckSquare, X } from "lucide-react";
+import { Search, FileText, CheckSquare, X, Layers, ListChecks } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FlowchartStep } from "@/lib/flowchart-data";
@@ -160,11 +160,23 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
 
   const getIcon = (result: SearchResult) => {
     if (result.type === 'document') {
-      return <FileText className="h-4 w-4 text-red-500" />;
+      return (
+        <div className="flex items-center justify-center w-8 h-8 rounded bg-red-50 dark:bg-red-950">
+          <FileText className="h-4 w-4 text-red-600 dark:text-red-400" />
+        </div>
+      );
     } else if (result.type === 'task') {
-      return <CheckSquare className="h-4 w-4 text-green-500" />;
+      return (
+        <div className="flex items-center justify-center w-8 h-8 rounded bg-green-50 dark:bg-green-950">
+          <CheckSquare className="h-4 w-4 text-green-600 dark:text-green-400" />
+        </div>
+      );
     }
-    return <Search className="h-4 w-4 text-blue-500" />;
+    return (
+      <div className="flex items-center justify-center w-8 h-8 rounded bg-blue-50 dark:bg-blue-950">
+        <Layers className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+      </div>
+    );
   };
 
   return (
@@ -203,36 +215,40 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
         )}
       </div>
 
-      {/* Results dropdown */}
+      {/* Results dropdown - Google-style */}
       {isOpen && results.length > 0 && (
         <div
           ref={resultsRef}
-          className="absolute top-full mt-1 w-full bg-background border rounded-lg shadow-2xl z-[210] max-h-[500px] overflow-y-auto"
+          className="absolute top-full mt-2 w-full min-w-[400px] bg-background border rounded-xl shadow-2xl z-[210] max-h-[500px] overflow-hidden"
         >
-          <div className="p-1">
+          <div className="p-2 space-y-0.5">
             {results.map((result, index) => (
               <button
                 key={`${result.type}-${result.id}`}
                 onClick={() => handleSelect(result)}
                 className={cn(
-                  "w-full text-left px-3 py-2 rounded-md transition-colors flex items-start gap-2",
+                  "w-full text-left px-3 py-3 rounded-lg transition-all flex items-start gap-3 group",
                   index === selectedIndex
-                    ? "bg-accent"
-                    : "hover:bg-accent/50"
+                    ? "bg-blue-50 dark:bg-blue-950/50 shadow-sm"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 )}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
-                <div className="mt-0.5">
-                  {getIcon(result)}
-                </div>
+                {/* Icon with colored background */}
+                {getIcon(result)}
+
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium truncate">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={cn(
+                      "text-sm font-medium truncate",
+                      index === selectedIndex && "text-blue-700 dark:text-blue-400"
+                    )}>
                       {result.title}
                     </span>
                     {result.serviceType && (
                       <span
-                        className="text-[9px] px-1.5 py-0.5 rounded font-bold"
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0"
                         style={{
                           backgroundColor: SERVICE_TYPE_COLORS[result.serviceType as keyof typeof SERVICE_TYPE_COLORS] || '#gray',
                           color: ['7Y', '10Y'].includes(result.serviceType) ? 'black' : 'white'
@@ -241,17 +257,24 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
                         {result.serviceType}
                       </span>
                     )}
+                    {result.type === 'document' && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium flex-shrink-0">
+                        PDF
+                      </span>
+                    )}
                   </div>
                   {result.subtitle && (
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate leading-relaxed">
                       {result.subtitle}
                     </p>
                   )}
                 </div>
-                {result.type === 'document' && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-medium">
-                    PDF
-                  </span>
+
+                {/* Hover indicator */}
+                {index === selectedIndex && (
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-1 h-8 bg-blue-600 rounded-full" />
+                  </div>
                 )}
               </button>
             ))}

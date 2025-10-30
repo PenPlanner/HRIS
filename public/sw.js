@@ -6,9 +6,7 @@ const PDF_CACHE = `${CACHE_VERSION}-pdfs`;
 
 // Files to cache immediately on install
 const STATIC_ASSETS = [
-  '/',
-  '/flowcharts',
-  '/offline',
+  '/brand/flowy-dev-mode2.png',
 ];
 
 // Install event - cache static assets

@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   FlowchartData,
   generateFlowchartId,
+  generateUniqueFlowchartId,
   loadCustomFlowcharts,
   deleteFlowchart,
   exportFlowchartJSON,
@@ -47,6 +48,7 @@ export function FlowchartManagerDialog({ open, onOpenChange, onRefresh }: Flowch
 
     const newFlowchart: FlowchartData = {
       id: generateFlowchartId(newModel, newServiceType),
+      flowchartId: generateUniqueFlowchartId(), // Auto-generated Flow-ID
       model: newModel,
       serviceType: newServiceType,
       optimizedSIF: "Custom",

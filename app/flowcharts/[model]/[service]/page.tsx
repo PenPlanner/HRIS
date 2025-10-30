@@ -1863,122 +1863,35 @@ ${fullLayoutData.map(step =>
         {/* Header - Two Row Layout */}
         {!isFullscreen && (
         <div className="border-b px-4 py-2 bg-background/95 backdrop-blur-sm">
-          {/* Row 1: Main controls */}
+          {/* Row 1: Year, Flow-ID at top left */}
           <div className="flex items-center justify-between gap-3">
-            {/* Left: Back button + Title + All fields */}
+            {/* Left: Year, Flow-ID */}
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push("/flowcharts")}
-                className="h-8 px-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex items-center gap-3">
-                <h1 className="text-lg font-bold">{flowchartData.model}</h1>
-                {flowchartData.isCustom && (
-                  <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
-                )}
-
-                {/* Service Program and Revision on same line */}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Service Program ·</span>
-                  <button
-                    onClick={() => setRevisionHistoryOpen(true)}
-                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
-                  >
-                    Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
-                  </button>
-                </div>
+              {/* Year Input */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground font-medium">Year:</span>
+                <input
+                  type="text"
+                  value={makeYear}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setMakeYear(value);
+                  }}
+                  placeholder="2024"
+                  maxLength={4}
+                  className="w-[52px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                />
               </div>
 
-              {/* Divider - minimal space */}
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-0.5" />
-
-              {/* Right group: WTG, Year, Assign, Search */}
-              <div className="flex items-center gap-3">
-                {/* WTG Number Input */}
+              {/* Flow-ID Display (Read-only) */}
+              {flowchartData.flowchartId && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">WTG:</span>
-                  <input
-                    type="text"
-                    value={wtgNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                      setWtgNumber(value);
-                    }}
-                    placeholder="248024"
-                    maxLength={6}
-                    className="w-20 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-                  />
+                  <span className="text-xs text-muted-foreground font-medium">Flow-ID:</span>
+                  <div className="w-[70px] h-6 px-2 text-xs font-mono border rounded bg-gray-50 dark:bg-gray-800 flex items-center justify-center cursor-not-allowed">
+                    {flowchartData.flowchartId}
+                  </div>
                 </div>
-
-                {/* Year Input */}
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">Year:</span>
-                  <input
-                    type="text"
-                    value={makeYear}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      setMakeYear(value);
-                    }}
-                    placeholder="2024"
-                    maxLength={4}
-                    className="w-14 h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-                  />
-                </div>
-
-                {/* Technician Assignment */}
-                <div className="flex items-center gap-1">
-                  <Users className="h-3 w-3 text-muted-foreground" />
-                  <button
-                    onClick={() => openTechnicianModal('global')}
-                    className={cn(
-                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
-                      selectedT1
-                        ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
-                  </button>
-                  <span className="text-muted-foreground">/</span>
-                  <button
-                    onClick={() => openTechnicianModal('global')}
-                    className={cn(
-                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
-                      selectedT2
-                        ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
-                  </button>
-                  <span className="text-muted-foreground">/</span>
-                  <button
-                    onClick={() => openTechnicianModal('global')}
-                    className={cn(
-                      "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
-                      selectedT3
-                        ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                    )}
-                  >
-                    <GraduationCap className="h-3 w-3" />
-                    T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
-                  </button>
-                </div>
-
-                {/* Search */}
-                <div className="w-64">
-                  <FlowchartSearch
-                    steps={steps}
-                    onSelectStep={handleSearchSelectStep}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Right: Controls */}
@@ -2088,7 +2001,102 @@ ${fullLayoutData.map(step =>
             )}
           </div>
 
-          {/* Row 2: Start Service button or Job Tracking Display + Controls */}
+          {/* Row 2: Back button, WTG, Model name, Service Program, T1/T2/T3, Search */}
+          <div className="flex items-center gap-3 mt-2">
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/flowcharts")}
+              className="h-8 px-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+
+            {/* WTG Number Input */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground font-medium">WTG:</span>
+              <input
+                type="text"
+                value={wtgNumber}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                  setWtgNumber(value);
+                }}
+                placeholder="248024"
+                maxLength={6}
+                className="w-[70px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+              />
+            </div>
+
+            {/* Model name */}
+            <h1 className="text-lg font-bold">{flowchartData.model}</h1>
+            {flowchartData.isCustom && (
+              <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
+            )}
+
+            {/* Service Program and Revision */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Service Program ·</span>
+              <button
+                onClick={() => setRevisionHistoryOpen(true)}
+                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
+              >
+                Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
+              </button>
+            </div>
+
+            {/* Technician Assignment (T1/T2/T3) */}
+            <div className="flex items-center gap-1">
+              <Users className="h-3 w-3 text-muted-foreground" />
+              <button
+                onClick={() => openTechnicianModal('global')}
+                className={cn(
+                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                  selectedT1
+                    ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                )}
+              >
+                T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
+              </button>
+              <span className="text-muted-foreground">/</span>
+              <button
+                onClick={() => openTechnicianModal('global')}
+                className={cn(
+                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                  selectedT2
+                    ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                )}
+              >
+                T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
+              </button>
+              <span className="text-muted-foreground">/</span>
+              <button
+                onClick={() => openTechnicianModal('global')}
+                className={cn(
+                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
+                  selectedT3
+                    ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
+                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                )}
+              >
+                <GraduationCap className="h-3 w-3" />
+                T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="w-64">
+              <FlowchartSearch
+                steps={steps}
+                onSelectStep={handleSearchSelectStep}
+              />
+            </div>
+          </div>
+
+          {/* Row 3: Start Service button or Job Tracking Display + Controls */}
           {!isEditMode && (
             <div className="flex items-center gap-3 ml-11 mt-1">
               {!jobStarted ? (
@@ -2242,7 +2250,7 @@ ${fullLayoutData.map(step =>
                       setToastMessage(`✅ ${testCompletionPercent}% tasks completed (test mode)`);
                       setShowToast(true);
                     }}
-                    className="h-6 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900"
+                    className="h-5 px-1.5 text-[10px] text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900"
                     title={`Complete ${testCompletionPercent}% of tasks`}
                   >
                     Test {testCompletionPercent}%
@@ -2262,7 +2270,7 @@ ${fullLayoutData.map(step =>
                       setToastMessage('🔄 All tasks reset');
                       setShowToast(true);
                     }}
-                    className="h-6 px-2 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="h-5 px-1.5 text-[10px] text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
                     title="Reset all tasks"
                   >
                     Reset

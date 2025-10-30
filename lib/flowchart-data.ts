@@ -143,6 +143,7 @@ export function getCumulativeServiceTime(
 
 export interface FlowchartData {
   id: string;
+  flowchartId?: string; // Unique flowchart ID (format: YYYYRR-NNN, e.g., 202501-001)
   model: string;
   serviceType: string;
   optimizedSIF: string;
@@ -175,6 +176,7 @@ export interface FlowchartData {
 // This ensures consistency across all users and sessions.
 export const ENVENTUS_MK0_1Y: FlowchartData = {
   id: "enventus-mk0-1y",
+  flowchartId: "250302", // Example Flow-ID (YY=25, RR=03, NN=02)
   model: "EnVentus Mk 0",
   serviceType: "1Y Service",
   optimizedSIF: "0159-0667",
@@ -846,6 +848,42 @@ export function generateFlowchartId(model: string, serviceType: string): string 
   const modelSlug = model.toLowerCase().replace(/\s+/g, "-");
   const serviceSlug = serviceType.toLowerCase().replace(/\s+/g, "-");
   return `custom-${modelSlug}-${serviceSlug}-${timestamp}`;
+}
+
+/**
+ * Generate a unique flowchart ID with format: YYRRNN
+ * YY = Year (last 2 digits)
+ * RR = Region code (2 digits, default: 03)
+ * NN = Sequential number (2 digits, auto-incremented)
+ * Example: 250302, 250303, etc.
+ * Total: 6 digits
+ */
+export function generateUniqueFlowchartId(regionCode: string = "03"): string {
+  const year = new Date().getFullYear();
+  const yearShort = year.toString().slice(-2); // Get last 2 digits (e.g., 2025 -> 25)
+
+  // Get all existing flowchart IDs from localStorage
+  const existingFlowcharts = loadCustomFlowcharts();
+  const prefix = `${yearShort}${regionCode}`;
+
+  // Find the highest sequence number for this year and region
+  let maxSequence = 0;
+  existingFlowcharts.forEach(fc => {
+    if (fc.flowchartId && fc.flowchartId.startsWith(prefix)) {
+      // Extract last 2 digits as sequence number
+      const idStr = fc.flowchartId.toString();
+      if (idStr.length === 6) {
+        const sequence = parseInt(idStr.slice(-2));
+        if (!isNaN(sequence) && sequence > maxSequence) {
+          maxSequence = sequence;
+        }
+      }
+    }
+  });
+
+  // Increment and format with leading zeros (2 digits)
+  const nextSequence = (maxSequence + 1).toString().padStart(2, '0');
+  return `${prefix}${nextSequence}`;
 }
 
 /**

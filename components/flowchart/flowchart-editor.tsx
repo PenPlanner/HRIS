@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
   ReactFlow,
   Node,
@@ -1157,6 +1158,63 @@ function InfoCardNode({ data }: InfoCardNodeProps) {
   );
 }
 
+// Logo node component - displays Flowy logo (draggable in edit mode)
+interface LogoNodeData {
+  isEditMode: boolean;
+}
+
+function LogoNode({ data }: NodeProps<LogoNodeData>) {
+  const { isEditMode } = data;
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
+      <div className="relative w-full h-full flex items-center justify-center p-6">
+        <div className={`hover:scale-105 transition-transform duration-500 ${isEditMode ? 'cursor-move' : 'cursor-pointer'}`}>
+          <Image
+            src="/brand/flowy-dev-mode2.png"
+            alt="Flowy Logo"
+            width={300}
+            height={150}
+            className="w-full h-auto drop-shadow-2xl opacity-80"
+            priority
+          />
+        </div>
+      </div>
+      {isEditMode && (
+        <div className="absolute top-2 right-2 bg-blue-500/80 text-white text-xs px-2 py-1 rounded">
+          Logo (Draggable)
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Commit hash node component (draggable in edit mode)
+interface CommitNodeData {
+  isEditMode: boolean;
+}
+
+function CommitNode({ data }: NodeProps<CommitNodeData>) {
+  const { isEditMode } = data;
+
+  return (
+    <div className={`relative opacity-30 hover:opacity-100 transition-opacity duration-300 group pointer-events-auto ${isEditMode ? 'cursor-move' : ''}`}>
+      <div className="flex items-center gap-1.5 cursor-pointer">
+        <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+        <p className="text-[10px] text-slate-400 font-mono">22d8104</p>
+      </div>
+      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+        <p className="text-[10px] text-slate-500 font-mono">2025-10-30 20:39</p>
+      </div>
+      {isEditMode && (
+        <div className="absolute -top-6 left-0 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+          Commit Hash (Draggable)
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Custom heights for specific steps (for this flowchart layout)
 // These are specific to the current flowchart and not part of the import/export
 const CUSTOM_STEP_HEIGHTS: Record<string, number> = {
@@ -1306,8 +1364,31 @@ function FlowchartEditorInner({
       };
     });
 
+    // Add logo and commit hash nodes (draggable in edit mode)
+    const logoNode: Node<LogoNodeData> = {
+      id: 'flowy-logo',
+      type: 'logoNode',
+      position: { x: -360, y: 60 },
+      style: { width: 300, height: 200 },
+      data: { isEditMode },
+      draggable: isEditMode,
+      selectable: isEditMode,
+      connectable: false,
+    };
+
+    const commitNode: Node<CommitNodeData> = {
+      id: 'commit-hash',
+      type: 'commitNode',
+      position: { x: -120, y: 180 },
+      style: { width: 100, height: 30 },
+      data: { isEditMode },
+      draggable: isEditMode,
+      selectable: isEditMode,
+      connectable: false,
+    };
+
     // Info card is now a dropdown at the top - no longer a node in the flowchart
-    return stepNodes;
+    return [logoNode, commitNode, ...stepNodes];
   }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds, onOpenTechnicianPairModal, selectedT1, selectedT2]);
 
   // Initialize edges (connections) - load from props
@@ -2513,7 +2594,9 @@ function FlowchartEditorInner({
 
   // Define custom node types
   const nodeTypes = useMemo(() => ({
-    stepNode: StepNode
+    stepNode: StepNode,
+    logoNode: LogoNode,
+    commitNode: CommitNode
     // infoCardNode removed - now using dropdown component instead
   }), []);
   const edgeTypes = useMemo(() => ({
