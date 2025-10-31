@@ -39,7 +39,8 @@
       "Bash(if exist \"nul\" del \"nul\")",
       "Bash(rm:*)",
       "Bash(git clean:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(npx kill-port:*)"
     ],
     "deny": [],
     "ask": []

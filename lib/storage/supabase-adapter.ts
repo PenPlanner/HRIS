@@ -35,7 +35,7 @@ class SupabaseAdapter implements StorageAdapter {
 
   /**
    * Get value by key
-   * Tries local cache first, then Supabase, then IndexedDB fallback
+   * Tries local cache first, then IndexedDB, then Supabase cloud
    */
   async get<T = any>(key: string): Promise<T | null> {
     await this.initialize();
@@ -55,9 +55,23 @@ class SupabaseAdapter implements StorageAdapter {
 
       // If not in cache and online, try Supabase
       if (navigator.onLine) {
-        // For now, return from IndexedDB only
-        // TODO: Implement Supabase key-value table query
-        console.log('[SupabaseAdapter] Cloud sync not yet implemented, using local cache');
+        const { data, error } = await supabase
+          .rpc('get_pwa_storage' as any, {
+            storage_key: key,
+            storage_user_id: null
+          } as any);
+
+        if (error) {
+          console.error(`[SupabaseAdapter] Supabase error for "${key}":`, error);
+          return null;
+        }
+
+        if (data) {
+          // Cache in memory and IndexedDB
+          this.cache.set(key, data);
+          await indexedDBAdapter.set(key, data);
+          return data as T;
+        }
       }
 
       return null;
@@ -71,7 +85,7 @@ class SupabaseAdapter implements StorageAdapter {
 
   /**
    * Set value by key
-   * Writes to local cache immediately, queues cloud sync
+   * Writes to local cache immediately, syncs to cloud if online
    */
   async set<T = any>(key: string, value: T): Promise<void> {
     await this.initialize();
@@ -83,10 +97,26 @@ class SupabaseAdapter implements StorageAdapter {
       // Write to IndexedDB immediately (offline-first)
       await indexedDBAdapter.set(key, value);
 
-      // Queue cloud sync if online
+      // Sync to cloud if online
       if (navigator.onLine) {
-        // TODO: Implement Supabase key-value table upsert
-        console.log('[SupabaseAdapter] Queued cloud sync for:', key);
+        try {
+          const { error } = await supabase.rpc('upsert_pwa_storage' as any, {
+            storage_key: key,
+            storage_value: value as any,
+            storage_device_id: null, // TODO: Get actual device ID
+            storage_user_id: null, // TODO: Get actual user ID from auth
+          } as any);
+
+          if (error) {
+            console.error(`[SupabaseAdapter] Failed to sync "${key}" to cloud:`, error);
+            // Don't throw - local write succeeded, cloud sync can retry later
+          } else {
+            console.log(`[SupabaseAdapter] Successfully synced "${key}" to cloud`);
+          }
+        } catch (syncError) {
+          console.error(`[SupabaseAdapter] Cloud sync error for "${key}":`, syncError);
+          // Don't throw - local write succeeded
+        }
       }
     } catch (error) {
       console.error(`[SupabaseAdapter] Failed to set "${key}":`, error);
@@ -107,10 +137,22 @@ class SupabaseAdapter implements StorageAdapter {
       // Remove from IndexedDB
       await indexedDBAdapter.remove(key);
 
-      // Queue cloud deletion if online
+      // Delete from cloud if online
       if (navigator.onLine) {
-        // TODO: Implement Supabase key-value table delete
-        console.log('[SupabaseAdapter] Queued cloud deletion for:', key);
+        try {
+          const { error } = await supabase.rpc('delete_pwa_storage' as any, {
+            storage_key: key,
+            storage_user_id: null,
+          } as any);
+
+          if (error) {
+            console.error(`[SupabaseAdapter] Failed to delete "${key}" from cloud:`, error);
+          } else {
+            console.log(`[SupabaseAdapter] Successfully deleted "${key}" from cloud`);
+          }
+        } catch (syncError) {
+          console.error(`[SupabaseAdapter] Cloud deletion error for "${key}":`, syncError);
+        }
       }
     } catch (error) {
       console.error(`[SupabaseAdapter] Failed to remove "${key}":`, error);
