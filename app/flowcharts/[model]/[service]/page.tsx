@@ -2107,9 +2107,9 @@ ${fullLayoutData.map(step =>
                 <Button
                   onClick={handleStartService}
                   size="sm"
-                  className="h-5 px-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
+                  className="h-10 px-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md touch-manipulation"
                 >
-                  <span className="text-[10px] font-semibold">Start Service</span>
+                  <span className="text-xs font-semibold">Start Service</span>
                 </Button>
               ) : !jobFinished ? (
                 /* Service In Progress */
@@ -2117,9 +2117,9 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-5 px-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white cursor-default opacity-100 animate-pulse shadow-lg shadow-yellow-500/50"
+                    className="h-10 px-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white cursor-default opacity-100 animate-pulse shadow-lg shadow-yellow-500/50 touch-manipulation"
                   >
-                    <span className="text-[10px] font-semibold">In Progress</span>
+                    <span className="text-xs font-semibold">In Progress</span>
                   </Button>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
                     <span className="text-xs text-muted-foreground">Started:</span>
@@ -2147,9 +2147,9 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-5 px-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100"
+                    className="h-10 px-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100 touch-manipulation"
                   >
-                    <span className="text-[10px] font-semibold">✓ Completed</span>
+                    <span className="text-xs font-semibold">✓ Completed</span>
                   </Button>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
                     <span className="text-xs text-muted-foreground">Started:</span>

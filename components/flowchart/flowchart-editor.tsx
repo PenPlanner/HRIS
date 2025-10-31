@@ -3087,12 +3087,14 @@ function FlowchartEditorInner({
         }}
         proOptions={{ hideAttribution: true }}
         // Touch device support with viewport lock
-        panOnDrag={isViewportLocked ? false : (!isEditMode ? [1, 2] : [1, 2])}
+        // iPad: Allow one-finger pan, two-finger pinch-to-zoom
+        panOnDrag={isViewportLocked ? false : [1, 2]} // Allow both mouse buttons and touch
         panOnScroll={false}
-        zoomOnPinch={isViewportLocked ? false : true}
+        zoomOnPinch={isViewportLocked ? false : true} // Enable pinch-to-zoom
         zoomOnScroll={isViewportLocked ? false : true}
-        zoomOnDoubleClick={isViewportLocked ? false : true}
-        preventScrolling={true}
+        zoomOnDoubleClick={isViewportLocked ? false : true} // Enable double-tap to zoom
+        preventScrolling={true} // Prevent page scroll when using flowchart
+        panActivationKeyCode={null} // No key needed for panning (better for touch)
         // Use drag-to-connect (default), not click-to-connect
         // connectOnClick can cause conflicts with handle interactions
       >

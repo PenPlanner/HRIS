@@ -63,6 +63,33 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
     setIsLongPressing(false);
   };
 
+  // Touch handlers for iPad
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setIsLongPressing(true);
+    longPressTimerRef.current = setTimeout(() => {
+      if (onLongPress) {
+        onLongPress();
+        setIsLongPressing(false);
+      }
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressing(false);
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressing(false);
+  };
+
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) {
@@ -152,7 +179,7 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
       {/* Card */}
       <Card
         className={cn(
-          "relative cursor-pointer hover:shadow-lg transition-all p-4 w-[300px] min-h-[168px]",
+          "relative cursor-pointer hover:shadow-lg transition-all p-4 w-[300px] min-h-[168px] touch-manipulation",
           isComplete && "ring-2 ring-green-500",
           isActive && "ring-4 ring-blue-500 ring-offset-2 shadow-2xl shadow-blue-500/30",
           isLongPressing && "scale-[0.98]"
@@ -160,6 +187,7 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
         style={{
           backgroundColor: `${step.color}15`,
           borderLeft: `4px solid ${step.color}`,
+          touchAction: 'none', // Prevent default touch behaviors
           ...(isActive && {
             boxShadow: '0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)',
           })
@@ -168,6 +196,9 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         onWheel={(e) => {
           // Stop propagation to allow scrolling inside the card
           e.stopPropagation();
