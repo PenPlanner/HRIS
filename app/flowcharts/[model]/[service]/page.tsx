@@ -2287,33 +2287,48 @@ ${fullLayoutData.map(step =>
                 return Math.max(1, actualTime);
               };
 
-              // Create completely new step objects with new task objects
+              // Update step objects while preserving references where possible
               const updatedSteps = steps.map((step, stepIndex) => {
                 // Calculate average time per task based on step duration
                 const stepDuration = step.duration || 0;
                 const taskCount = step.tasks.length;
                 const avgTimePerTask = taskCount > 0 ? Math.floor(stepDuration / taskCount) : 15;
 
+                // Update tasks
+                const updatedTasks = step.tasks.map((task, taskIndex) => {
+                  // Find if this task should be completed
+                  const taskGlobalIndex = allTasks.findIndex(
+                    t => t.stepIndex === stepIndex && t.taskIndex === taskIndex
+                  );
+                  const shouldComplete = taskGlobalIndex < tasksToComplete;
+
+                  // If task state doesn't need to change, return the same object
+                  if (task.completed === shouldComplete &&
+                      (shouldComplete ? task.actualTimeMinutes !== undefined : true)) {
+                    return task;
+                  }
+
+                  return {
+                    ...task,
+                    completed: shouldComplete,
+                    // Add realistic time if task is completed (use actualTimeMinutes field)
+                    actualTimeMinutes: shouldComplete ? generateRealisticTime(avgTimePerTask) : task.actualTimeMinutes
+                  };
+                });
+
+                // If no tasks changed, return the same step object
+                if (updatedTasks.every((task, i) => task === step.tasks[i])) {
+                  return step;
+                }
+
                 return {
                   ...step,
-                  tasks: step.tasks.map((task, taskIndex) => {
-                    // Find if this task should be completed
-                    const taskGlobalIndex = allTasks.findIndex(
-                      t => t.stepIndex === stepIndex && t.taskIndex === taskIndex
-                    );
-                    const shouldComplete = taskGlobalIndex < tasksToComplete;
-
-                    return {
-                      ...task,
-                      completed: shouldComplete,
-                      // Add realistic time if task is completed (use actualTimeMinutes field)
-                      actualTimeMinutes: shouldComplete ? generateRealisticTime(avgTimePerTask) : task.actualTimeMinutes
-                    };
-                  })
+                  tasks: updatedTasks
                 };
               });
 
               setSteps(updatedSteps);
+              setHasUnsavedChanges(true);
               setToastMessage(`✅ ${testCompletionPercent}% tasks completed with realistic times (test mode)`);
               setShowToast(true);
             }}

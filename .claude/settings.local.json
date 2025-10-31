@@ -32,7 +32,12 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(if exist \".next\\dev\\lock\" del \".next\\dev\\lock\")",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(cmd //c \"taskkill //F //IM node.exe //T\")",
+      "Bash(if exist \".next/dev/lock\" del \".next/dev/lock\")",
+      "Bash(git push)",
+      "Bash(if exist \"nul\" del \"nul\")",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
