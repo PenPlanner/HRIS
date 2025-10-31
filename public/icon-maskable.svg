@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Full bleed background for maskable icon (no rounded corners) -->
+  <rect width="512" height="512" fill="#2563eb"/>
+
+  <!-- Safe zone content (80% of canvas, centered) -->
+  <!-- Letter H -->
+  <rect x="120" y="140" width="60" height="232" fill="white"/>
+  <rect x="332" y="140" width="60" height="232" fill="white"/>
+  <rect x="180" y="236" width="152" height="50" fill="white"/>
+
+  <!-- Wind turbine blades (simplified, in safe zone) -->
+  <circle cx="360" cy="160" r="7" fill="#60a5fa"/>
+  <path d="M360 160 L390 130" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+  <path d="M360 160 L390 190" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+  <path d="M360 160 L330 160" stroke="#60a5fa" stroke-width="5" stroke-linecap="round"/>
+</svg>

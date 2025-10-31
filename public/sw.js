@@ -1,11 +1,19 @@
-// HRIS Service Worker - Full Offline Support
-const CACHE_VERSION = 'hris-v2';
+// HRIS Service Worker - Full Offline Support with Enhanced App Shell Caching
+const CACHE_VERSION = 'hris-v3'; // Bumped for new caching strategy
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const PDF_CACHE = `${CACHE_VERSION}-pdfs`;
 
-// Files to cache immediately on install
+// Files to cache immediately on install - App Shell + Critical Assets
 const STATIC_ASSETS = [
+  '/',
+  '/offline',
+  '/flowcharts',
+  '/manifest.json',
+  '/icon.svg',
+  '/icon-192.svg',
+  '/icon-512.svg',
+  '/icon-maskable.svg',
   '/brand/flowy-dev-mode2.png',
 ];
 

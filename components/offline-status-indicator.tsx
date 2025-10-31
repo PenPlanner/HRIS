@@ -93,47 +93,66 @@ export function OfflineStatusIndicator({ flowchart, steps = [], side = 'bottom' 
     setShowDownloadDialog(true);
     setIsDownloading(true);
 
-    // Download each document sequentially
-    for (let i = 0; i < documents.length; i++) {
-      const doc = documents[i];
+    // Download documents in parallel (3 at a time for better performance)
+    const PARALLEL_DOWNLOADS = 3;
+    const downloadQueue = [...documents];
+    const activeDownloads = new Set<number>();
+
+    const downloadDocument = async (index: number) => {
+      const doc = documents[index];
+      activeDownloads.add(index);
 
       // Update status to downloading
       setDownloadStatuses(prev =>
-        prev.map((d, idx) => idx === i ? { ...d, status: 'downloading', progress: 0 } : d)
+        prev.map((d, idx) => idx === index ? { ...d, status: 'downloading', progress: 0 } : d)
       );
 
+      // Simulate progress (since we don't have real progress from fetch)
+      const progressInterval = setInterval(() => {
+        setDownloadStatuses(prev =>
+          prev.map((d, idx) =>
+            idx === index && d.status === 'downloading'
+              ? { ...d, progress: Math.min(d.progress + 10, 90) }
+              : d
+          )
+        );
+      }, 100);
+
       try {
-        // Simulate progress (since we don't have real progress from fetch)
-        const progressInterval = setInterval(() => {
-          setDownloadStatuses(prev =>
-            prev.map((d, idx) =>
-              idx === i && d.status === 'downloading'
-                ? { ...d, progress: Math.min(d.progress + 10, 90) }
-                : d
-            )
-          );
-        }, 100);
-
         await downloadPDF(doc.id, doc.url, doc.title);
-
         clearInterval(progressInterval);
 
         // Mark as completed
         setDownloadStatuses(prev =>
-          prev.map((d, idx) => idx === i ? { ...d, status: 'completed', progress: 100 } : d)
+          prev.map((d, idx) => idx === index ? { ...d, status: 'completed', progress: 100 } : d)
         );
       } catch (error) {
+        clearInterval(progressInterval);
         // Mark as error
         setDownloadStatuses(prev =>
           prev.map((d, idx) =>
-            idx === i
+            idx === index
               ? { ...d, status: 'error', progress: 0, error: error instanceof Error ? error.message : 'Download failed' }
               : d
           )
         );
+      } finally {
+        activeDownloads.delete(index);
       }
+    };
+
+    // Process downloads in batches
+    const promises: Promise<void>[] = [];
+    for (let i = 0; i < documents.length; i++) {
+      // Wait if we have too many active downloads
+      while (activeDownloads.size >= PARALLEL_DOWNLOADS) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      promises.push(downloadDocument(i));
     }
 
+    // Wait for all downloads to complete
+    await Promise.all(promises);
     setIsDownloading(false);
   };
 
