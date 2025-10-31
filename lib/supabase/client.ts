@@ -6,6 +6,14 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: false, // No auth for now
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+  // Enable real-time subscriptions for future use
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
   },
 })

@@ -19,6 +19,7 @@
 import { StorageAdapter, SyncAdapter } from './storage-adapter';
 import { localStorageAdapter } from './local-storage-adapter';
 import { indexedDBAdapter } from './indexeddb-adapter';
+import { supabaseAdapter } from './supabase-adapter';
 import { syncManager } from './sync-manager';
 
 /**
@@ -26,8 +27,8 @@ import { syncManager } from './sync-manager';
  */
 export const STORAGE_CONFIG = {
   // Which adapter to use: 'localStorage', 'indexedDB', or 'supabase'
-  // IndexedDB is preferred for better performance, but falls back to localStorage if unavailable
-  preferredAdapter: 'indexedDB' as 'localStorage' | 'indexedDB' | 'supabase',
+  // Supabase is now enabled for cloud storage with offline support!
+  preferredAdapter: 'supabase' as 'localStorage' | 'indexedDB' | 'supabase',
 
   // Enable offline queue (for Supabase integration)
   enableOfflineQueue: true,
@@ -43,9 +44,20 @@ export const STORAGE_CONFIG = {
  * Get the appropriate storage adapter based on configuration and availability
  */
 function getStorageAdapter(): StorageAdapter {
-  // Check if IndexedDB is available
-  const hasIndexedDB = typeof window !== 'undefined' && 'indexedDB' in window;
+  // Check if we're in browser
+  if (typeof window === 'undefined') {
+    console.log('[Storage] Server-side detected, using LocalStorage adapter');
+    return localStorageAdapter;
+  }
 
+  // Supabase adapter (with IndexedDB cache and offline support)
+  if (STORAGE_CONFIG.preferredAdapter === 'supabase') {
+    console.log('[Storage] Using Supabase adapter with offline support');
+    return supabaseAdapter;
+  }
+
+  // IndexedDB adapter
+  const hasIndexedDB = 'indexedDB' in window;
   if (STORAGE_CONFIG.preferredAdapter === 'indexedDB' && hasIndexedDB) {
     console.log('[Storage] Using IndexedDB adapter');
     return indexedDBAdapter;
