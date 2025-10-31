@@ -1,3 +1,5 @@
+import { storage } from './storage';
+
 export interface BugReportComment {
   id: string;
   timestamp: string;
@@ -25,17 +27,16 @@ export interface BugReport {
 const STORAGE_KEY = "bug_reports";
 
 /**
- * Load all bug reports from localStorage
+ * Load all bug reports from storage
  */
-export function loadBugReports(): BugReport[] {
+export async function loadBugReports(): Promise<BugReport[]> {
   if (typeof window === "undefined") return [];
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
+    const data = await storage.get<Record<string, BugReport>>(STORAGE_KEY);
+    if (!data) return [];
 
-    const data = JSON.parse(stored);
-    return Object.values(data) as BugReport[];
+    return Object.values(data);
   } catch (error) {
     console.error("Failed to load bug reports:", error);
     return [];
@@ -45,16 +46,13 @@ export function loadBugReports(): BugReport[] {
 /**
  * Save a bug report
  */
-export function saveBugReport(report: BugReport): void {
+export async function saveBugReport(report: BugReport): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    const data = stored ? JSON.parse(stored) : {};
-
+    const data = await storage.get<Record<string, BugReport>>(STORAGE_KEY) || {};
     data[report.id] = report;
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    await storage.set(STORAGE_KEY, data);
   } catch (error) {
     console.error("Failed to save bug report:", error);
     throw error;
@@ -64,23 +62,22 @@ export function saveBugReport(report: BugReport): void {
 /**
  * Update bug report status
  */
-export function updateBugReportStatus(
+export async function updateBugReportStatus(
   reportId: string,
   status: BugReport["status"]
-): void {
+): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
+    const data = await storage.get<Record<string, BugReport>>(STORAGE_KEY);
+    if (!data) return;
 
-    const data = JSON.parse(stored);
     if (data[reportId]) {
       data[reportId].status = status;
       if (status === "resolved") {
         data[reportId].resolvedAt = new Date().toISOString();
       }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await storage.set(STORAGE_KEY, data);
     }
   } catch (error) {
     console.error("Failed to update bug report status:", error);
@@ -91,18 +88,17 @@ export function updateBugReportStatus(
 /**
  * Add comment to bug report
  */
-export function addBugReportComment(
+export async function addBugReportComment(
   reportId: string,
   comment: string,
   isAdmin: boolean = false
-): void {
+): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
+    const data = await storage.get<Record<string, BugReport>>(STORAGE_KEY);
+    if (!data) return;
 
-    const data = JSON.parse(stored);
     if (data[reportId]) {
       const newComment: BugReportComment = {
         id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -117,7 +113,7 @@ export function addBugReportComment(
       }
 
       data[reportId].comments.push(newComment);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      await storage.set(STORAGE_KEY, data);
     }
   } catch (error) {
     console.error("Failed to add comment:", error);
@@ -128,17 +124,15 @@ export function addBugReportComment(
 /**
  * Delete a bug report
  */
-export function deleteBugReport(reportId: string): void {
+export async function deleteBugReport(reportId: string): Promise<void> {
   if (typeof window === "undefined") return;
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
+    const data = await storage.get<Record<string, BugReport>>(STORAGE_KEY);
+    if (!data) return;
 
-    const data = JSON.parse(stored);
     delete data[reportId];
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    await storage.set(STORAGE_KEY, data);
   } catch (error) {
     console.error("Failed to delete bug report:", error);
     throw error;

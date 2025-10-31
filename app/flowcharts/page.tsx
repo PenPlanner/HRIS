@@ -26,20 +26,27 @@ export default function FlowchartsPage() {
   const [allModels, setAllModels] = useState(getAllFlowcharts());
   const [managerOpen, setManagerOpen] = useState(false);
   const [pdfImportOpen, setPdfImportOpen] = useState(false);
-  const [completedFlowcharts, setCompletedFlowcharts] = useState(getCompletedFlowchartsSorted());
-  const [allBugs, setAllBugs] = useState(getAllBugs());
+  const [completedFlowcharts, setCompletedFlowcharts] = useState<any[]>([]);
+  const [allBugs, setAllBugs] = useState<any[]>([]);
 
-  const refreshFlowcharts = () => {
+  const refreshFlowcharts = async () => {
     setAllModels(getAllFlowcharts());
-    setCompletedFlowcharts(getCompletedFlowchartsSorted());
-    setAllBugs(getAllBugs());
+    const cf = await getCompletedFlowchartsSorted();
+    const bugs = await getAllBugs();
+    setCompletedFlowcharts(cf);
+    setAllBugs(bugs);
   };
 
   // Seed example data and refresh on mount
   useEffect(() => {
-    seedCompletedFlowcharts();
-    setCompletedFlowcharts(getCompletedFlowchartsSorted());
-    setAllBugs(getAllBugs());
+    const loadData = async () => {
+      seedCompletedFlowcharts();
+      const cf = await getCompletedFlowchartsSorted();
+      const bugs = await getAllBugs();
+      setCompletedFlowcharts(cf);
+      setAllBugs(bugs);
+    };
+    loadData();
   }, []);
 
   const filteredModels = allModels.filter(model => {
@@ -469,7 +476,7 @@ export default function FlowchartsPage() {
                     <div className="mt-4 pt-4 border-t">
                       <p className="text-xs text-muted-foreground mb-2 font-semibold">Completed Steps:</p>
                       <div className="flex flex-wrap gap-1">
-                        {cf.steps.filter(step => step.completedAt).map(step => (
+                        {cf.steps.filter((step: any) => step.completedAt).map((step: any) => (
                           <Badge
                             key={step.id}
                             variant="outline"
@@ -587,8 +594,8 @@ export default function FlowchartsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                updateBugStatus(bug.id, 'investigating');
+                              onClick={async () => {
+                                await updateBugStatus(bug.id, 'investigating');
                                 refreshFlowcharts();
                               }}
                             >
@@ -600,8 +607,8 @@ export default function FlowchartsPage() {
                               size="sm"
                               variant="default"
                               className="bg-green-600 hover:bg-green-700"
-                              onClick={() => {
-                                updateBugStatus(bug.id, 'crushed', 'System');
+                              onClick={async () => {
+                                await updateBugStatus(bug.id, 'crushed', 'System');
                                 refreshFlowcharts();
                               }}
                             >

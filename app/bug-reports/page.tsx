@@ -34,8 +34,8 @@ export default function BugReportsPage() {
     loadReports();
   }, []);
 
-  const loadReports = () => {
-    const allReports = loadBugReports();
+  const loadReports = async () => {
+    const allReports = await loadBugReports();
     setReports(allReports);
   };
 
@@ -45,24 +45,24 @@ export default function BugReportsPage() {
     return true;
   });
 
-  const handleStatusChange = (reportId: string, newStatus: BugReport["status"]) => {
-    updateBugReportStatus(reportId, newStatus);
+  const handleStatusChange = async (reportId: string, newStatus: BugReport["status"]) => {
+    await updateBugReportStatus(reportId, newStatus);
     toast.success("Status updated");
     loadReports();
   };
 
-  const handleAddComment = (reportId: string) => {
+  const handleAddComment = async (reportId: string) => {
     if (!commentText.trim()) return;
 
-    addBugReportComment(reportId, commentText.trim(), isAdmin);
+    await addBugReportComment(reportId, commentText.trim(), isAdmin);
     toast.success("Comment added");
     setCommentText("");
     loadReports();
   };
 
-  const handleDelete = (reportId: string) => {
+  const handleDelete = async (reportId: string) => {
     if (confirm("Are you sure you want to delete this bug report?")) {
-      deleteBugReport(reportId);
+      await deleteBugReport(reportId);
       toast.success("Bug report deleted");
       loadReports();
     }

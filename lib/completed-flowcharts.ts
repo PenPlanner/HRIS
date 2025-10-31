@@ -1,5 +1,6 @@
 // Completed Flowcharts Storage System
 import { FlowchartData, FlowchartStep } from "./flowchart-data";
+import { storage } from './storage';
 
 export interface BugReport {
   id: string;
@@ -55,15 +56,14 @@ export interface CompletedFlowchart {
 
 const STORAGE_KEY = 'completed-flowcharts';
 
-// Get all completed flowcharts from localStorage
-export function getCompletedFlowcharts(): CompletedFlowchart[] {
+// Get all completed flowcharts from storage
+export async function getCompletedFlowcharts(): Promise<CompletedFlowchart[]> {
   // Check if we're on the client side
   if (typeof window === 'undefined') return [];
 
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    return JSON.parse(stored);
+    const stored = await storage.get<CompletedFlowchart[]>(STORAGE_KEY);
+    return stored || [];
   } catch (e) {
     console.error('Failed to load completed flowcharts:', e);
     return [];
@@ -71,7 +71,7 @@ export function getCompletedFlowcharts(): CompletedFlowchart[] {
 }
 
 // Save a completed flowchart
-export function saveCompletedFlowchart(
+export async function saveCompletedFlowchart(
   flowchartData: FlowchartData,
   steps: FlowchartStep[],
   startedAt: string,
@@ -79,7 +79,7 @@ export function saveCompletedFlowchart(
   bugs?: BugReport[],
   t1?: { id: string; name: string; initials: string },
   t2?: { id: string; name: string; initials: string }
-): CompletedFlowchart {
+): Promise<CompletedFlowchart> {
   // Calculate summary statistics
   const completedSteps = steps.filter(step => step.completedAt).length;
   const totalTasks = steps.reduce((sum, step) => sum + step.tasks.length, 0);
@@ -131,33 +131,35 @@ export function saveCompletedFlowchart(
     }
   };
 
-  // Save to localStorage
+  // Save to storage
   if (typeof window !== 'undefined') {
-    const existing = getCompletedFlowcharts();
+    const existing = await getCompletedFlowcharts();
     existing.push(completedFlowchart);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    await storage.set(STORAGE_KEY, existing);
   }
 
   return completedFlowchart;
 }
 
 // Get completed flowcharts for a specific flowchart ID
-export function getCompletedFlowchartsById(flowchartId: string): CompletedFlowchart[] {
-  return getCompletedFlowcharts().filter(cf => cf.flowchartId === flowchartId);
+export async function getCompletedFlowchartsById(flowchartId: string): Promise<CompletedFlowchart[]> {
+  const all = await getCompletedFlowcharts();
+  return all.filter(cf => cf.flowchartId === flowchartId);
 }
 
 // Delete a completed flowchart
-export function deleteCompletedFlowchart(id: string): void {
+export async function deleteCompletedFlowchart(id: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  const existing = getCompletedFlowcharts();
+  const existing = await getCompletedFlowcharts();
   const filtered = existing.filter(cf => cf.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  await storage.set(STORAGE_KEY, filtered);
 }
 
 // Get completed flowcharts sorted by completion date (newest first)
-export function getCompletedFlowchartsSorted(): CompletedFlowchart[] {
-  return getCompletedFlowcharts().sort((a, b) =>
+export async function getCompletedFlowchartsSorted(): Promise<CompletedFlowchart[]> {
+  const all = await getCompletedFlowcharts();
+  return all.sort((a, b) =>
     new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
   );
 }
@@ -194,8 +196,8 @@ export function formatDuration(minutes: number): string {
 }
 
 // Get all bugs from all completed flowcharts
-export function getAllBugs(): Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> {
-  const allFlowcharts = getCompletedFlowcharts();
+export async function getAllBugs(): Promise<Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }>> {
+  const allFlowcharts = await getCompletedFlowcharts();
   const bugs: Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> = [];
 
   allFlowcharts.forEach(flowchart => {
@@ -215,21 +217,23 @@ export function getAllBugs(): Array<BugReport & { flowchartId: string; wtgNumber
 }
 
 // Get bugs by status
-export function getBugsByStatus(status: "open" | "investigating" | "crushed"): Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }> {
-  return getAllBugs().filter(bug => bug.status === status);
+export async function getBugsByStatus(status: "open" | "investigating" | "crushed"): Promise<Array<BugReport & { flowchartId: string; wtgNumber: string; flowchartName: string }>> {
+  const allBugs = await getAllBugs();
+  return allBugs.filter(bug => bug.status === status);
 }
 
 // Get bugs for a specific WTG number
-export function getBugsByWTG(wtgNumber: string): BugReport[] {
-  const flowchart = getCompletedFlowcharts().find(cf => cf.wtgNumber === wtgNumber);
+export async function getBugsByWTG(wtgNumber: string): Promise<BugReport[]> {
+  const allFlowcharts = await getCompletedFlowcharts();
+  const flowchart = allFlowcharts.find(cf => cf.wtgNumber === wtgNumber);
   return flowchart?.bugs || [];
 }
 
 // Update bug status
-export function updateBugStatus(bugId: string, status: "open" | "investigating" | "crushed", resolvedBy?: string): void {
+export async function updateBugStatus(bugId: string, status: "open" | "investigating" | "crushed", resolvedBy?: string): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  const allFlowcharts = getCompletedFlowcharts();
+  const allFlowcharts = await getCompletedFlowcharts();
 
   for (const flowchart of allFlowcharts) {
     if (flowchart.bugs) {
@@ -245,7 +249,7 @@ export function updateBugStatus(bugId: string, status: "open" | "investigating" 
         flowchart.summary.openBugs = flowchart.bugs.filter(b => b.status === "open").length;
         flowchart.summary.crushedBugs = flowchart.bugs.filter(b => b.status === "crushed").length;
 
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(allFlowcharts));
+        await storage.set(STORAGE_KEY, allFlowcharts);
         break;
       }
     }
