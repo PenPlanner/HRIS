@@ -2290,7 +2290,7 @@ ${fullLayoutData.map(step =>
               // Update step objects while preserving references where possible
               const updatedSteps = steps.map((step, stepIndex) => {
                 // Calculate average time per task based on step duration
-                const stepDuration = step.duration || 0;
+                const stepDuration = step.durationMinutes || 0;
                 const taskCount = step.tasks.length;
                 const avgTimePerTask = taskCount > 0 ? Math.floor(stepDuration / taskCount) : 15;
 
