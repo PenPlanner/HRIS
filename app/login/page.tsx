@@ -28,9 +28,9 @@ export default function LoginPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      router.push("/");
+      window.location.href = "/";
     }
-  }, [user, router]);
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,8 +46,9 @@ export default function LoginPage() {
         await signIn(email, password);
         setLoginSuccess(true);
 
+        // Hard redirect instead of Next.js router to avoid issues
         setTimeout(() => {
-          router.push("/");
+          window.location.href = "/";
         }, 1500);
       }
     } catch (err: any) {

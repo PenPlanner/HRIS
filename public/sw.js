@@ -60,6 +60,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // IMPORTANT: Skip service worker for auth-related pages to avoid redirect issues
+  if (url.pathname === '/login' || url.pathname === '/unauthorized' || url.pathname.startsWith('/auth')) {
+    return; // Let these requests go directly to network
+  }
+
   // Handle PDF files specially
   if (url.pathname.includes('/files/flowchart/sii/')) {
     event.respondWith(
@@ -124,9 +129,15 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
 
-      return fetch(request).then((networkResponse) => {
-        // Cache successful responses
-        if (networkResponse.ok) {
+      // For navigation requests (like auth redirects), use network-first strategy
+      // and allow redirects by using redirect: 'follow'
+      const fetchOptions = request.mode === 'navigate'
+        ? { redirect: 'follow' }
+        : {};
+
+      return fetch(request, fetchOptions).then((networkResponse) => {
+        // Don't cache redirects or errors
+        if (networkResponse.ok && networkResponse.type !== 'opaqueredirect') {
           const clonedResponse = networkResponse.clone();
           caches.open(DYNAMIC_CACHE).then((cache) => {
             cache.put(request, clonedResponse);
