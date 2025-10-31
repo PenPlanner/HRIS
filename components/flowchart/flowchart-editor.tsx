@@ -30,7 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2, Pencil, Eye, EyeOff } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2, Pencil, Eye, EyeOff, GitCommit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -38,6 +38,11 @@ import { getSelectedTechnicians, getActiveTechnicians, getTechnicianById, Techni
 import { TechnicianSelectModal } from "@/components/technician-select-modal";
 import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
 import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useGitCommit } from "@/hooks/use-git-commit";
+import { parseSIIReference, SIIReference } from "@/lib/sii-documents";
+import { getSectionPage } from "@/lib/sii-page-mapping";
+import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface FlowchartEditorProps {
   flowchart: FlowchartData;
@@ -168,6 +173,11 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   // OVERRIDE: Get isActiveWork from context instead of data to ensure it stays updated
   const isActiveWorkFromContext = activeWorkContext?.activeWorkSteps.has(id) || false;
 
+  // Count ALL tasks - MUST be declared before shouldDim
+  const completedTasks = step.tasks.filter(t => t.completed).length;
+  const totalTasks = step.tasks.length;
+  const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
   // Check if this node should be dimmed (in highlight mode but not active work)
   const shouldDim = highlightActiveWorkMode && !isActiveWorkFromContext && !isComplete;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -175,11 +185,6 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
 
   // Get selected technicians directly from localStorage (same as info-dropdown)
   const { t1, t2 } = getSelectedTechnicians();
-
-  // Count ALL tasks
-  const completedTasks = step.tasks.filter(t => t.completed).length;
-  const totalTasks = step.tasks.length;
-  const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
   // Calculate total notes count from all tasks
   const totalNotesCount = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
@@ -379,8 +384,8 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
           } : {})
         }}
       >
-      {/* Active Work Toggle - Top right corner (only show if not complete) */}
-      {!isEditMode && !isComplete && (
+      {/* Active Work Toggle - Top right corner (show for all steps, even completed) */}
+      {!isEditMode && (
         <button
           data-active-work-button="true"
           onClick={(e) => {
@@ -1302,22 +1307,76 @@ interface CommitNodeProps extends NodeProps {
 
 function CommitNode({ data }: CommitNodeProps) {
   const { isEditMode } = data;
+  const [isOpen, setIsOpen] = useState(false);
+  const { latestCommit: latest, allCommits, loading } = useGitCommit({ refreshInterval: 30000 });
+
+  const latestCommit = latest || { hash: 'Loading...', date: '' };
+  const commits = allCommits;
 
   return (
-    <div className={`relative opacity-30 hover:opacity-100 transition-opacity duration-300 group pointer-events-auto ${isEditMode ? 'cursor-move' : ''}`}>
-      <div className="flex items-center gap-1.5 cursor-pointer">
-        <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-        <p className="text-[10px] text-slate-400 font-mono">22d8104</p>
-      </div>
-      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-        <p className="text-[10px] text-slate-500 font-mono">2025-10-30 20:39</p>
-      </div>
-      {isEditMode && (
-        <div className="absolute -top-6 left-0 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
-          Commit Hash (Draggable)
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <div className={`relative opacity-30 hover:opacity-100 transition-opacity duration-300 group pointer-events-auto ${isEditMode ? 'cursor-move' : 'cursor-pointer'}`}>
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            <p className="text-[10px] text-slate-400 font-mono">{latestCommit.hash}</p>
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+            <p className="text-[10px] text-slate-500 font-mono">{latestCommit.date}</p>
+          </div>
+          {isEditMode && (
+            <div className="absolute -top-6 left-0 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">
+              Commit Hash (Draggable)
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[500px] max-h-[70vh] overflow-y-auto p-3 bg-slate-900/95 backdrop-blur-sm border-slate-700"
+        align="start"
+        side="top"
+        sideOffset={5}
+      >
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-700">
+            <GitCommit className="h-4 w-4 text-green-400" />
+            <h3 className="text-sm font-semibold text-white">Recent Commits</h3>
+            {loading && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
+          </div>
+
+          {commits.length === 0 && !loading && (
+            <p className="text-xs text-slate-400">No commits found</p>
+          )}
+
+          {commits.map((commit, index) => (
+            <div
+              key={commit.hash}
+              className={cn(
+                "p-2 rounded-md transition-colors hover:bg-slate-800/50",
+                index === 0 && "bg-green-900/20 border border-green-700/30"
+              )}
+            >
+              <div className="flex items-start gap-2">
+                <div className="flex-shrink-0 mt-0.5">
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    index === 0 ? "bg-green-400 animate-pulse" : "bg-slate-500"
+                  )} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <code className="text-xs font-mono text-green-400">{commit.hash}</code>
+                    <span className="text-[10px] text-slate-500">{commit.relativeTime}</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">{commit.message}</p>
+                  <p className="text-[10px] text-slate-500 mt-1 font-mono">{commit.date}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1442,23 +1501,42 @@ function FlowchartEditorInner({
   // Highlight Active Work mode - dims non-active work steps
   const [highlightActiveWorkMode, setHighlightActiveWorkMode] = useState(false);
 
+  // Step navigation state
+  const [showStepNavigation, setShowStepNavigation] = useState(false);
+  const [stepNavMode, setStepNavMode] = useState<'all' | 'active' | 'remaining'>('all');
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [showStepInfoModal, setShowStepInfoModal] = useState(false);
+  const [stepInfoModalPosition, setStepInfoModalPosition] = useState({ x: 0, y: 0 });
+  const [pageNumberInput, setPageNumberInput] = useState('');
+
+  // PDF Viewer state (for direct PDF opening from navigation modal)
+  const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [selectedPdfUrl, setSelectedPdfUrl] = useState('');
+  const [selectedPdfTitle, setSelectedPdfTitle] = useState('');
+  const [selectedPdfPage, setSelectedPdfPage] = useState(1);
+
+  // Get filtered steps based on navigation mode
+  const navigationSteps = useMemo(() => {
+    if (stepNavMode === 'all') {
+      return displayedSteps;
+    } else if (stepNavMode === 'active') {
+      return displayedSteps.filter(step => activeWorkSteps.has(step.id));
+    } else {
+      // remaining = incomplete steps
+      return displayedSteps.filter(step => {
+        const completedTasks = step.tasks.filter(t => t.completed).length;
+        const totalTasks = step.tasks.length;
+        return completedTasks < totalTasks;
+      });
+    }
+  }, [displayedSteps, stepNavMode, activeWorkSteps]);
+
   // Handler for long-press to toggle active work state
   const handleToggleActiveWork = useCallback((stepId: string) => {
     console.log('🟢 handleToggleActiveWork called with stepId:', stepId);
 
-    // Find the step to check if it's complete
-    const step = displayedSteps.find(s => s.id === stepId);
-    if (step) {
-      const completedTasks = step.tasks.filter(t => t.completed).length;
-      const totalTasks = step.tasks.length;
-      const isComplete = completedTasks === totalTasks && totalTasks > 0;
-
-      if (isComplete) {
-        console.log('🟢 Step is complete - cannot mark as active work');
-        return; // Don't allow marking completed steps as active work
-      }
-    }
-
+    // ALLOW toggling active work even for completed steps
+    // This is useful when using test completion slider
     setActiveWorkSteps(prev => {
       const newSet = new Set(prev);
       console.log('🟢 Current activeWorkSteps:', Array.from(prev));
@@ -1472,33 +1550,35 @@ function FlowchartEditorInner({
       console.log('🟢 New activeWorkSteps:', Array.from(newSet));
       return newSet;
     });
-  }, [displayedSteps]);
+  }, []);
 
   // Automatically remove completed steps from activeWorkSteps
-  useEffect(() => {
-    setActiveWorkSteps(prev => {
-      const newSet = new Set(prev);
-      let hasChanges = false;
+  // DISABLED: This was causing issues with test completion slider
+  // Let users manually remove steps from active work instead
+  // useEffect(() => {
+  //   setActiveWorkSteps(prev => {
+  //     const newSet = new Set(prev);
+  //     let hasChanges = false;
 
-      // Check each step in activeWorkSteps
-      prev.forEach(stepId => {
-        const step = displayedSteps.find(s => s.id === stepId);
-        if (step) {
-          const completedTasks = step.tasks.filter(t => t.completed).length;
-          const totalTasks = step.tasks.length;
-          const isComplete = completedTasks === totalTasks && totalTasks > 0;
+  //     // Check each step in activeWorkSteps
+  //     prev.forEach(stepId => {
+  //       const step = displayedSteps.find(s => s.id === stepId);
+  //       if (step) {
+  //         const completedTasks = step.tasks.filter(t => t.completed).length;
+  //         const totalTasks = step.tasks.length;
+  //         const isComplete = completedTasks === totalTasks && totalTasks > 0;
 
-          if (isComplete) {
-            console.log('🟢 Auto-removing completed step from active work:', stepId);
-            newSet.delete(stepId);
-            hasChanges = true;
-          }
-        }
-      });
+  //         if (isComplete) {
+  //           console.log('🟢 Auto-removing completed step from active work:', stepId);
+  //           newSet.delete(stepId);
+  //           hasChanges = true;
+  //         }
+  //       }
+  //     });
 
-      return hasChanges ? newSet : prev;
-    });
-  }, [displayedSteps]);
+  //     return hasChanges ? newSet : prev;
+  //   });
+  // }, [displayedSteps]);
 
   // Convert FlowchartStep[] to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
@@ -1615,38 +1695,40 @@ function FlowchartEditorInner({
   }, [initialNodes, setNodes, updateNodeInternals, selectedT1, selectedT2]);
 
   // Update nodes when activeStepIds or activeWorkSteps changes
-  useEffect(() => {
+  // DISABLED: This is redundant because initialNodes already includes activeWorkSteps
+  // Having two useEffects updating nodes simultaneously causes race conditions
+  // useEffect(() => {
 
-    setNodes((currentNodes) => {
-      const updated = currentNodes.map((node) => {
-        if (node.type === 'stepNode') {
-          const isActive = activeStepIds.includes(node.id);
-          const isActiveWork = activeWorkSteps.has(node.id);
-          if (isActive !== node.data.isActive || isActiveWork !== node.data.isActiveWork) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                isActive,
-                isActiveWork
-              }
-            };
-          }
-        }
-        return node;
-      });
-      return updated;
-    });
+  //   setNodes((currentNodes) => {
+  //     const updated = currentNodes.map((node) => {
+  //       if (node.type === 'stepNode') {
+  //         const isActive = activeStepIds.includes(node.id);
+  //         const isActiveWork = activeWorkSteps.has(node.id);
+  //         if (isActive !== node.data.isActive || isActiveWork !== node.data.isActiveWork) {
+  //           return {
+  //             ...node,
+  //             data: {
+  //               ...node.data,
+  //               isActive,
+  //               isActiveWork
+  //             }
+  //           };
+  //         }
+  //       }
+  //       return node;
+  //     });
+  //     return updated;
+  //   });
 
-    // Force React Flow to re-render the updated nodes
-    activeStepIds.forEach((nodeId) => {
-      updateNodeInternals(nodeId);
-    });
-    // Also update active work nodes
-    activeWorkSteps.forEach((nodeId) => {
-      updateNodeInternals(nodeId);
-    });
-  }, [activeStepIds, activeWorkSteps, setNodes, updateNodeInternals]);
+  //   // Force React Flow to re-render the updated nodes
+  //   activeStepIds.forEach((nodeId) => {
+  //     updateNodeInternals(nodeId);
+  //   });
+  //   // Also update active work nodes
+  //   activeWorkSteps.forEach((nodeId) => {
+  //     updateNodeInternals(nodeId);
+  //   });
+  // }, [activeStepIds, activeWorkSteps, setNodes, updateNodeInternals]);
 
 
   // Track if auto-layout has been triggered
@@ -2355,23 +2437,113 @@ function FlowchartEditorInner({
     const node = getNode(stepId);
     if (!node) return;
 
-    // Get node dimensions
-    const nodeWidth = node.width || 300;
-    const nodeHeight = node.height || 200;
+    // Get node dimensions - use actual rendered dimensions if available
+    const nodeWidth = node.measured?.width || node.width || 300;
+    const nodeHeight = node.measured?.height || node.height || 200;
 
     // Calculate zoom level based on node size
-    // Smaller nodes get higher zoom, larger nodes get lower zoom
+    // Zoomed in 1 level from previous (-0.2 adjustment)
     const maxDimension = Math.max(nodeWidth, nodeHeight);
-    let targetZoom = 1.2;
+    let targetZoom = 1.0; // Was 0.8
     if (maxDimension > 600) {
-      targetZoom = 0.8;
+      targetZoom = 0.6; // Was 0.4
     } else if (maxDimension > 400) {
-      targetZoom = 1.0;
+      targetZoom = 0.8; // Was 0.6
     }
 
-    // Center on the node with calculated zoom
-    setCenter(node.position.x + nodeWidth / 2, node.position.y + nodeHeight / 2, { zoom: targetZoom, duration: 600 });
+    // Center on the MIDDLE of the node (position + half width/height)
+    const centerX = node.position.x + nodeWidth / 2;
+    const centerY = node.position.y + nodeHeight / 2;
+
+    setCenter(centerX, centerY, { zoom: targetZoom, duration: 600 });
   }, [getNode, setCenter]);
+
+  // Step navigation handlers (must be AFTER handleZoomToStep)
+  const handlePreviousStep = useCallback(() => {
+    if (navigationSteps.length === 0) return;
+    const newIndex = currentStepIndex === 0 ? navigationSteps.length - 1 : currentStepIndex - 1;
+    setCurrentStepIndex(newIndex);
+    const targetStep = navigationSteps[newIndex];
+    if (targetStep) {
+      handleZoomToStep(targetStep.id);
+
+      // Show info modal to the right of the step
+      const node = getNode(targetStep.id);
+      if (node) {
+        const nodeWidth = node.measured?.width || node.width || 300;
+        setStepInfoModalPosition({
+          x: node.position.x + nodeWidth + 20,
+          y: node.position.y
+        });
+        setShowStepInfoModal(true);
+      }
+    }
+  }, [currentStepIndex, navigationSteps, handleZoomToStep, getNode]);
+
+  const handleNextStep = useCallback(() => {
+    if (navigationSteps.length === 0) return;
+    const newIndex = currentStepIndex === navigationSteps.length - 1 ? 0 : currentStepIndex + 1;
+    setCurrentStepIndex(newIndex);
+    const targetStep = navigationSteps[newIndex];
+    if (targetStep) {
+      handleZoomToStep(targetStep.id);
+
+      // Show info modal to the right of the step
+      const node = getNode(targetStep.id);
+      if (node) {
+        const nodeWidth = node.measured?.width || node.width || 300;
+        setStepInfoModalPosition({
+          x: node.position.x + nodeWidth + 20,
+          y: node.position.y
+        });
+        setShowStepInfoModal(true);
+      }
+    }
+  }, [currentStepIndex, navigationSteps, handleZoomToStep, getNode]);
+
+  // Handler for jumping to specific step by page number
+  const handleJumpToPage = useCallback((pageNumber: number) => {
+    if (navigationSteps.length === 0) return;
+
+    const index = pageNumber - 1; // Convert to 0-based index
+    if (index < 0 || index >= navigationSteps.length) return;
+
+    setCurrentStepIndex(index);
+    const targetStep = navigationSteps[index];
+    if (targetStep) {
+      handleZoomToStep(targetStep.id);
+      const node = getNode(targetStep.id);
+      if (node) {
+        const nodeWidth = node.measured?.width || node.width || 300;
+        setStepInfoModalPosition({
+          x: node.position.x + nodeWidth + 20,
+          y: node.position.y
+        });
+        setShowStepInfoModal(true);
+      }
+    }
+    setPageNumberInput(''); // Clear input after jump
+  }, [navigationSteps, handleZoomToStep, getNode]);
+
+  // Keyboard navigation - Arrow keys
+  useEffect(() => {
+    if (!showStepNavigation || isEditMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePreviousStep();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNextStep();
+      } else if (e.key === 'Escape') {
+        setShowStepInfoModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showStepNavigation, isEditMode, handlePreviousStep, handleNextStep]);
 
   // Expose realign functions to parent
   useEffect(() => {
@@ -2909,7 +3081,10 @@ function FlowchartEditorInner({
         snapToGrid={isEditMode && !freePositioning}
         snapGrid={[gridSize, gridSize]}
         connectionLineStyle={{ stroke: '#6366f1', strokeWidth: 2 }}
-        onPaneClick={() => setSelectedEdge(null)}
+        onPaneClick={() => {
+          setSelectedEdge(null);
+          setShowStepInfoModal(false);
+        }}
         proOptions={{ hideAttribution: true }}
         // Touch device support with viewport lock
         panOnDrag={isViewportLocked ? false : (!isEditMode ? [1, 2] : [1, 2])}
@@ -3139,8 +3314,14 @@ function FlowchartEditorInner({
               {/* Focus Active Work */}
               <button
                 onClick={() => {
+                  console.log('👁️ Active Work Filter clicked!');
+                  console.log('👁️ activeWorkSteps.size:', activeWorkSteps.size);
+                  console.log('👁️ highlightActiveWorkMode:', highlightActiveWorkMode);
                   if (activeWorkSteps.size > 0) {
+                    console.log('👁️ Toggling highlight mode to:', !highlightActiveWorkMode);
                     setHighlightActiveWorkMode(!highlightActiveWorkMode);
+                  } else {
+                    console.log('👁️ No active work steps - button disabled');
                   }
                 }}
                 disabled={activeWorkSteps.size === 0}
@@ -3163,8 +3344,27 @@ function FlowchartEditorInner({
                 {highlightActiveWorkMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
               </button>
 
-              <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
+              {/* Step Navigation Toggle */}
+              <button
+                onClick={() => setShowStepNavigation(!showStepNavigation)}
+                className={cn(
+                  "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
+                  showStepNavigation
+                    ? "bg-gray-600/80 hover:bg-gray-700/80 text-white"
+                    : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
+                )}
+                title={showStepNavigation ? "Hide Step Navigation" : "Show Step Navigation"}
+              >
+                {showStepNavigation ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
 
+              {/* Offline Status */}
+              <OfflineStatusIndicator flowchart={flowchart} steps={steps} side="top" />
+
+              {/* Divider - Separate regular tools from dev tools */}
+              <div className="w-px h-6 bg-gray-600/30 group-hover:bg-gray-600/60 mx-1 transition-all duration-300" />
+
+              {/* Dev Tools Section */}
               {/* Test Completion Slider */}
               <div className="flex items-center gap-1.5 bg-gray-600/10 hover:bg-gray-600/20 px-2 py-1 rounded transition-all duration-300">
                 <input
@@ -3174,12 +3374,13 @@ function FlowchartEditorInner({
                   step="5"
                   value={testCompletionPercent}
                   onChange={(e) => onTestCompletionChange?.(Number(e.target.value))}
-                  className="w-16 h-1 bg-gray-600/30 rounded-lg appearance-none cursor-pointer accent-gray-400"
+                  className="w-16 h-1 bg-gray-600/30 rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: 'rgba(255, 255, 255, 0.6)' }}
                   title="Test completion percentage"
                 />
                 <button
                   onClick={() => onTestCompletion?.()}
-                  className="h-6 px-1.5 text-[10px] font-medium text-white/60 hover:text-white hover:bg-gray-600/20 rounded transition-colors"
+                  className="h-6 px-1.5 text-[10px] font-medium text-white/40 hover:text-white hover:bg-gray-600/20 rounded transition-colors"
                   title={`Complete ${testCompletionPercent}% of tasks`}
                 >
                   Test {testCompletionPercent}%
@@ -3198,14 +3399,304 @@ function FlowchartEditorInner({
               >
                 <Trash2 className="h-4 w-4" />
               </button>
-
-              <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
-
-              {/* Offline Status */}
-              <OfflineStatusIndicator flowchart={flowchart} steps={steps} side="top" />
             </>
           )}
         </div>
+
+        {/* Step Navigation Panel - Compact */}
+        {!isEditMode && showStepNavigation && (
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 bg-gray-800/10 backdrop-blur-md border border-gray-600/10 rounded-lg px-2 py-1.5 shadow-2xl transition-all duration-300 bg-gray-800/80 border-gray-600/50">
+            {/* Mode Selector - Compact color dots */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  setStepNavMode('all');
+                  setCurrentStepIndex(0);
+                }}
+                className={cn(
+                  "h-6 w-6 rounded transition-all duration-300",
+                  stepNavMode === 'all'
+                    ? "bg-gray-500 ring-2 ring-white/60"
+                    : "bg-gray-600/40 hover:bg-gray-500/60"
+                )}
+                title="All steps"
+              />
+              <button
+                onClick={() => {
+                  setStepNavMode('active');
+                  setCurrentStepIndex(0);
+                }}
+                className={cn(
+                  "h-6 w-6 rounded transition-all duration-300",
+                  stepNavMode === 'active'
+                    ? "bg-blue-500 ring-2 ring-white/60"
+                    : "bg-blue-600/40 hover:bg-blue-500/60",
+                  activeWorkSteps.size === 0 && "opacity-30 cursor-not-allowed"
+                )}
+                title="Active work steps"
+                disabled={activeWorkSteps.size === 0}
+              />
+              <button
+                onClick={() => {
+                  setStepNavMode('remaining');
+                  setCurrentStepIndex(0);
+                }}
+                className={cn(
+                  "h-6 w-6 rounded transition-all duration-300",
+                  stepNavMode === 'remaining'
+                    ? "bg-yellow-400 ring-2 ring-white/60"
+                    : "bg-yellow-500/40 hover:bg-yellow-400/60"
+                )}
+                title="Remaining steps"
+              />
+            </div>
+
+            <div className="w-px h-5 bg-white/20" />
+
+            {/* Navigation Controls - Compact */}
+            <button
+              onClick={handlePreviousStep}
+              disabled={navigationSteps.length === 0}
+              className="h-7 w-7 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Previous step"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+
+            <div className="px-2 text-[11px] font-medium text-white/80 min-w-[45px] text-center">
+              {navigationSteps.length > 0 ? `${currentStepIndex + 1}/${navigationSteps.length}` : '0/0'}
+            </div>
+
+            <button
+              onClick={handleNextStep}
+              disabled={navigationSteps.length === 0}
+              className="h-7 w-7 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Next step"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+
+            <div className="w-px h-5 bg-white/20" />
+
+            {/* Page Number Input */}
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={pageNumberInput}
+                onChange={(e) => setPageNumberInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const pageNum = parseInt(pageNumberInput);
+                    if (!isNaN(pageNum)) {
+                      handleJumpToPage(pageNum);
+                    }
+                  }
+                }}
+                placeholder="#"
+                disabled={navigationSteps.length === 0}
+                className="h-7 w-12 bg-white/10 border border-white/20 rounded text-white text-[11px] text-center placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/40 focus:bg-white/15 transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Jump to step number"
+                min="1"
+                max={navigationSteps.length}
+              />
+              <button
+                onClick={() => {
+                  const pageNum = parseInt(pageNumberInput);
+                  if (!isNaN(pageNum)) {
+                    handleJumpToPage(pageNum);
+                  }
+                }}
+                disabled={navigationSteps.length === 0 || !pageNumberInput}
+                className="h-7 px-2 flex items-center justify-center bg-white/10 hover:bg-white/20 text-white rounded text-[10px] font-medium transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Go to step"
+              >
+                Go
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step Info Modal - Appears to the right of current step */}
+        {!isEditMode && showStepInfoModal && navigationSteps.length > 0 && navigationSteps[currentStepIndex] && (
+          <ViewportPortal>
+            <div
+              className="absolute z-20 pointer-events-auto"
+              style={{
+                left: `${stepInfoModalPosition.x}px`,
+                top: `${stepInfoModalPosition.y}px`,
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-gray-800/95 backdrop-blur-md border border-gray-600/50 rounded-lg shadow-2xl p-4 w-[280px] animate-in fade-in slide-in-from-left-2 duration-300">
+                {(() => {
+                  const step = navigationSteps[currentStepIndex];
+                  const completedTasks = step.tasks.filter(t => t.completed).length;
+                  const totalTasks = step.tasks.length;
+                  const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+                  // Calculate target duration
+                  const targetMinutes = step.durationMinutes || 0;
+                  const targetHours = Math.floor(targetMinutes / 60);
+                  const targetMins = targetMinutes % 60;
+                  const targetDurationText = targetHours > 0 ? `${targetHours}h ${targetMins}m` : `${targetMins}m`;
+
+                  // Calculate actual time spent
+                  const actualMinutes = step.tasks.reduce((sum, task) => sum + (task.actualTimeMinutes || 0), 0);
+                  const actualHours = Math.floor(actualMinutes / 60);
+                  const actualMins = actualMinutes % 60;
+                  const actualTimeText = actualHours > 0 ? `${actualHours}h ${actualMins}m` : `${actualMins}m`;
+
+                  // Calculate time variance
+                  const isOvertime = actualMinutes > targetMinutes && targetMinutes > 0;
+                  const isAhead = actualMinutes < targetMinutes && actualMinutes > 0;
+                  const varianceMinutes = Math.abs(actualMinutes - targetMinutes);
+                  const varianceHours = Math.floor(varianceMinutes / 60);
+                  const varianceMins = varianceMinutes % 60;
+                  const varianceText = varianceHours > 0 ? `${varianceHours}h ${varianceMins}m` : `${varianceMins}m`;
+
+                  // Count notes and bugs
+                  const totalNotes = step.tasks.reduce((sum, task) => sum + (task.notes?.length || 0), 0);
+                  const bugs = step.bugs || [];
+
+                  return (
+                    <>
+                      {/* Header */}
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="text-white font-bold text-sm flex-1">
+                          {step.title.split('\n')[0]}
+                        </h3>
+                        <button
+                          onClick={() => setShowStepInfoModal(false)}
+                          className="text-white/60 hover:text-white transition-colors ml-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Progress */}
+                      <div className="mb-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs text-gray-400">Progress</span>
+                          <span className="text-xs font-bold text-white">{completedTasks}/{totalTasks}</span>
+                        </div>
+                        <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              isComplete ? "bg-green-500" : "bg-blue-500"
+                            )}
+                            style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Time Info */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-400">Target Time</span>
+                          <span className="text-xs font-medium text-white">{targetDurationText}</span>
+                        </div>
+                        {actualMinutes > 0 && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs text-gray-400">Actual Time</span>
+                              <span className={cn(
+                                "text-xs font-medium",
+                                isOvertime ? "text-red-400" : isAhead ? "text-green-400" : "text-blue-400"
+                              )}>
+                                {actualTimeText}
+                              </span>
+                            </div>
+                            {targetMinutes > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs text-gray-400">Variance</span>
+                                <span className={cn(
+                                  "text-xs font-bold",
+                                  isOvertime ? "text-red-400" : "text-green-400"
+                                )}>
+                                  {isOvertime ? '+' : '-'}{varianceText}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Notes & Bugs */}
+                      {(totalNotes > 0 || bugs.length > 0) && (
+                        <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-2">
+                          {totalNotes > 0 && (
+                            <div className="flex items-center gap-2">
+                              <StickyNote className="h-3.5 w-3.5 text-yellow-400" />
+                              <span className="text-xs text-gray-300">{totalNotes} note{totalNotes > 1 ? 's' : ''}</span>
+                            </div>
+                          )}
+                          {bugs.length > 0 && (
+                            <div className="flex items-center gap-2">
+                              <Bug className="h-3.5 w-3.5 text-red-400" />
+                              <span className="text-xs text-gray-300">{bugs.length} bug report{bugs.length > 1 ? 's' : ''}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Task Documents - Compact list */}
+                      {step.tasks && step.tasks.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-700/50">
+                          <div className="space-y-1 max-h-[200px] overflow-y-auto">
+                            {step.tasks.map((task, idx) => {
+                              // Extract section reference from task description (e.g., "5.2.1.1")
+                              const sectionMatch = task.description.match(/^([\d.]+)/);
+                              const sectionRef = sectionMatch ? sectionMatch[1] : null;
+
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    // Parse SII reference and open PDF directly
+                                    const ref = parseSIIReference(task.description);
+                                    if (ref) {
+                                      const page = getSectionPage(ref.documentNumber, ref.section);
+                                      console.log('📄 Direct PDF open from nav modal:', {
+                                        documentNumber: ref.documentNumber,
+                                        section: ref.section,
+                                        calculatedPage: page,
+                                        pdfPath: ref.documentPath
+                                      });
+                                      setSelectedPdfUrl(ref.documentPath);
+                                      setSelectedPdfTitle(`Doc ${ref.documentNumber}: ${ref.documentTitle} - § ${ref.section}`);
+                                      setSelectedPdfPage(page);
+                                      setPdfViewerOpen(true);
+                                    }
+
+                                    // Close the info modal
+                                    setShowStepInfoModal(false);
+                                  }}
+                                  className="w-full flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 transition-colors text-left group"
+                                  title={sectionRef ? `Jump to § ${sectionRef} in PDF` : 'Open task'}
+                                >
+                                  <span className="text-[10px] font-mono text-blue-400 flex-shrink-0">
+                                    {sectionRef ? `§ ${sectionRef}` : task.id.split('-').pop()}
+                                  </span>
+                                  <span className="text-[11px] text-gray-300 truncate flex-1 group-hover:text-white">
+                                    {task.description.replace(/^[\d.]+\s*/, '')}
+                                  </span>
+                                  <svg className="h-3 w-3 text-red-400/60 group-hover:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                                  </svg>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </ViewportPortal>
+        )}
 
       </ReactFlow>
 
@@ -3512,6 +4003,15 @@ function FlowchartEditorInner({
           <Button onClick={onAddStep}>Add First Step</Button>
         </div>
       )}
+
+      {/* PDF Viewer Dialog for direct opening from navigation modal */}
+      <PDFViewerDialog
+        open={pdfViewerOpen}
+        onOpenChange={setPdfViewerOpen}
+        pdfUrl={selectedPdfUrl}
+        title={selectedPdfTitle}
+        initialPage={selectedPdfPage}
+      />
       </div>
     </ActiveWorkContext.Provider>
   );

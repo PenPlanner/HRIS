@@ -151,6 +151,7 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
   10: {
     "5": 6,
     "5.2": 10,
+    "5.2.5": 10,  // Spring packs section (approximate, adjust based on actual PDF)
     "6": 15,
     "7": 20,
   },
@@ -186,7 +187,12 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
 
 /**
  * Gets the page number for a specific section in a document
- * Falls back to page 1 if no mapping exists
+ * Uses smart nearest-neighbor algorithm to find best match
+ *
+ * Algorithm:
+ * 1. Try exact match
+ * 2. Try parent sections going backwards (5.2.4.5 -> 5.2.4 -> 5.2 -> 5)
+ * 3. Try finding nearest sibling/child by numeric proximity
  *
  * @param documentNumber - The SII document number (1-15)
  * @param section - The section reference (e.g., "5.1", "5.2.3") or empty string for document title
@@ -195,6 +201,7 @@ export const SII_PAGE_MAPPINGS: Record<number, SectionPageMapping> = {
 export function getSectionPage(documentNumber: number, section: string): number {
   const mapping = SII_PAGE_MAPPINGS[documentNumber];
   if (!mapping) {
+    console.log(`⚠️ No mapping found for document ${documentNumber}`);
     return 1; // Default to first page if no mapping
   }
 
@@ -206,23 +213,79 @@ export function getSectionPage(documentNumber: number, section: string): number 
   // Clean section by removing special suffixes like "i2" from "5.2.7i2"
   const cleanedSection = section.replace(/[a-z]\d+$/, '');
 
-  // Try exact match first (both original and cleaned)
+  // STEP 1: Try exact match first (both original and cleaned)
   if (mapping[section]) {
+    console.log(`✅ Exact match: "${section}" -> page ${mapping[section]}`);
     return mapping[section];
   }
   if (cleanedSection !== section && mapping[cleanedSection]) {
+    console.log(`✅ Cleaned match: "${cleanedSection}" -> page ${mapping[cleanedSection]}`);
     return mapping[cleanedSection];
   }
 
-  // Try parent sections (e.g., "5.2.3" -> "5.2" -> "5")
+  // STEP 2: Try parent sections going backwards (e.g., "5.2.4.5" -> "5.2.4" -> "5.2" -> "5")
   const parts = cleanedSection.split('.');
   for (let i = parts.length - 1; i > 0; i--) {
     const parentSection = parts.slice(0, i).join('.');
     if (mapping[parentSection]) {
+      console.log(`✅ Parent match: "${cleanedSection}" -> "${parentSection}" -> page ${mapping[parentSection]}`);
       return mapping[parentSection];
     }
   }
 
+  // STEP 3: Smart nearest-neighbor search
+  // Find sections with matching prefix and closest numeric value
+  const availableSections = Object.keys(mapping);
+
+  // Try each level from most specific to least specific
+  for (let prefixLen = parts.length; prefixLen > 0; prefixLen--) {
+    const prefix = parts.slice(0, prefixLen).join('.');
+
+    // Find all sections that start with this prefix
+    const candidates = availableSections
+      .filter(s => s.startsWith(prefix + '.') || s === prefix)
+      .map(s => {
+        const sParts = s.split('.').map(Number);
+        const targetParts = parts.map(Number);
+
+        // Calculate numeric distance (sum of differences at each level)
+        let distance = 0;
+        for (let i = 0; i < Math.max(sParts.length, targetParts.length); i++) {
+          const a = sParts[i] || 0;
+          const b = targetParts[i] || 0;
+          distance += Math.abs(a - b);
+        }
+
+        return { section: s, distance, page: mapping[s] };
+      })
+      .sort((a, b) => a.distance - b.distance); // Sort by distance
+
+    if (candidates.length > 0) {
+      const nearest = candidates[0];
+      console.log(`✅ Nearest neighbor: "${cleanedSection}" -> "${nearest.section}" (distance: ${nearest.distance}) -> page ${nearest.page}`);
+      return nearest.page;
+    }
+  }
+
+  // STEP 4: Last resort - find the section with closest first number
+  const firstNum = parseInt(parts[0]);
+  if (!isNaN(firstNum)) {
+    const closestSection = availableSections
+      .map(s => ({
+        section: s,
+        firstNum: parseInt(s.split('.')[0]),
+        page: mapping[s]
+      }))
+      .filter(item => !isNaN(item.firstNum))
+      .sort((a, b) => Math.abs(a.firstNum - firstNum) - Math.abs(b.firstNum - firstNum))[0];
+
+    if (closestSection) {
+      console.log(`✅ Closest section by first number: "${cleanedSection}" -> "${closestSection.section}" -> page ${closestSection.page}`);
+      return closestSection.page;
+    }
+  }
+
+  console.log(`⚠️ No match found for "${section}" in doc ${documentNumber}, defaulting to page 6`);
   // Default to first content page (usually page 6 after covers/TOC)
   return 6;
 }

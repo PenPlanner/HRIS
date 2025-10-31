@@ -250,11 +250,59 @@ export function StepDetailDrawer({
   // Open PDF viewer with specific section
   const openPdfViewer = (reference: SIIReference) => {
     const page = getSectionPage(reference.documentNumber, reference.section);
+    console.log('📄 Opening PDF:', {
+      documentNumber: reference.documentNumber,
+      section: reference.section,
+      calculatedPage: page,
+      pdfPath: reference.documentPath
+    });
     setSelectedPdfUrl(reference.documentPath);
     setSelectedPdfTitle(`Doc ${reference.documentNumber}: ${reference.documentTitle} - § ${reference.section}`);
     setSelectedPdfPage(page);
     setPdfViewerOpen(true);
   };
+
+  // Auto-open PDF when drawer opens from navigation modal
+  useEffect(() => {
+    if (!open || !step) return;
+
+    const autoOpenPdf = sessionStorage.getItem('autoOpenPdf');
+    const targetTaskId = sessionStorage.getItem('targetTaskId');
+
+    console.log('🔍 Auto-open PDF check:', { autoOpenPdf, targetTaskId, open, hasStep: !!step });
+
+    if (autoOpenPdf === 'true' && targetTaskId) {
+      // Clear the flags
+      sessionStorage.removeItem('autoOpenPdf');
+      sessionStorage.removeItem('targetTaskId');
+
+      // Find the target task
+      const task = step.tasks.find(t => t.id === targetTaskId);
+      console.log('🔍 Found task:', task?.id, task?.description?.substring(0, 50));
+
+      if (task && task.description && typeof task.description === 'string' && task.description.trim()) {
+        try {
+          // Extract section reference from task description using parseSIIReference
+          const ref = parseSIIReference(task.description);
+          console.log('🔍 Extracted ref:', ref);
+
+          if (ref) {
+            // Open PDF with the reference - increase delay
+            setTimeout(() => {
+              console.log('🔍 Opening PDF viewer with ref:', ref);
+              openPdfViewer(ref);
+            }, 800); // Increased delay to let drawer fully render
+          } else {
+            console.log('⚠️ No SII reference found in task description:', task.description);
+          }
+        } catch (error) {
+          console.error('❌ Error extracting SII reference:', error);
+        }
+      } else {
+        console.log('⚠️ Task not found or has no description');
+      }
+    }
+  }, [open, step]);
 
   // Guard against null step
   if (!step) {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useGitCommit } from "@/hooks/use-git-commit";
 
 // Preset users for demo
 const PRESET_USERS = [
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState(false);
+  const { latestCommit } = useGitCommit({ refreshInterval: 30000 }); // Auto-refresh every 30s
 
   useEffect(() => {
     const authToken = localStorage.getItem("auth-token");
@@ -212,14 +214,16 @@ export default function LoginPage() {
       <div className="absolute bottom-6 right-6 opacity-40 hover:opacity-100 transition-opacity duration-300 group">
         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/40 rounded border border-slate-700/30 backdrop-blur-sm cursor-pointer">
           <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-          <p className="text-[10px] text-slate-400 font-mono">22d8104</p>
+          <p className="text-[10px] text-slate-400 font-mono">{latestCommit?.hash || 'Loading...'}</p>
         </div>
         {/* Tooltip */}
-        <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-          <div className="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-slate-700">
-            2025-10-30 20:39
+        {latestCommit && (
+          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-slate-700">
+              {latestCommit.date}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Success Message */}

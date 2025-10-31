@@ -1,14 +1,22 @@
 "use client"
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Info, CheckCircle, Sparkles, Bug as BugIcon, Zap, Package } from "lucide-react";
+import { Info, CheckCircle, Sparkles, Bug as BugIcon, Zap, Package, GitCommit } from "lucide-react";
+import { useGitCommit } from "@/hooks/use-git-commit";
 
 interface VersionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface GitCommit {
+  hash: string;
+  message: string;
+  relativeTime: string;
+  date: string;
 }
 
 const APP_VERSION = "1.4.0";
@@ -95,6 +103,8 @@ const versionHistory = [
 ];
 
 export function VersionDialog({ open, onOpenChange }: VersionDialogProps) {
+  const { allCommits: commits, loading: loadingCommits } = useGitCommit({ refreshInterval: 30000 });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
@@ -127,6 +137,45 @@ export function VersionDialog({ open, onOpenChange }: VersionDialogProps) {
             <p className="text-sm text-muted-foreground">
               The latest and most advanced version of the HRIS Flowchart Manager with comprehensive bug tracking, WTG management, and modern UI enhancements.
             </p>
+          </div>
+
+          {/* Recent Git Commits */}
+          <div>
+            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+              <GitCommit className="h-5 w-5" />
+              Recent Changes
+            </h3>
+            {loadingCommits ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : commits.length > 0 ? (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                {commits.map((commit, index) => (
+                  <div
+                    key={commit.hash}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                        <GitCommit className="h-3 w-3 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <code className="text-xs font-mono text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded">
+                          {commit.hash}
+                        </code>
+                        <span className="text-xs text-muted-foreground">{commit.relativeTime}</span>
+                      </div>
+                      <p className="text-sm text-gray-900 dark:text-gray-100">{commit.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No recent commits available</p>
+            )}
           </div>
 
           {/* Version History */}
