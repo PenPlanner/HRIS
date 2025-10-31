@@ -3,75 +3,56 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { User, Lock, Loader2, Cpu } from "lucide-react";
+import { User, Lock, Loader2, Cpu, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useGitCommit } from "@/hooks/use-git-commit";
-
-// Preset users for demo
-const PRESET_USERS = [
-  { username: "Lean", password: "Lean2026", role: "technician", name: "Lean Andersson" },
-  { username: "Admin", password: "Admin2026", role: "admin", name: "Admin User" },
-  { username: "Demo", password: "Demo2026", role: "viewer", name: "Demo User" },
-];
+import { useAuth } from "@/lib/auth/hooks";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const { signIn, signUp, user } = useAuth();
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const { latestCommit } = useGitCommit({ refreshInterval: 30000 }); // Auto-refresh every 30s
+  const { latestCommit } = useGitCommit({ refreshInterval: 30000 });
 
+  // Redirect if already logged in
   useEffect(() => {
-    const authToken = localStorage.getItem("auth-token");
-    if (authToken) {
+    if (user) {
       router.push("/");
     }
-  }, [router]);
+  }, [user, router]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (isSignUp) {
+        await signUp(email, password, fullName);
+        setError("Konto skapat! Kolla din e-post för verifiering.");
+        setIsLoading(false);
+      } else {
+        await signIn(email, password);
+        setLoginSuccess(true);
 
-    const user = PRESET_USERS.find(
-      u => u.username.toLowerCase() === username.toLowerCase() &&
-          u.password === password
-    );
-
-    if (user) {
-      setLoginSuccess(true);
-
-      const authData = {
-        token: btoa(`${user.username}:${Date.now()}`),
-        user: {
-          username: user.username,
-          name: user.name,
-          role: user.role,
-        },
-        timestamp: Date.now(),
-      };
-
-      localStorage.setItem("auth-token", authData.token);
-      localStorage.setItem("auth-user", JSON.stringify(authData.user));
-      document.cookie = `auth-token=${authData.token}; path=/; max-age=${rememberMe ? 604800 : 86400}`;
-
-      if (rememberMe) {
-        localStorage.setItem("remember-me", "true");
+        setTimeout(() => {
+          router.push("/");
+        }, 1500);
       }
-
-      setTimeout(() => {
-        router.push("/");
-      }, 1500);
-    } else {
-      setError("Invalid username or password");
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      setError(err.message || "Ett fel uppstod. Försök igen.");
       setIsLoading(false);
     }
   };
@@ -92,25 +73,44 @@ export default function LoginPage() {
             <p className="text-sm text-slate-400">Please sign in to your account</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Message */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2">
-                <p className="text-xs text-red-400 text-center">{error}</p>
+              <div className={`${error.includes('skapat') ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'} border rounded-lg p-2`}>
+                <p className={`text-xs ${error.includes('skapat') ? 'text-green-400' : 'text-red-400'} text-center`}>{error}</p>
               </div>
             )}
 
-            {/* Username */}
+            {/* Full Name (Sign Up Only) */}
+            {isSignUp && (
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName" className="text-sm text-slate-300 font-medium">Full Name</Label>
+                <div className="relative">
+                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="pl-9 h-10 text-sm bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Email */}
             <div className="space-y-1.5">
-              <Label htmlFor="username" className="text-sm text-slate-300 font-medium">Username</Label>
+              <Label htmlFor="email" className="text-sm text-slate-300 font-medium">Email</Label>
               <div className="relative">
-                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Mail className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="din@email.se"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-9 h-10 text-sm bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/50"
                   disabled={isLoading}
                   required
@@ -136,8 +136,8 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
+            {/* Remember Me (Sign In Only) */}
+            {!isSignUp && (
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
@@ -150,27 +150,48 @@ export default function LoginPage() {
                   Remember me
                 </Label>
               </div>
-              <a href="#" className="text-xs text-blue-400 hover:text-blue-300 hover:underline font-medium transition-all duration-200">
-                Forgot password?
-              </a>
-            </div>
+            )}
 
-            {/* Sign In Button */}
+            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full h-10 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 hover:scale-105 text-white font-semibold text-sm shadow-lg hover:shadow-2xl transition-all duration-300"
-              disabled={isLoading || !username || !password}
+              disabled={isLoading || !email || !password}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  {isSignUp ? "Creating account..." : "Signing in..."}
                 </>
               ) : (
-                "Sign In"
+                isSignUp ? "Create Account" : "Sign In"
               )}
             </Button>
           </form>
+
+          {/* Toggle Sign In/Sign Up */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError('');
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300 hover:underline font-medium transition-all duration-200"
+            >
+              {isSignUp
+                ? 'Already have an account? Sign In'
+                : 'Need an account? Sign Up'}
+            </button>
+          </div>
+
+          {/* Info for first user */}
+          {isSignUp && (
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <p className="text-xs text-blue-300">
+                <strong>OBS:</strong> First user becomes Super Admin with full access!
+              </p>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="mt-6 text-center text-xs text-slate-500">
