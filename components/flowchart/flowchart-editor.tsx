@@ -1308,9 +1308,8 @@ interface CommitNodeProps extends NodeProps {
 function CommitNode({ data }: CommitNodeProps) {
   const { isEditMode } = data;
   const [isOpen, setIsOpen] = useState(false);
-  const { latestCommit: latest, allCommits, loading } = useGitCommit({ refreshInterval: 30000 });
+  const { latestCommit: latest, allCommits, loading, error } = useGitCommit({ refreshInterval: 30000 });
 
-  const latestCommit = latest || { hash: 'Loading...', date: '' };
   const commits = allCommits;
 
   return (
@@ -1318,11 +1317,15 @@ function CommitNode({ data }: CommitNodeProps) {
       <PopoverTrigger asChild>
         <div className={`relative opacity-30 hover:opacity-100 transition-opacity duration-300 group pointer-events-auto ${isEditMode ? 'cursor-move' : 'cursor-pointer'}`}>
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-            <p className="text-[10px] text-slate-400 font-mono">{latestCommit.hash}</p>
+            <div className={`h-1.5 w-1.5 rounded-full ${error ? 'bg-red-400' : loading ? 'bg-yellow-400' : 'bg-green-400'} animate-pulse`} />
+            <p className="text-[10px] text-slate-400 font-mono">
+              {error ? 'Error' : loading ? 'Loading...' : latest?.hash || 'N/A'}
+            </p>
           </div>
           <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-            <p className="text-[10px] text-slate-500 font-mono">{latestCommit.date}</p>
+            <p className="text-[10px] text-slate-500 font-mono">
+              {error ? 'Failed to load' : loading ? '' : latest?.date || ''}
+            </p>
           </div>
           {isEditMode && (
             <div className="absolute -top-6 left-0 bg-green-500/80 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap">

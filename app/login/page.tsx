@@ -25,7 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const { latestCommit } = useGitCommit({ refreshInterval: 30000 }); // Auto-refresh every 30s
+  const { latestCommit, loading: commitLoading, error: commitError } = useGitCommit({ refreshInterval: 30000 }); // Auto-refresh every 30s
 
   useEffect(() => {
     const authToken = localStorage.getItem("auth-token");
@@ -213,14 +213,23 @@ export default function LoginPage() {
       {/* Git Commit Hash - Bottom Right */}
       <div className="absolute bottom-6 right-6 opacity-40 hover:opacity-100 transition-opacity duration-300 group">
         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-800/40 rounded border border-slate-700/30 backdrop-blur-sm cursor-pointer">
-          <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-          <p className="text-[10px] text-slate-400 font-mono">{latestCommit?.hash || 'Loading...'}</p>
+          <div className={`h-1.5 w-1.5 rounded-full ${commitError ? 'bg-red-400' : commitLoading ? 'bg-yellow-400' : 'bg-green-400'} animate-pulse`} />
+          <p className="text-[10px] text-slate-400 font-mono">
+            {commitError ? 'Error' : commitLoading ? 'Loading...' : latestCommit?.hash || 'N/A'}
+          </p>
         </div>
         {/* Tooltip */}
-        {latestCommit && (
+        {latestCommit && !commitError && (
           <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
             <div className="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-slate-700">
               {latestCommit.date}
+            </div>
+          </div>
+        )}
+        {commitError && (
+          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+            <div className="bg-red-800 text-red-200 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-red-700">
+              Failed to load commits
             </div>
           </div>
         )}

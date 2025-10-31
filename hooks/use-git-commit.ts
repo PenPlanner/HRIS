@@ -31,6 +31,7 @@ export function useGitCommit(options: UseGitCommitOptions = {}) {
       if (!contentType || !contentType.includes('application/json')) {
         console.warn('Git commits API returned non-JSON response, skipping...');
         setError('API returned non-JSON response');
+        setLoading(false);
         return;
       }
 
@@ -40,13 +41,14 @@ export function useGitCommit(options: UseGitCommitOptions = {}) {
         setLatestCommit(data.commits[0]);
         setAllCommits(data.commits);
         setError(null);
+        setLoading(false);
       } else {
         setError('No commits found');
+        setLoading(false);
       }
     } catch (err) {
       console.warn('Error fetching git commits (non-critical):', err instanceof Error ? err.message : err);
       setError('Failed to fetch commits');
-    } finally {
       setLoading(false);
     }
   };
