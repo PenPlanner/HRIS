@@ -1877,43 +1877,43 @@ ${fullLayoutData.map(step =>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Multi Row Layout */}
+        {/* Header - Compact Layout for iPad */}
         {!isFullscreen && (
-        <div className="border-b px-4 py-2.5 bg-background/95 backdrop-blur-sm">
+        <div className="border-b px-4 py-1.5 bg-background/95 backdrop-blur-sm">
           {/* Row 1: Back, Model name, WTG, Year, Flow-ID, Controls/Search */}
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-2">
             {/* Left: Back button, Model name, WTG, Year, Flow-ID */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {/* Back button */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/flowcharts")}
-                className="h-8 px-2"
+                className="h-7 px-2"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3.5 w-3.5" />
               </Button>
 
               {/* Model name and revision */}
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold">{flowchartData.model}</h1>
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-base font-bold">{flowchartData.model}</h1>
                 {flowchartData.isCustom && (
-                  <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">Custom</Badge>
                 )}
                 <button
                   onClick={() => setRevisionHistoryOpen(true)}
-                  className="text-sm text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                  className="text-xs text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
                 >
                   Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
                 </button>
               </div>
 
               {/* Divider */}
-              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
 
               {/* WTG Number Input */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground font-medium">WTG:</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">WTG:</span>
                 <input
                   type="text"
                   value={wtgNumber}
@@ -1923,13 +1923,13 @@ ${fullLayoutData.map(step =>
                   }}
                   placeholder="81309"
                   maxLength={6}
-                  className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  className="w-[50px] h-7 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center touch-manipulation"
                 />
               </div>
 
               {/* Year Input */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground font-medium">Year:</span>
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground font-medium">Year:</span>
                 <input
                   type="text"
                   value={makeYear}
@@ -1939,33 +1939,33 @@ ${fullLayoutData.map(step =>
                   }}
                   placeholder="2024"
                   maxLength={4}
-                  className="w-[45px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  className="w-[45px] h-7 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center touch-manipulation"
                 />
               </div>
 
               {/* Flow-ID Input (same style as WTG and Year) */}
               {flowchartData.flowchartId && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground font-medium">Flow-ID:</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">Flow-ID:</span>
                   <input
                     type="text"
                     value={flowchartData.flowchartId}
                     readOnly
-                    className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-not-allowed"
+                    className="w-[50px] h-7 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-not-allowed"
                   />
                 </div>
               )}
 
               {/* Divider */}
-              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+              <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
 
               {/* Technician Assignment (T1/T2/T3) */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <Users className="h-3 w-3 text-muted-foreground" />
                 <button
                   onClick={() => openTechnicianModal('global')}
                   className={cn(
-                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                    "h-7 px-2 text-[10px] font-bold rounded transition-colors whitespace-nowrap touch-manipulation",
                     selectedT1
                       ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
                       : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
@@ -1973,11 +1973,11 @@ ${fullLayoutData.map(step =>
                 >
                   T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
                 </button>
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground text-xs">/</span>
                 <button
                   onClick={() => openTechnicianModal('global')}
                   className={cn(
-                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                    "h-7 px-2 text-[10px] font-bold rounded transition-colors whitespace-nowrap touch-manipulation",
                     selectedT2
                       ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
                       : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
@@ -1985,17 +1985,17 @@ ${fullLayoutData.map(step =>
                 >
                   T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
                 </button>
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground text-xs">/</span>
                 <button
                   onClick={() => openTechnicianModal('global')}
                   className={cn(
-                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
+                    "h-7 px-2 text-[10px] font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1 touch-manipulation",
                     selectedT3
                       ? "bg-green-500 hover:bg-green-600 text-white border-0"
                       : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
                   )}
                 >
-                  <GraduationCap className="h-3 w-3" />
+                  <GraduationCap className="h-2.5 w-2.5" />
                   T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
                 </button>
               </div>
@@ -2003,95 +2003,87 @@ ${fullLayoutData.map(step =>
 
             {/* Right: Controls */}
             {isEditMode ? (
-              <div className="flex flex-col gap-1">
-                {/* Row 1: Add, Import, Export */}
-                <div className="flex items-center gap-1.5">
-                  <Button variant="outline" size="sm" onClick={handleAddStep} className="h-7">
-                    <Plus className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">Add</span>
-                  </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={handleAddStep} className="h-7 px-2 touch-manipulation">
+                  <Plus className="h-3 w-3 mr-1" />
+                  <span className="text-[10px]">Add</span>
+                </Button>
 
-                  <Button variant="outline" size="sm" onClick={() => setPdfImportOpen(true)} className="h-7">
-                    <FileUp className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">Import</span>
-                  </Button>
+                <Button variant="outline" size="sm" onClick={() => setPdfImportOpen(true)} className="h-7 px-2 touch-manipulation">
+                  <FileUp className="h-3 w-3 mr-1" />
+                  <span className="text-[10px]">Import</span>
+                </Button>
 
-                  <Button variant="outline" size="sm" onClick={handleExportFlowchart} className="h-7">
-                    <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">Export</span>
-                  </Button>
+                <Button variant="outline" size="sm" onClick={handleExportFlowchart} className="h-7 px-2 touch-manipulation">
+                  <FileDown className="h-3 w-3 mr-1" />
+                  <span className="text-[10px]">Export</span>
+                </Button>
 
-                  {/* Divider */}
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportToCode}
+                  className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300 touch-manipulation"
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  <span className="text-[10px]">Save</span>
+                </Button>
 
-                {/* Row 2: Save Layout, Layout, View */}
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportToCode}
-                    className="h-7 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-300"
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">Save Layout</span>
-                  </Button>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300"
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-300 touch-manipulation"
+                    >
+                      <Grid3x3 className="h-3 w-3 mr-1" />
+                      <span className="text-[10px]">Layout</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-40 p-2">
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => {
+                          setLayoutMode('topdown');
+                          if ((window as any).__flowchartRealignToGridTopDown) {
+                            (window as any).__flowchartRealignToGridTopDown();
+                            setToastMessage("Top-Down layout applied!");
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 2000);
+                          }
+                        }}
+                        className={cn(
+                          "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
+                          layoutMode === 'topdown' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                        )}
                       >
-                        <Grid3x3 className="h-3.5 w-3.5 mr-1.5" />
-                        <span className="text-xs">Layout</span>
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-40 p-2">
-                      <div className="space-y-1">
-                        <button
-                          onClick={() => {
-                            setLayoutMode('topdown');
-                            if ((window as any).__flowchartRealignToGridTopDown) {
-                              (window as any).__flowchartRealignToGridTopDown();
-                              setToastMessage("Top-Down layout applied!");
-                              setShowToast(true);
-                              setTimeout(() => setShowToast(false), 2000);
-                            }
-                          }}
-                          className={cn(
-                            "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
-                            layoutMode === 'topdown' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
-                          )}
-                        >
-                          Top-Down
-                        </button>
-                        <button
-                          onClick={() => {
-                            setLayoutMode('centered');
-                            if ((window as any).__flowchartRealignToGridCentered) {
-                              (window as any).__flowchartRealignToGridCentered();
-                              setToastMessage("Centered layout applied!");
-                              setShowToast(true);
-                              setTimeout(() => setShowToast(false), 2000);
-                            }
-                          }}
-                          className={cn(
-                            "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
-                            layoutMode === 'centered' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
-                          )}
-                        >
-                          Centered
-                        </button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                        Top-Down
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLayoutMode('centered');
+                          if ((window as any).__flowchartRealignToGridCentered) {
+                            (window as any).__flowchartRealignToGridCentered();
+                            setToastMessage("Centered layout applied!");
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 2000);
+                          }
+                        }}
+                        className={cn(
+                          "w-full px-2 py-1.5 text-xs text-left rounded hover:bg-gray-100 dark:hover:bg-gray-800",
+                          layoutMode === 'centered' && "bg-blue-50 dark:bg-blue-950 text-blue-600 font-medium"
+                        )}
+                      >
+                        Centered
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
-                  <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-7">
-                    <Eye className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">View</span>
-                  </Button>
-                </div>
+                <Button variant="outline" size="sm" onClick={toggleEditMode} className="h-7 px-2 touch-manipulation">
+                  <Eye className="h-3 w-3 mr-1" />
+                  <span className="text-[10px]">View</span>
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
@@ -2101,13 +2093,13 @@ ${fullLayoutData.map(step =>
 
           {/* Row 2: Start Service button or Job Tracking Display + Controls */}
           {!isEditMode && (
-            <div className="flex items-center gap-3 ml-11 mt-0.5">
+            <div className="flex items-center gap-2 ml-9 mt-1">
               {!jobStarted ? (
                 /* Before Service Start */
                 <Button
                   onClick={handleStartService}
                   size="sm"
-                  className="h-10 px-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md touch-manipulation"
+                  className="h-8 px-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md touch-manipulation"
                 >
                   <span className="text-xs font-semibold">Start Service</span>
                 </Button>
@@ -2117,13 +2109,13 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-10 px-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white cursor-default opacity-100 animate-pulse shadow-lg shadow-yellow-500/50 touch-manipulation"
+                    className="h-8 px-3 bg-gradient-to-r from-yellow-500 to-amber-500 text-white cursor-default opacity-100 animate-pulse shadow-lg shadow-yellow-500/50 touch-manipulation"
                   >
                     <span className="text-xs font-semibold">In Progress</span>
                   </Button>
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
-                    <span className="text-xs text-muted-foreground">Started:</span>
-                    <span className="text-xs font-mono font-semibold">
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
+                    <span className="text-[10px] text-muted-foreground">Started:</span>
+                    <span className="text-[10px] font-mono font-semibold">
                       {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
                       {new Date(jobStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -2131,13 +2123,13 @@ ${fullLayoutData.map(step =>
                   </div>
                   {selectedServiceType && selectedServiceType !== 'all' && (
                     <div
-                      className="px-2 py-1 rounded-md shadow-sm"
+                      className="px-2 py-0.5 rounded-md shadow-sm"
                       style={{
                         backgroundColor: SERVICE_TYPE_COLORS[selectedServiceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS["1Y"],
                         color: selectedServiceType === "7Y" || selectedServiceType === "10Y" ? "#000000" : "#FFFFFF"
                       }}
                     >
-                      <span className="text-xs font-bold">{selectedServiceType}</span>
+                      <span className="text-[10px] font-bold">{selectedServiceType}</span>
                     </div>
                   )}
                 </>
@@ -2147,21 +2139,21 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-10 px-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100 touch-manipulation"
+                    className="h-8 px-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100 touch-manipulation"
                   >
                     <span className="text-xs font-semibold">✓ Completed</span>
                   </Button>
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
-                    <span className="text-xs text-muted-foreground">Started:</span>
-                    <span className="text-xs font-mono font-semibold">
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
+                    <span className="text-[10px] text-muted-foreground">Started:</span>
+                    <span className="text-[10px] font-mono font-semibold">
                       {new Date(jobStarted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
                       {new Date(jobStarted).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700 rounded-md">
-                    <span className="text-xs text-green-700 dark:text-green-300">Finished:</span>
-                    <span className="text-xs font-mono font-semibold text-green-700 dark:text-green-300">
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-700 rounded-md">
+                    <span className="text-[10px] text-green-700 dark:text-green-300">Finished:</span>
+                    <span className="text-[10px] font-mono font-semibold text-green-700 dark:text-green-300">
                       {new Date(jobFinished).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       {' '}
                       {new Date(jobFinished).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })}
@@ -2169,13 +2161,13 @@ ${fullLayoutData.map(step =>
                   </div>
                   {selectedServiceType && selectedServiceType !== 'all' && (
                     <div
-                      className="px-2 py-1 rounded-md shadow-sm"
+                      className="px-2 py-0.5 rounded-md shadow-sm"
                       style={{
                         backgroundColor: SERVICE_TYPE_COLORS[selectedServiceType as keyof typeof SERVICE_TYPE_COLORS] || SERVICE_TYPE_COLORS["1Y"],
                         color: selectedServiceType === "7Y" || selectedServiceType === "10Y" ? "#000000" : "#FFFFFF"
                       }}
                     >
-                      <span className="text-xs font-bold">{selectedServiceType}</span>
+                      <span className="text-[10px] font-bold">{selectedServiceType}</span>
                     </div>
                   )}
                 </>
@@ -2202,7 +2194,7 @@ ${fullLayoutData.map(step =>
 
         {/* Search Bar - Centered below header */}
         {!isFullscreen && (
-          <div className="absolute z-50 left-1/2 top-[78px] -translate-x-1/2 group">
+          <div className="absolute z-50 left-1/2 top-[62px] -translate-x-1/2 group">
             <div className="bg-gray-800/10 hover:bg-gray-800/80 focus-within:bg-gray-800/80 backdrop-blur-sm border border-gray-700/10 hover:border-gray-700/50 focus-within:border-gray-700/50 rounded-lg p-1.5 shadow-lg transition-all duration-300">
               <FlowchartSearch
                 steps={steps}
