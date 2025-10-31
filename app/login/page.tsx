@@ -85,7 +85,7 @@ export default function LoginPage() {
           ${error ? 'animate-shake' : ''}
           ${loginSuccess ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}
         `}>
-          <div className="mb-6">
+          <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold text-white mb-1">Welcome to Flowy</h1>
             <p className="text-sm text-slate-400">Please sign in to your account</p>
           </div>
@@ -175,6 +175,14 @@ export default function LoginPage() {
             <p>Built with love for wind turbine technicians</p>
             <p className="mt-1">&copy; 2025 Flowy. All rights reserved.</p>
           </div>
+
+          {/* Powered by MarkOS */}
+          <div className="mt-4 flex justify-center opacity-70 hover:opacity-100 transition-all duration-300">
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-slate-800/50 to-slate-700/50 rounded-full border border-slate-600/30 backdrop-blur-md hover:scale-110 hover:border-blue-500/50 transition-all duration-300 cursor-pointer">
+              <Cpu className="h-3.5 w-3.5 text-blue-400 hover:rotate-180 transition-transform duration-500" />
+              <p className="text-xs text-slate-300 font-medium">Powered by <span className="text-blue-400">MarkOS</span></p>
+            </div>
+          </div>
         </div>
 
         {/* Logo - Right Side */}
@@ -189,42 +197,14 @@ export default function LoginPage() {
               className="w-full h-auto drop-shadow-2xl hover:drop-shadow-[0_20px_50px_rgba(59,130,246,0.5)] transition-all duration-500"
             />
           </div>
-          <div className="space-y-3 max-w-md px-8 -mt-40">
+          <div className="space-y-3 max-w-md px-8 -mt-20">
             <p className="text-lg text-slate-300 font-medium text-center">
               Smart flowcharts for wind turbine service
             </p>
             <p className="text-sm text-slate-500 text-center">
               Intelligent step-by-step smart guidance for your maintenance workflow
             </p>
-            <div className="space-y-1.5 pt-2 text-left">
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • From laminated PDFs to digital smart workflows
-              </p>
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • Real-time progress tracking across teams
-              </p>
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • Know exactly where you are in the service flow
-              </p>
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • Target vs actual time comparison live
-              </p>
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • Visual timeline shows if you're ahead or behind
-              </p>
-              <p className="text-sm text-slate-400 hover:text-blue-400 hover:translate-x-2 transition-all duration-300 cursor-pointer">
-                • Dynamic technician assignments and scheduling
-              </p>
-            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Powered by MarkOS - Bottom Center */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 opacity-70 hover:opacity-100 transition-all duration-300">
-        <div className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-slate-800/50 to-slate-700/50 rounded-full border border-slate-600/30 backdrop-blur-md hover:scale-110 hover:border-blue-500/50 transition-all duration-300 cursor-pointer">
-          <Cpu className="h-3.5 w-3.5 text-blue-400 hover:rotate-180 transition-transform duration-500" />
-          <p className="text-xs text-slate-300 font-medium">Powered by <span className="text-blue-400">MarkOS</span></p>
         </div>
       </div>
 

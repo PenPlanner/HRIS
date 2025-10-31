@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,6 +143,9 @@ export default function FlowchartViewerPage() {
   // State for active/current steps (steps being worked on)
   const [activeStepIds, setActiveStepIds] = useState<string[]>([]);
 
+  // Ref to store flowchart ID for stable reference in callbacks
+  const flowchartIdRef = useRef<string | undefined>(undefined);
+
   // Auto-hide Progress Tracker when entering Edit Mode
   useEffect(() => {
     if (isEditMode) {
@@ -216,6 +220,7 @@ export default function FlowchartViewerPage() {
     }
     const flowchart = model.flowcharts.find(f => f.id === serviceId);
     setFlowchartData(flowchart || null);
+    flowchartIdRef.current = flowchart?.id;
     setIsLoading(false);
 
     // DEBUG: Log what's in flowchartData
@@ -1276,12 +1281,22 @@ export default function FlowchartViewerPage() {
   };
 
   // Clear cache and reload page
-  const handleClearCache = () => {
+  const handleClearCache = useCallback(() => {
+    console.log('🗑️ Clear Cache button clicked');
+
+    // Confirm with user
+    if (!confirm('Clear all cache and reload? This will reset all progress, technicians, and settings.')) {
+      console.log('🗑️ User cancelled cache clear');
+      return;
+    }
+
+    console.log('🗑️ User confirmed - clearing cache...');
+
     // Clear ALL localStorage keys for this flowchart
     const storageKey = `flowchart_${modelId}_${serviceId}`;
     const defaultLayoutKey = `default-layout-${serviceId}`;
-    const animationShownKey = `flowchart-animation-shown-${flowchartData?.id ?? ''}`;
-    const makeYearKey = `make-year-${flowchartData?.id ?? ''}`;
+    const animationShownKey = `flowchart-animation-shown-${flowchartIdRef.current ?? ''}`;
+    const makeYearKey = `make-year-${flowchartIdRef.current ?? ''}`;
 
     localStorage.removeItem(storageKey);
     localStorage.removeItem(defaultLayoutKey);
@@ -1300,11 +1315,12 @@ export default function FlowchartViewerPage() {
     // Clear WTG number
     localStorage.removeItem('flowchart-wtg-number');
 
-    console.log('Cleared all flowchart-related cache including technician selections');
+    console.log('🗑️ Cleared all flowchart-related cache including technician selections');
 
     // Reload the page to fresh state
+    console.log('🗑️ Reloading page...');
     window.location.reload();
-  };
+  }, [modelId, serviceId]);
 
   // Auto-layout handler - intelligently arrange steps based on flowchart pattern
   const handleAutoLayout = () => {
@@ -1446,6 +1462,7 @@ export default function FlowchartViewerPage() {
       const flowchart = model.flowcharts.find(f => f.id === serviceId);
       if (flowchart) {
         setFlowchartData(flowchart);
+        flowchartIdRef.current = flowchart.id;
       }
     }
 
@@ -1860,13 +1877,56 @@ ${fullLayoutData.map(step =>
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header - Two Row Layout */}
+        {/* Header - Multi Row Layout */}
         {!isFullscreen && (
-        <div className="border-b px-4 py-2 bg-background/95 backdrop-blur-sm">
-          {/* Row 1: Year, Flow-ID at top left */}
+        <div className="border-b px-4 py-2.5 bg-background/95 backdrop-blur-sm">
+          {/* Row 1: Back, Model name, WTG, Year, Flow-ID, Controls/Search */}
           <div className="flex items-center justify-between gap-3">
-            {/* Left: Year, Flow-ID */}
+            {/* Left: Back button, Model name, WTG, Year, Flow-ID */}
             <div className="flex items-center gap-3">
+              {/* Back button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/flowcharts")}
+                className="h-8 px-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Model name and revision */}
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">{flowchartData.model}</h1>
+                {flowchartData.isCustom && (
+                  <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
+                )}
+                <button
+                  onClick={() => setRevisionHistoryOpen(true)}
+                  className="text-sm text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
+                >
+                  Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
+                </button>
+              </div>
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+              {/* WTG Number Input */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground font-medium">WTG:</span>
+                <input
+                  type="text"
+                  value={wtgNumber}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setWtgNumber(value);
+                  }}
+                  placeholder="81309"
+                  maxLength={6}
+                  className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                />
+              </div>
+
               {/* Year Input */}
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-muted-foreground font-medium">Year:</span>
@@ -1879,19 +1939,66 @@ ${fullLayoutData.map(step =>
                   }}
                   placeholder="2024"
                   maxLength={4}
-                  className="w-[52px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  className="w-[45px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                 />
               </div>
 
-              {/* Flow-ID Display (Read-only) */}
+              {/* Flow-ID Input (same style as WTG and Year) */}
               {flowchartData.flowchartId && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground font-medium">Flow-ID:</span>
-                  <div className="w-[70px] h-6 px-2 text-xs font-mono border rounded bg-gray-50 dark:bg-gray-800 flex items-center justify-center cursor-not-allowed">
-                    {flowchartData.flowchartId}
-                  </div>
+                  <input
+                    type="text"
+                    value={flowchartData.flowchartId}
+                    readOnly
+                    className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-not-allowed"
+                  />
                 </div>
               )}
+
+              {/* Divider */}
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+
+              {/* Technician Assignment (T1/T2/T3) */}
+              <div className="flex items-center gap-1">
+                <Users className="h-3 w-3 text-muted-foreground" />
+                <button
+                  onClick={() => openTechnicianModal('global')}
+                  className={cn(
+                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                    selectedT1
+                      ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
+                </button>
+                <span className="text-muted-foreground">/</span>
+                <button
+                  onClick={() => openTechnicianModal('global')}
+                  className={cn(
+                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
+                    selectedT2
+                      ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
+                </button>
+                <span className="text-muted-foreground">/</span>
+                <button
+                  onClick={() => openTechnicianModal('global')}
+                  className={cn(
+                    "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
+                    selectedT3
+                      ? "bg-green-500 hover:bg-green-600 text-white border-0"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                  )}
+                >
+                  <GraduationCap className="h-3 w-3" />
+                  T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
+                </button>
+              </div>
             </div>
 
             {/* Right: Controls */}
@@ -1915,10 +2022,6 @@ ${fullLayoutData.map(step =>
                   </Button>
 
                   {/* Divider */}
-                  <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-0.5" />
-
-                  {/* Offline Status */}
-                  <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
                 </div>
 
                 {/* Row 2: Save Layout, Layout, View */}
@@ -1992,121 +2095,21 @@ ${fullLayoutData.map(step =>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
-                {/* Divider */}
-                <div className="h-5 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-
-                {/* Offline Status */}
-                <OfflineStatusIndicator flowchart={flowchartData} steps={steps} />
               </div>
             )}
           </div>
 
-          {/* Row 2: Back button, WTG, Model name, Service Program, T1/T2/T3, Search */}
-          <div className="flex items-center gap-3 mt-2">
-            {/* Back button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/flowcharts")}
-              className="h-8 px-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-
-            {/* WTG Number Input */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground font-medium">WTG:</span>
-              <input
-                type="text"
-                value={wtgNumber}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setWtgNumber(value);
-                }}
-                placeholder="248024"
-                maxLength={6}
-                className="w-[70px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-              />
-            </div>
-
-            {/* Model name */}
-            <h1 className="text-lg font-bold">{flowchartData.model}</h1>
-            {flowchartData.isCustom && (
-              <Badge variant="secondary" className="text-xs h-5">Custom</Badge>
-            )}
-
-            {/* Service Program and Revision */}
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Service Program ·</span>
-              <button
-                onClick={() => setRevisionHistoryOpen(true)}
-                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-dotted underline-offset-2 hover:decoration-solid"
-              >
-                Rev.{flowchartData.revisionDate.split('/')[0].replace(/^0+/, '')}
-              </button>
-            </div>
-
-            {/* Technician Assignment (T1/T2/T3) */}
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-muted-foreground" />
-              <button
-                onClick={() => openTechnicianModal('global')}
-                className={cn(
-                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
-                  selectedT1
-                    ? "bg-blue-500 hover:bg-blue-600 text-white border-0"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                )}
-              >
-                T1{selectedT1?.initials ? `: ${selectedT1.initials}` : ''}
-              </button>
-              <span className="text-muted-foreground">/</span>
-              <button
-                onClick={() => openTechnicianModal('global')}
-                className={cn(
-                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap",
-                  selectedT2
-                    ? "bg-purple-500 hover:bg-purple-600 text-white border-0"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                )}
-              >
-                T2{selectedT2?.initials ? `: ${selectedT2.initials}` : ''}
-              </button>
-              <span className="text-muted-foreground">/</span>
-              <button
-                onClick={() => openTechnicianModal('global')}
-                className={cn(
-                  "h-6 px-2 text-xs font-bold rounded transition-colors whitespace-nowrap flex items-center gap-1",
-                  selectedT3
-                    ? "bg-amber-500 hover:bg-amber-600 text-white border-0"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                )}
-              >
-                <GraduationCap className="h-3 w-3" />
-                T3{selectedT3?.initials ? `: ${selectedT3.initials}` : ''}
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="w-64">
-              <FlowchartSearch
-                steps={steps}
-                onSelectStep={handleSearchSelectStep}
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Start Service button or Job Tracking Display + Controls */}
+          {/* Row 2: Start Service button or Job Tracking Display + Controls */}
           {!isEditMode && (
-            <div className="flex items-center gap-3 ml-11 mt-1">
+            <div className="flex items-center gap-3 ml-11 mt-0.5">
               {!jobStarted ? (
                 /* Before Service Start */
                 <Button
                   onClick={handleStartService}
                   size="sm"
-                  className="h-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
+                  className="h-5 px-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
                 >
-                  <span className="text-xs font-semibold">Start Service</span>
+                  <span className="text-[10px] font-semibold">Start Service</span>
                 </Button>
               ) : !jobFinished ? (
                 /* Service In Progress */
@@ -2114,9 +2117,9 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-6 bg-gradient-to-r from-yellow-500 to-amber-500 text-white shadow-md cursor-default opacity-100"
+                    className="h-5 px-2 bg-gradient-to-r from-yellow-500 to-amber-500 text-white cursor-default opacity-100 animate-pulse shadow-lg shadow-yellow-500/50"
                   >
-                    <span className="text-xs font-semibold">In Progress</span>
+                    <span className="text-[10px] font-semibold">In Progress</span>
                   </Button>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
                     <span className="text-xs text-muted-foreground">Started:</span>
@@ -2144,9 +2147,9 @@ ${fullLayoutData.map(step =>
                   <Button
                     size="sm"
                     disabled
-                    className="h-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100"
+                    className="h-5 px-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md cursor-default opacity-100"
                   >
-                    <span className="text-xs font-semibold">✓ Completed</span>
+                    <span className="text-[10px] font-semibold">✓ Completed</span>
                   </Button>
                   <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md">
                     <span className="text-xs text-muted-foreground">Started:</span>
@@ -2178,105 +2181,6 @@ ${fullLayoutData.map(step =>
                 </>
               )}
 
-              {/* Push controls to the right */}
-              <div className="flex items-center gap-2 ml-auto">
-                {/* Hide Completed Steps Toggle */}
-                <label className="flex items-center gap-1.5 border rounded-md px-2 py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors h-6">
-                  <input
-                    type="checkbox"
-                    checked={hideCompletedSteps}
-                    onChange={(e) => setHideCompletedSteps(e.target.checked)}
-                    className="w-3 h-3 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="text-xs font-medium text-muted-foreground">Hide Done</span>
-                </label>
-
-                {/* Clear Cache */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleClearCache}
-                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-300 dark:hover:bg-red-950"
-                  title="Clear Cache"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-
-                {/* Test: Completion Slider */}
-                <div className="flex items-center gap-2 border rounded-md px-3 py-1 bg-green-50/50 dark:bg-green-950/50 border-green-300 dark:border-green-700">
-                  <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    value={testCompletionPercent}
-                    onChange={(e) => setTestCompletionPercent(Number(e.target.value))}
-                    className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-green-600"
-                    title="Test completion percentage"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      // Calculate how many tasks to complete based on percentage
-                      const allTasks: any[] = [];
-                      steps.forEach((step, stepIndex) => {
-                        step.tasks.forEach((task, taskIndex) => {
-                          allTasks.push({ stepIndex, taskIndex, task });
-                        });
-                      });
-
-                      const tasksToComplete = Math.floor((allTasks.length * testCompletionPercent) / 100);
-
-                      // Create completely new step objects with new task objects
-                      const updatedSteps = steps.map((step, stepIndex) => ({
-                        ...step,
-                        tasks: step.tasks.map((task, taskIndex) => {
-                          // Find if this task should be completed
-                          const taskGlobalIndex = allTasks.findIndex(
-                            t => t.stepIndex === stepIndex && t.taskIndex === taskIndex
-                          );
-                          return {
-                            ...task,
-                            completed: taskGlobalIndex < tasksToComplete
-                          };
-                        })
-                      }));
-
-                      setSteps(updatedSteps);
-                      // Force flowchart to re-render
-                      setFlowchartKey(prev => prev + 1);
-                      setToastMessage(`✅ ${testCompletionPercent}% tasks completed (test mode)`);
-                      setShowToast(true);
-                    }}
-                    className="h-5 px-1.5 text-[10px] text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-900"
-                    title={`Complete ${testCompletionPercent}% of tasks`}
-                  >
-                    Test {testCompletionPercent}%
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      // Create completely new step objects with new task objects
-                      const updatedSteps = steps.map(step => ({
-                        ...step,
-                        tasks: step.tasks.map(task => ({ ...task, completed: false }))
-                      }));
-                      setSteps(updatedSteps);
-                      // Force flowchart to re-render
-                      setFlowchartKey(prev => prev + 1);
-                      setToastMessage('🔄 All tasks reset');
-                      setShowToast(true);
-                    }}
-                    className="h-5 px-1.5 text-[10px] text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    title="Reset all tasks"
-                  >
-                    Reset
-                  </Button>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -2296,6 +2200,18 @@ ${fullLayoutData.map(step =>
           </div>
         )}
 
+        {/* Search Bar - Centered below header */}
+        {!isFullscreen && (
+          <div className="absolute z-50 left-1/2 top-[78px] -translate-x-1/2 group">
+            <div className="bg-gray-800/10 hover:bg-gray-800/80 focus-within:bg-gray-800/80 backdrop-blur-sm border border-gray-700/10 hover:border-gray-700/50 focus-within:border-gray-700/50 rounded-lg p-1.5 shadow-lg transition-all duration-300">
+              <FlowchartSearch
+                steps={steps}
+                onSelectStep={handleSearchSelectStep}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Flowchart Area - Unified View with Optional Edit Mode */}
         <div className="flex-1 overflow-hidden relative">
           {/* Info Legend Dropdown - Top Left */}
@@ -2304,6 +2220,13 @@ ${fullLayoutData.map(step =>
             steps={steps}
             selectedServiceType={selectedServiceType}
             onServiceTypeChange={setSelectedServiceType}
+            onStepClick={(stepId) => {
+              const step = steps.find(s => s.id === stepId);
+              if (step) {
+                setSelectedStep(step);
+                setDrawerOpen(true);
+              }
+            }}
           />
 
           <FlowchartEditor
@@ -2324,6 +2247,7 @@ ${fullLayoutData.map(step =>
             initialEdges={edges}
             onEdgesChange={setEdges}
             hideCompletedSteps={hideCompletedSteps}
+            onToggleHideCompleted={() => setHideCompletedSteps(!hideCompletedSteps)}
             onRealignToGrid={handleRealignToGrid}
             freePositioning={freePositioning}
             layoutMode={layoutMode}
@@ -2334,6 +2258,66 @@ ${fullLayoutData.map(step =>
             }}
             selectedT1={selectedT1}
             selectedT2={selectedT2}
+            testCompletionPercent={testCompletionPercent}
+            onTestCompletionChange={setTestCompletionPercent}
+            onTestCompletion={() => {
+              // Calculate how many tasks to complete based on percentage
+              const allTasks: any[] = [];
+              steps.forEach((step, stepIndex) => {
+                step.tasks.forEach((task, taskIndex) => {
+                  allTasks.push({ stepIndex, taskIndex, task });
+                });
+              });
+
+              const tasksToComplete = Math.floor((allTasks.length * testCompletionPercent) / 100);
+
+              // Helper function to generate realistic time based on target
+              const generateRealisticTime = (targetMinutes: number): number => {
+                if (!targetMinutes || targetMinutes === 0) {
+                  // If no target, use a random time between 5-30 minutes
+                  return Math.floor(5 + Math.random() * 25);
+                }
+
+                // Generate variance between -20% to +30% of target time
+                // This creates realistic variation where tasks sometimes take longer
+                const variancePercent = -20 + Math.random() * 50; // -20% to +30%
+                const actualTime = Math.round(targetMinutes * (1 + variancePercent / 100));
+
+                // Ensure at least 1 minute
+                return Math.max(1, actualTime);
+              };
+
+              // Create completely new step objects with new task objects
+              const updatedSteps = steps.map((step, stepIndex) => {
+                // Calculate average time per task based on step duration
+                const stepDuration = step.duration || 0;
+                const taskCount = step.tasks.length;
+                const avgTimePerTask = taskCount > 0 ? Math.floor(stepDuration / taskCount) : 15;
+
+                return {
+                  ...step,
+                  tasks: step.tasks.map((task, taskIndex) => {
+                    // Find if this task should be completed
+                    const taskGlobalIndex = allTasks.findIndex(
+                      t => t.stepIndex === stepIndex && t.taskIndex === taskIndex
+                    );
+                    const shouldComplete = taskGlobalIndex < tasksToComplete;
+
+                    return {
+                      ...task,
+                      completed: shouldComplete,
+                      // Add realistic time if task is completed (use actualTimeMinutes field)
+                      actualTimeMinutes: shouldComplete ? generateRealisticTime(avgTimePerTask) : task.actualTimeMinutes
+                    };
+                  })
+                };
+              });
+
+              setSteps(updatedSteps);
+              setToastMessage(`✅ ${testCompletionPercent}% tasks completed with realistic times (test mode)`);
+              setShowToast(true);
+            }}
+            onClearCache={handleClearCache}
           />
         </div>
       </div>

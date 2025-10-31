@@ -4,17 +4,25 @@ import { useState, useEffect, useRef } from "react";
 import { FlowchartData, parseServiceTimes } from "@/lib/flowchart-data";
 import { SERVICE_TYPE_COLORS } from "@/lib/service-colors";
 import { getSelectedTechnicians } from "@/lib/technicians-data";
-import { Users, Clock, Timer, ChevronDown, ChevronUp, Pin, X, GripVertical, FileText, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Clock, Timer, ChevronDown, ChevronUp, Pin, X, GripVertical, FileText, ArrowUp, ArrowDown, ExternalLink, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface FlowchartInfoDropdownProps {
   flowchart: FlowchartData;
   steps?: any[]; // Optional steps array for progress tracking
   selectedServiceType?: string; // Selected service type to show additional time
   onServiceTypeChange?: (serviceType: string) => void; // Callback to change service type filter
+  onStepClick?: (stepId: string) => void; // Callback to open a step
 }
 
-export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceType, onServiceTypeChange }: FlowchartInfoDropdownProps) {
+export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceType, onServiceTypeChange, onStepClick }: FlowchartInfoDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -22,6 +30,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [dropDirection, setDropDirection] = useState<'down' | 'up'>('down');
+  const [showNotesDialog, setShowNotesDialog] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -60,10 +69,35 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
   const timeDifferenceMinutes = totalActualTimeMinutes - targetDurationMinutes;
   const isAheadOfSchedule = timeDifferenceMinutes < 0 && totalActualTimeMinutes > 0;
 
-  // Count total notes
-  const totalNotes = steps.reduce((sum, step) => {
-    return sum + (step.notes ? 1 : 0);
-  }, 0);
+  // Collect all notes from all tasks with metadata
+  const allNotes: Array<{
+    note: any;
+    stepId: string;
+    stepTitle: string;
+    taskDescription: string;
+    taskId: string;
+  }> = [];
+
+  steps.forEach((step) => {
+    step.tasks?.forEach((task: any) => {
+      if (task.notes && Array.isArray(task.notes) && task.notes.length > 0) {
+        task.notes.forEach((note: any) => {
+          allNotes.push({
+            note,
+            stepId: step.id,
+            stepTitle: step.title || 'Untitled Step',
+            taskDescription: task.description,
+            taskId: task.id,
+          });
+        });
+      }
+    });
+  });
+
+  // Sort notes by timestamp (newest first)
+  allNotes.sort((a, b) => new Date(b.note.timestamp).getTime() - new Date(a.note.timestamp).getTime());
+
+  const totalNotes = allNotes.length;
 
   // Format to "H M" format (e.g., "38H", "19H 30M", "30M")
   const formatToHM = (minutes: number): string => {
@@ -225,15 +259,12 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
       data-tutorial="info-panel"
     >
       {/* Info Button */}
-      <div className={cn(
-        "bg-gray-800/80 hover:bg-gray-700/90 text-white rounded-md shadow-lg transition-all select-none backdrop-blur-sm border border-gray-700/50",
-        !hasBeenOpened && "animate-pulse"
-      )}>
+      <div className="bg-gray-800/10 hover:bg-gray-800/80 text-white/40 hover:text-white rounded-md shadow-lg transition-all duration-300 select-none backdrop-blur-sm border border-gray-700/10 hover:border-gray-700/50">
         <div className="flex items-center">
           <div
             onMouseDown={handleMouseDown}
             className={cn(
-              "p-1.5 hover:bg-gray-600/50 rounded-l-md transition-colors",
+              "p-1.5 hover:bg-gray-600/50 rounded-l-md transition-all duration-300",
               isDragging ? "cursor-grabbing" : "cursor-grab"
             )}
             title="Drag to move"
@@ -257,13 +288,13 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
       {/* Dropdown Legend Panel */}
       <div
         className={cn(
-          "absolute left-0 w-[300px] bg-white dark:bg-gray-900 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300",
+          "absolute left-0 w-[300px] bg-gray-800/10 backdrop-blur-md rounded-lg shadow-2xl border border-gray-600/10 overflow-hidden transition-all duration-300",
           dropDirection === 'down' ? "top-full mt-2" : "bottom-full mb-2",
-          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          isOpen ? "opacity-100 scale-100 bg-gray-800/80 border-gray-600/50" : "opacity-0 scale-95 pointer-events-none"
         )}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-gray-800 to-gray-700 px-3 py-2 flex items-center justify-between border-b border-gray-700">
+        <div className="bg-gradient-to-r from-gray-700/80 to-gray-600/80 px-3 py-2 flex items-center justify-between border-b border-gray-700/50">
           <h3 className="text-white font-bold text-sm">{flowchart.model}</h3>
           <div className="flex items-center gap-1">
             <button
@@ -337,18 +368,18 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
           </div>
 
           {/* Progress Tracker */}
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold">PROGRESS</div>
+          <div className="pt-2 border-t border-gray-700/50">
+            <div className="text-[10px] text-gray-400 mb-1.5 font-semibold">PROGRESS</div>
 
             {/* Tasks Progress */}
             <div className="mb-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-600 dark:text-gray-300">Tasks</span>
-                <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200">
+                <span className="text-[10px] text-gray-300">Tasks</span>
+                <span className="text-[10px] font-bold text-gray-200">
                   {completedTasks}/{totalTasks} ({Math.round(taskProgressPercent)}%)
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-green-500 transition-all"
                   style={{ width: `${taskProgressPercent}%` }}
@@ -362,12 +393,12 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                 {/* Time Progress - Target */}
                 <div className="mb-2">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-gray-600 dark:text-gray-300">Target</span>
-                    <span className="text-[10px] font-bold text-green-600">
+                    <span className="text-[10px] text-gray-300">Target</span>
+                    <span className="text-[10px] font-bold text-green-400">
                       {formatToHM(targetDurationMinutes)}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-green-500 transition-all"
                       style={{ width: `${targetProgressPercent}%` }}
@@ -378,7 +409,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                 {/* Time Progress - Actual with Smart Color Coding */}
                 <div className="mb-1">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-gray-600 dark:text-gray-300">Actual</span>
+                <span className="text-[10px] text-gray-300">Actual</span>
                 <div className="flex items-center gap-2">
                   <span className={cn(
                     "text-[10px] font-bold",
@@ -452,7 +483,7 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
                 </div>
               </div>
               <div className="relative">
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden relative">
+                <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden relative">
                   {/* Green part (up to target) */}
                   {totalActualTimeMinutes > 0 && (
                     <div
@@ -480,8 +511,8 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
           </div>
 
           {/* Service Type Legend */}
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5 font-semibold">SERVICE TYPES (FILTER)</div>
+          <div className="pt-2 border-t border-gray-700/50">
+            <div className="text-[10px] text-gray-400 mb-1.5 font-semibold">SERVICE TYPES (FILTER)</div>
             <div className="grid grid-cols-5 gap-1">
               {[
                 { code: "1Y", label: "1Y" },
@@ -543,17 +574,23 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
           </div>
 
           {/* Notes & Reference Info */}
-          <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1.5">
+          <div className="pt-2 border-t border-gray-700/50 space-y-1.5">
             {/* All Notes */}
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md px-2 py-1.5 flex items-center gap-2">
-              <FileText className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-              <span className="text-[11px] font-semibold text-amber-900 dark:text-amber-100">
+            <button
+              onClick={() => setShowNotesDialog(true)}
+              className="w-full bg-gray-700/20 hover:bg-gray-700/40 border border-gray-600/30 hover:border-gray-500/50 rounded-md px-2 py-1.5 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <FileText className="h-3.5 w-3.5 text-gray-300" />
+              <span className="text-[11px] font-semibold text-gray-200">
                 All Notes ({totalNotes})
               </span>
-            </div>
+              {totalNotes > 0 && (
+                <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
+              )}
+            </button>
 
             {/* Reference Info */}
-            <div className="text-[10px] space-y-0.5 text-gray-600 dark:text-gray-400">
+            <div className="text-[10px] space-y-0.5 text-gray-400">
               <div className="flex items-start gap-1">
                 <span className="font-semibold min-w-[24px]">SIF:</span>
                 <span>{flowchart.optimizedSIF}</span>
@@ -570,6 +607,90 @@ export function FlowchartInfoDropdown({ flowchart, steps = [], selectedServiceTy
           </div>
         </div>
       </div>
+
+      {/* All Notes Dialog */}
+      <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-amber-600 flex items-center justify-center">
+                <StickyNote className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold">All Notes</DialogTitle>
+                <DialogDescription>
+                  {totalNotes} {totalNotes === 1 ? 'note' : 'notes'} across all tasks
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+            {allNotes.length === 0 ? (
+              <div className="text-center py-12">
+                <StickyNote className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-sm text-muted-foreground">No notes yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Add notes to tasks to document observations and deviations
+                </p>
+              </div>
+            ) : (
+              allNotes.map((item, index) => (
+                <div
+                  key={`${item.stepId}-${item.taskId}-${item.note.id}-${index}`}
+                  className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-lg p-4 hover:border-amber-400 dark:hover:border-amber-600 transition-all"
+                >
+                  {/* Header: Step and Task info */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-amber-900 dark:text-amber-100">
+                          {item.stepTitle}
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-700 dark:text-amber-300 truncate">
+                        {item.taskDescription}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        onStepClick?.(item.stepId);
+                        setShowNotesDialog(false);
+                      }}
+                      className="flex-shrink-0 px-2 py-1 text-xs font-medium text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 hover:bg-amber-200 dark:hover:bg-amber-900/50 rounded transition-colors flex items-center gap-1"
+                      title="Go to task"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open
+                    </button>
+                  </div>
+
+                  {/* Note content */}
+                  <div className="bg-white dark:bg-gray-900/50 rounded-md p-3 mb-2">
+                    <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                      {item.note.note}
+                    </p>
+                  </div>
+
+                  {/* Timestamp */}
+                  <div className="flex items-center gap-2 text-[10px] text-amber-600 dark:text-amber-400">
+                    <Clock className="h-3 w-3" />
+                    <span>
+                      {new Date(item.note.timestamp).toLocaleString('sv-SE', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

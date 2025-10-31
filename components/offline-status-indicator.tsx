@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Cloud, CloudOff, HardDrive, Trash2, CheckCircle, AlertCircle, Download, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Popover,
   PopoverContent,
@@ -26,6 +27,7 @@ import { parseSIIReference, SII_DOCUMENTS } from "@/lib/sii-documents";
 interface OfflineStatusIndicatorProps {
   flowchart?: FlowchartData;
   steps?: FlowchartStep[];
+  side?: 'top' | 'bottom'; // Where the popover should open
 }
 
 interface DocumentDownloadStatus {
@@ -37,7 +39,7 @@ interface DocumentDownloadStatus {
   error?: string;
 }
 
-export function OfflineStatusIndicator({ flowchart, steps = [] }: OfflineStatusIndicatorProps) {
+export function OfflineStatusIndicator({ flowchart, steps = [], side = 'bottom' }: OfflineStatusIndicatorProps) {
   const { offlinePDFs, storageSize, clearAll, deletePDF, downloadPDF } = useOfflinePDFs();
   const [isOpen, setIsOpen] = useState(false);
   const [showDownloadDialog, setShowDownloadDialog] = useState(false);
@@ -263,31 +265,30 @@ export function OfflineStatusIndicator({ flowchart, steps = [] }: OfflineStatusI
       </Dialog>
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="relative h-9 gap-2"
+        <button
+          className={cn(
+            "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0 relative",
+            hasOfflineContent
+              ? "bg-green-600/80 hover:bg-green-700/80 text-white"
+              : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
+          )}
+          title={hasOfflineContent ? `Offline Ready (${offlinePDFs.length} documents)` : "Online Only - No offline content"}
         >
           {hasOfflineContent ? (
             <>
-              <CloudOff className="h-4 w-4 text-green-600" />
-              <span className="text-xs font-medium">Offline Ready</span>
-              <Badge
-                variant="secondary"
-                className="h-5 px-1.5 text-[10px] bg-green-100 text-green-700 hover:bg-green-100"
-              >
-                {offlinePDFs.length}
-              </Badge>
+              <CloudOff className="h-4 w-4" />
+              {offlinePDFs.length > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {offlinePDFs.length}
+                </span>
+              )}
             </>
           ) : (
-            <>
-              <Cloud className="h-4 w-4 text-gray-400" />
-              <span className="text-xs font-medium text-muted-foreground">Online Only</span>
-            </>
+            <Cloud className="h-4 w-4" />
           )}
-        </Button>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-96" align="end">
+      <PopoverContent className="w-96 max-h-[85vh] overflow-y-auto" align="end" side={side}>
         <div className="space-y-4">
           {/* Header */}
           <div>
@@ -367,35 +368,93 @@ export function OfflineStatusIndicator({ flowchart, steps = [] }: OfflineStatusI
 
               {/* Document List */}
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold">Cached Documents</h4>
-                <div className="max-h-64 overflow-y-auto space-y-2">
-                  {offlinePDFs.map((pdf) => (
-                    <div
-                      key={pdf.id}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0 mr-2">
-                        <p className="text-xs font-medium truncate">{pdf.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatBytes(pdf.size)}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">•</span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {new Date(pdf.downloadedAt).toLocaleDateString()}
-                          </span>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold">Cached Documents ({offlinePDFs.length})</h4>
+                  <Badge className="bg-green-100 text-green-700 text-[10px]">
+                    Available Offline
+                  </Badge>
+                </div>
+                <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+                  {offlinePDFs.map((pdf) => {
+                    const handleOpenPDF = async () => {
+                      try {
+                        // Open the PDF in a new tab from blob data
+                        const blob = new Blob([pdf.data], { type: 'application/pdf' });
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+
+                        // Clean up the URL after a delay
+                        setTimeout(() => URL.revokeObjectURL(url), 100);
+                      } catch (error) {
+                        console.error('Error opening PDF:', error);
+                        alert('Failed to open PDF');
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={pdf.id}
+                        className="group flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
+                        onClick={handleOpenPDF}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0 mr-2">
+                          {/* PDF Icon */}
+                          <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                            <svg className="h-5 w-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+
+                          {/* Document Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate group-hover:text-blue-600 transition-colors">
+                              {pdf.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                              <span className="text-[10px] text-green-600 font-medium">
+                                Available Offline
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">•</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatBytes(pdf.size)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenPDF();
+                            }}
+                            className="h-8 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Open PDF"
+                          >
+                            Open
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete "${pdf.title}" from offline storage?`)) {
+                                deletePDF(pdf.id);
+                              }
+                            }}
+                            className="h-7 w-7 p-0"
+                            title="Delete from offline storage"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                          </Button>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deletePDF(pdf.id)}
-                        className="h-7 w-7 p-0 flex-shrink-0"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-red-600" />
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

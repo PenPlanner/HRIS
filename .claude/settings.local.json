@@ -28,7 +28,11 @@
       "Bash(curl:*)",
       "Bash(git log:*)",
       "Bash(xargs:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(if exist \".next\\dev\\lock\" del \".next\\dev\\lock\")",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

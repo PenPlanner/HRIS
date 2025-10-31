@@ -59,71 +59,146 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
 
     const searchQuery = query.toLowerCase().trim();
     const searchResults: SearchResult[] = [];
+    const addedIds = new Set<string>(); // Prevent duplicates
 
     steps.forEach(step => {
-      // Search in step title
+      const stepTitle = step.title.split('\n')[0]; // First line for display
+
+      // Search in step title (all lines)
       if (step.title.toLowerCase().includes(searchQuery)) {
-        searchResults.push({
-          type: 'step',
-          id: step.id,
-          title: step.title,
-          subtitle: `Step ${step.id.replace('step-', '')}`,
-          serviceType: step.colorCode
-        });
+        const resultId = `step-${step.id}`;
+        if (!addedIds.has(resultId)) {
+          searchResults.push({
+            type: 'step',
+            id: step.id,
+            title: stepTitle,
+            subtitle: `Step ${step.id.replace('step-', '')}`,
+            serviceType: step.colorCode
+          });
+          addedIds.add(resultId);
+        }
       }
 
-      // Search in tasks
+      // Search in tasks (all text in description)
       step.tasks.forEach(task => {
         if (task.description.toLowerCase().includes(searchQuery)) {
-          searchResults.push({
-            type: 'task',
-            id: task.id,
-            stepId: step.id,
-            title: task.description,
-            subtitle: `${step.title} - Step ${step.id.replace('step-', '')}`,
-            serviceType: task.serviceType || step.colorCode
-          });
+          const resultId = `task-${task.id}`;
+          if (!addedIds.has(resultId)) {
+            searchResults.push({
+              type: 'task',
+              id: task.id,
+              stepId: step.id,
+              title: task.description,
+              subtitle: `${stepTitle} - Step ${step.id.replace('step-', '')}`,
+              serviceType: task.serviceType || step.colorCode
+            });
+            addedIds.add(resultId);
+          }
         }
       });
 
-      // Search in documents (SII references and notes)
+      // Search in documents array
+      if (step.documents && step.documents.length > 0) {
+        step.documents.forEach((doc, index) => {
+          if (doc.toLowerCase().includes(searchQuery)) {
+            const resultId = `doc-${step.id}-${index}`;
+            if (!addedIds.has(resultId)) {
+              searchResults.push({
+                type: 'document',
+                id: `${step.id}-doc-${index}`,
+                stepId: step.id,
+                title: doc,
+                subtitle: `Document in ${stepTitle}`,
+                documentType: 'pdf'
+              });
+              addedIds.add(resultId);
+            }
+          }
+        });
+      }
+
+      // Search in notes (full text search)
       if (step.notes?.toLowerCase().includes(searchQuery)) {
-        // Check if notes contain SII references
-        const siiMatch = step.notes.match(/SII-\d{3}-\d{3}/);
-        if (siiMatch) {
-          searchResults.push({
-            type: 'document',
-            id: `${step.id}-doc`,
-            stepId: step.id,
-            title: siiMatch[0],
-            subtitle: `Document in ${step.title}`,
-            documentType: 'pdf'
+        // Extract SII references from notes
+        const siiMatches = step.notes.match(/SII-\d{3}-\d{3}/g);
+        if (siiMatches) {
+          siiMatches.forEach((siiRef, index) => {
+            const resultId = `sii-notes-${step.id}-${index}`;
+            if (!addedIds.has(resultId)) {
+              searchResults.push({
+                type: 'document',
+                id: `${step.id}-sii-${index}`,
+                stepId: step.id,
+                title: siiRef,
+                subtitle: `SII in notes - ${stepTitle}`,
+                documentType: 'pdf'
+              });
+              addedIds.add(resultId);
+            }
           });
+        } else {
+          // If notes match but no SII, show as step note
+          const resultId = `note-${step.id}`;
+          if (!addedIds.has(resultId)) {
+            const notePreview = step.notes.substring(0, 60) + (step.notes.length > 60 ? '...' : '');
+            searchResults.push({
+              type: 'step',
+              id: step.id,
+              title: notePreview,
+              subtitle: `Note in ${stepTitle}`,
+              serviceType: step.colorCode
+            });
+            addedIds.add(resultId);
+          }
         }
       }
 
       // Search in task descriptions for SII references
-      step.tasks.forEach(task => {
+      step.tasks.forEach((task, taskIndex) => {
         const siiMatches = task.description.match(/SII-\d{3}-\d{3}/g);
         if (siiMatches) {
           siiMatches.forEach((siiRef, index) => {
             if (siiRef.toLowerCase().includes(searchQuery)) {
-              searchResults.push({
-                type: 'document',
-                id: `${task.id}-doc-${index}`,
-                stepId: step.id,
-                title: siiRef,
-                subtitle: `Document in ${step.title}`,
-                documentType: 'pdf'
-              });
+              const resultId = `sii-task-${task.id}-${index}`;
+              if (!addedIds.has(resultId)) {
+                searchResults.push({
+                  type: 'document',
+                  id: `${task.id}-sii-${index}`,
+                  stepId: step.id,
+                  title: siiRef,
+                  subtitle: `SII in task - ${stepTitle}`,
+                  documentType: 'pdf'
+                });
+                addedIds.add(resultId);
+              }
             }
           });
         }
       });
+
+      // Search in media array (if exists)
+      if (step.media && step.media.length > 0) {
+        step.media.forEach((media, index) => {
+          if (media.toLowerCase().includes(searchQuery)) {
+            const resultId = `media-${step.id}-${index}`;
+            if (!addedIds.has(resultId)) {
+              searchResults.push({
+                type: 'document',
+                id: `${step.id}-media-${index}`,
+                stepId: step.id,
+                title: media,
+                subtitle: `Media in ${stepTitle}`,
+                documentType: 'other'
+              });
+              addedIds.add(resultId);
+            }
+          }
+        });
+      }
     });
 
-    // Limit results to 8
-    setResults(searchResults.slice(0, 8));
+    // Limit results to 10 (increased from 8 for better coverage)
+    setResults(searchResults.slice(0, 10));
     setSelectedIndex(0);
   }, [query, steps]);
 
@@ -187,11 +262,11 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
       }
     }}>
       <div className="relative">
-        <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
+        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/40 group-hover:text-white transition-all duration-300" />
+        <input
           ref={inputRef}
           type="text"
-          placeholder="Search steps, tasks, documents... (Ctrl+K)"
+          placeholder="Search... (Ctrl+K)"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -199,7 +274,7 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
           }}
           onFocus={() => query && setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          className="h-7 pl-7 pr-7 text-xs"
+          className="h-8 w-64 pl-8 pr-8 text-xs bg-transparent text-white placeholder:text-white/40 group-hover:placeholder:text-white focus:placeholder:text-white rounded transition-all duration-300 border-0 focus:outline-none focus:ring-0"
         />
         {query && (
           <button
@@ -208,7 +283,7 @@ export function FlowchartSearch({ steps, onSelectStep, onSelectDocument }: Flowc
               setResults([]);
               setIsOpen(false);
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
           >
             <X className="h-3 w-3" />
           </button>

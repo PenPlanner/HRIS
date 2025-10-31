@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, createContext, useContext } from "react";
 import Image from "next/image";
 import {
   ReactFlow,
@@ -30,13 +30,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2, Pencil } from "lucide-react";
+import { Clock, Trash2, Edit, Copy, StickyNote, CheckCircle2, Workflow, ArrowRight, ArrowLeft, ArrowLeftRight, Minus, TrendingUp, Zap, User, Users, ChevronDown, ChevronUp, Info, Bug, Timer, Plus, Maximize2, Lock, Unlock, Expand, Loader2, Pencil, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SERVICE_TYPE_COLORS, getIncludedServiceTypes } from "@/lib/service-colors";
 import { CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { getSelectedTechnicians, getActiveTechnicians, getTechnicianById, Technician } from "@/lib/technicians-data";
 import { TechnicianSelectModal } from "@/components/technician-select-modal";
 import { TechnicianPairSelectModal } from "@/components/technician-pair-select-modal";
+import { OfflineStatusIndicator } from "@/components/offline-status-indicator";
 
 interface FlowchartEditorProps {
   flowchart: FlowchartData;
@@ -56,6 +57,7 @@ interface FlowchartEditorProps {
   initialEdges?: Edge[];
   onEdgesChange?: (edges: Edge[]) => void;
   hideCompletedSteps?: boolean;
+  onToggleHideCompleted?: () => void;
   onRealignToGrid?: () => void;
   freePositioning?: boolean;
   layoutMode?: 'topdown' | 'centered';
@@ -63,6 +65,10 @@ interface FlowchartEditorProps {
   onOpenTechnicianPairModal?: () => void;
   selectedT1?: Technician | null;
   selectedT2?: Technician | null;
+  testCompletionPercent?: number;
+  onTestCompletionChange?: (percent: number) => void;
+  onTestCompletion?: () => void;
+  onClearCache?: () => void;
 }
 
 // GRID ALIGNMENT SYSTEM - ENFORCED
@@ -89,6 +95,13 @@ interface FlowchartEditorProps {
 // RESULT: All connection handles align PERFECTLY to grid dots → straight lines!
 const GRID_SIZE = 30; // pixels (LOCKED - do not make configurable)
 
+// Create context for active work handler (to avoid React Flow callback issues)
+const ActiveWorkContext = createContext<{
+  activeWorkSteps: Set<string>;
+  handleToggleActiveWork: (stepId: string) => void;
+  highlightActiveWorkMode: boolean;
+} | null>(null);
+
 interface StepNodeData {
   step: FlowchartStep;
   onEdit: (step: FlowchartStep) => void;
@@ -100,6 +113,7 @@ interface StepNodeData {
   selectedServiceType?: string;
   gridSize: number;
   isActive?: boolean;
+  isActiveWork?: boolean;
   onOpenTechnicianPairModal?: () => void;
   selectedT1?: Technician | null;
   selectedT2?: Technician | null;
@@ -144,10 +158,20 @@ interface StepNodeProps extends NodeProps {
 }
 
 function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, height }: StepNodeProps) {
-  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, onOpenTechnicianPairModal, selectedT1, selectedT2 } = data;
+  const { step, onEdit, onDelete, onDuplicate, onClick, onUpdateStep, isEditMode, selectedServiceType, gridSize, isActive, isActiveWork, onOpenTechnicianPairModal, selectedT1, selectedT2 } = data;
+
+  // Get active work handler and highlight mode from context (avoids React Flow callback issues)
+  const activeWorkContext = useContext(ActiveWorkContext);
+  const handleToggleActiveWork = activeWorkContext?.handleToggleActiveWork;
+  const highlightActiveWorkMode = activeWorkContext?.highlightActiveWorkMode || false;
+
+  // OVERRIDE: Get isActiveWork from context instead of data to ensure it stays updated
+  const isActiveWorkFromContext = activeWorkContext?.activeWorkSteps.has(id) || false;
+
+  // Check if this node should be dimmed (in highlight mode but not active work)
+  const shouldDim = highlightActiveWorkMode && !isActiveWorkFromContext && !isComplete;
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editingStepName, setEditingStepName] = useState(false);
-
 
   // Get selected technicians directly from localStorage (same as info-dropdown)
   const { t1, t2 } = getSelectedTechnicians();
@@ -196,7 +220,15 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
   };
 
   return (
-    <div className="group relative w-full h-full">
+    <div
+      className="group relative w-full h-full transition-opacity duration-300"
+      style={{ opacity: shouldDim ? 0.25 : 1 }}
+      onContextMenu={(e) => {
+        // Prevent default context menu (right-click menu) on step boxes
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
       {/* Resize handles - only visible in edit mode */}
       {isEditMode && (
         <NodeResizer
@@ -307,36 +339,95 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
           isConnectable={isEditMode} />
       </>
 
+      {/* Active Work Label - Above the box (outside Card to avoid overflow clipping) */}
+      {/* Only show if active work AND not complete (complete steps turn green and don't need active work label) */}
+      {isActiveWorkFromContext && !isComplete && (
+        <div className="absolute left-1/2 -translate-x-1/2 z-20 pointer-events-none" style={{ top: '-43px' }}>
+          <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 px-3 py-1 rounded shadow-md">
+            Active Work
+          </span>
+        </div>
+      )}
+
       <Card
         className={cn(
           "relative p-4 w-full h-full hover:shadow-lg transition-all flex flex-col overflow-auto",
           step.id === "step-4y-bolts"
             ? "border-yellow-500 border-[3px]"
-            : isActive && isComplete
-              ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50 ring-4 ring-blue-300/50"
-              : isComplete
-                ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
+            : isComplete
+              ? "border-green-500 border-[3px] shadow-green-500/50 shadow-xl"
+              : isActiveWorkFromContext
+                ? "ring-4 ring-blue-500 ring-offset-2 shadow-2xl shadow-blue-500/30 border-blue-500 border-[4px]"
                 : isActive
                   ? "border-blue-500 border-[4px] shadow-xl shadow-blue-500/50 ring-4 ring-blue-300/50"
                   : "border-gray-700/50 border-2"
         )}
         style={{
-          backgroundColor: isActive && isComplete
-            ? `rgba(59, 130, 246, 0.15)`
-            : isComplete
-              ? `rgba(34, 197, 94, 0.1)`
+          backgroundColor: isComplete
+            ? `rgba(34, 197, 94, 0.1)`
+            : isActiveWorkFromContext
+              ? `rgba(59, 130, 246, 0.2)`
               : isActive
                 ? `rgba(59, 130, 246, 0.1)`
                 : `${step.color}15`,
-          ...(isActive ? {
+          ...(isComplete ? {} : isActiveWorkFromContext ? {
+            boxShadow: '0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)',
+          } : isActive ? {
             borderColor: 'rgb(59, 130, 246)',
             borderWidth: '4px',
             boxShadow: '0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3)',
           } : {})
         }}
       >
-        {/* Step Label - Inside card, top left with checkmark if complete */}
-        <div className="absolute top-2 left-3 text-xs font-semibold flex items-center gap-1">
+      {/* Active Work Toggle - Top right corner (only show if not complete) */}
+      {!isEditMode && !isComplete && (
+        <button
+          data-active-work-button="true"
+          onClick={(e) => {
+            console.log('🔵 Active Work button clicked! step.id:', step.id);
+            console.log('🔵 handleToggleActiveWork exists?', typeof handleToggleActiveWork);
+            e.stopPropagation();
+            e.preventDefault();
+            if (handleToggleActiveWork) {
+              console.log('🔵 Calling handleToggleActiveWork...');
+              handleToggleActiveWork(step.id);
+            } else {
+              console.error('🔵 handleToggleActiveWork is undefined!');
+            }
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
+          className={cn(
+            "absolute top-2 right-2 z-20 rounded-md transition-all duration-200",
+            "hover:scale-110 active:scale-95",
+            "flex items-center justify-center",
+            isActiveWorkFromContext
+              ? "bg-blue-500 text-white shadow-lg shadow-blue-500/50"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-400 hover:text-white"
+          )}
+          style={{
+            width: '28px',
+            height: '28px',
+            padding: '4px'
+          }}
+          title={isActiveWorkFromContext ? "Remove from Active Work" : "Mark as Active Work"}
+        >
+          {isActiveWorkFromContext ? (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 4L6 11L3 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <div className="w-3 h-3 border-2 border-current rounded-sm" />
+          )}
+        </button>
+      )}
+
+        {/* Step Label - Center aligned at top with checkmark if complete */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 text-xs font-bold flex items-center gap-1">
           {isComplete && <span className="text-green-500 text-base">✓</span>}
           {isEditMode && editingStepName ? (
             <input
@@ -361,7 +452,7 @@ function StepNode({ data, id, positionAbsoluteX, positionAbsoluteY, width, heigh
                 }
               }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-blue-500 text-xs font-semibold text-foreground w-24"
+              className="bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-blue-500 text-[10px] font-bold text-foreground w-24"
             />
           ) : isEditMode ? (
             <span
@@ -1171,7 +1262,14 @@ function LogoNode({ data }: LogoNodeProps) {
   const { isEditMode } = data;
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
+    <div
+      className="relative w-full h-full flex items-center justify-center pointer-events-auto"
+      onContextMenu={(e) => {
+        // Prevent default context menu (right-click menu) on logo
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    >
       <div className="relative w-full h-full flex items-center justify-center p-6">
         <div className={`hover:scale-105 transition-transform duration-500 ${isEditMode ? 'cursor-move' : 'cursor-pointer'}`}>
           <Image
@@ -1262,13 +1360,18 @@ function FlowchartEditorInner({
   initialEdges = [],
   onEdgesChange: onEdgesChangeProp,
   hideCompletedSteps = false,
+  onToggleHideCompleted,
   onRealignToGrid,
   freePositioning = false,
   layoutMode = 'centered',
   activeStepIds = [],
   onOpenTechnicianPairModal,
   selectedT1,
-  selectedT2
+  selectedT2,
+  testCompletionPercent = 0,
+  onTestCompletionChange,
+  onTestCompletion,
+  onClearCache
 }: FlowchartEditorProps) {
   // Get React Flow instance to access fitView and zoom functions
   const { fitView, zoomIn, zoomOut, setCenter, getNode } = useReactFlow();
@@ -1333,6 +1436,70 @@ function FlowchartEditorInner({
     setHasUnsavedChanges(true);
   }, [flowchart, onFlowchartChange, setHasUnsavedChanges]);
 
+  // Active work steps (multiple steps can be active at once) - MUST be before useMemo
+  const [activeWorkSteps, setActiveWorkSteps] = useState<Set<string>>(new Set());
+
+  // Highlight Active Work mode - dims non-active work steps
+  const [highlightActiveWorkMode, setHighlightActiveWorkMode] = useState(false);
+
+  // Handler for long-press to toggle active work state
+  const handleToggleActiveWork = useCallback((stepId: string) => {
+    console.log('🟢 handleToggleActiveWork called with stepId:', stepId);
+
+    // Find the step to check if it's complete
+    const step = displayedSteps.find(s => s.id === stepId);
+    if (step) {
+      const completedTasks = step.tasks.filter(t => t.completed).length;
+      const totalTasks = step.tasks.length;
+      const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+      if (isComplete) {
+        console.log('🟢 Step is complete - cannot mark as active work');
+        return; // Don't allow marking completed steps as active work
+      }
+    }
+
+    setActiveWorkSteps(prev => {
+      const newSet = new Set(prev);
+      console.log('🟢 Current activeWorkSteps:', Array.from(prev));
+      if (newSet.has(stepId)) {
+        console.log('🟢 Removing stepId from active work');
+        newSet.delete(stepId);
+      } else {
+        console.log('🟢 Adding stepId to active work');
+        newSet.add(stepId);
+      }
+      console.log('🟢 New activeWorkSteps:', Array.from(newSet));
+      return newSet;
+    });
+  }, [displayedSteps]);
+
+  // Automatically remove completed steps from activeWorkSteps
+  useEffect(() => {
+    setActiveWorkSteps(prev => {
+      const newSet = new Set(prev);
+      let hasChanges = false;
+
+      // Check each step in activeWorkSteps
+      prev.forEach(stepId => {
+        const step = displayedSteps.find(s => s.id === stepId);
+        if (step) {
+          const completedTasks = step.tasks.filter(t => t.completed).length;
+          const totalTasks = step.tasks.length;
+          const isComplete = completedTasks === totalTasks && totalTasks > 0;
+
+          if (isComplete) {
+            console.log('🟢 Auto-removing completed step from active work:', stepId);
+            newSet.delete(stepId);
+            hasChanges = true;
+          }
+        }
+      });
+
+      return hasChanges ? newSet : prev;
+    });
+  }, [displayedSteps]);
+
   // Convert FlowchartStep[] to React Flow nodes
   const initialNodes: Node[] = useMemo(() => {
     const stepNodes: Node<StepNodeData>[] = displayedSteps.map(step => {
@@ -1363,6 +1530,7 @@ function FlowchartEditorInner({
           selectedServiceType,
           gridSize,
           isActive,
+          isActiveWork: activeWorkSteps.has(step.id),
           onOpenTechnicianPairModal,
           selectedT1,
           selectedT2,
@@ -1399,7 +1567,7 @@ function FlowchartEditorInner({
 
     // Info card is now a dropdown at the top - no longer a node in the flowchart
     return [logoNode, commitNode, ...stepNodes];
-  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds, onOpenTechnicianPairModal, selectedT1, selectedT2]);
+  }, [displayedSteps, gridSize, isEditMode, selectedServiceType, handleDelete, handleDuplicate, handleUpdateStep, onEditStep, onStepClick, flowchart, handleUpdateFlowchart, activeStepIds, onOpenTechnicianPairModal, selectedT1, selectedT2, activeWorkSteps, handleToggleActiveWork]);
 
   // Initialize edges (connections) - load from props
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -1410,9 +1578,19 @@ function FlowchartEditorInner({
   // NOW we can use useUpdateNodeInternals because we're inside ReactFlowProvider
   const updateNodeInternals = useUpdateNodeInternals();
 
-  // Update nodes when initialNodes changes (e.g., when technicians change)
+  // Update nodes when initialNodes changes (e.g., when technicians change, activeWorkSteps, etc.)
   // initialNodes already includes selectedT1 and selectedT2 in the data, so this is sufficient
   useEffect(() => {
+    console.log('🟣 useEffect triggered - updating nodes from initialNodes');
+    console.log('🟣 activeWorkSteps:', Array.from(activeWorkSteps));
+
+    // Log a sample node to see if onLongPress is there
+    const sampleNode = initialNodes.find(n => n.type === 'stepNode');
+    if (sampleNode) {
+      console.log('🟣 Sample node data.onLongPress:', typeof sampleNode.data.onLongPress);
+      console.log('🟣 Sample node data.isActiveWork:', sampleNode.data.isActiveWork);
+    }
+
     // Create completely new array reference and new object references for each node
     // to force React Flow to recognize the change
     const timestamp = Date.now();
@@ -1436,19 +1614,21 @@ function FlowchartEditorInner({
     }, 50);
   }, [initialNodes, setNodes, updateNodeInternals, selectedT1, selectedT2]);
 
-  // Update nodes when activeStepIds changes
+  // Update nodes when activeStepIds or activeWorkSteps changes
   useEffect(() => {
 
     setNodes((currentNodes) => {
       const updated = currentNodes.map((node) => {
         if (node.type === 'stepNode') {
           const isActive = activeStepIds.includes(node.id);
-          if (isActive !== node.data.isActive) {
+          const isActiveWork = activeWorkSteps.has(node.id);
+          if (isActive !== node.data.isActive || isActiveWork !== node.data.isActiveWork) {
             return {
               ...node,
               data: {
                 ...node.data,
-                isActive
+                isActive,
+                isActiveWork
               }
             };
           }
@@ -1462,7 +1642,11 @@ function FlowchartEditorInner({
     activeStepIds.forEach((nodeId) => {
       updateNodeInternals(nodeId);
     });
-  }, [activeStepIds, setNodes, updateNodeInternals]);
+    // Also update active work nodes
+    activeWorkSteps.forEach((nodeId) => {
+      updateNodeInternals(nodeId);
+    });
+  }, [activeStepIds, activeWorkSteps, setNodes, updateNodeInternals]);
 
 
   // Track if auto-layout has been triggered
@@ -2517,9 +2701,20 @@ function FlowchartEditorInner({
   }, [edges]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle node click to open detail drawer
-  const handleNodeClick = useCallback((_event: any, node: Node<StepNodeData>) => {
+  // Simple click handler - just open drawer
+  const handleNodeClick = useCallback((event: any, node: Node<StepNodeData>) => {
+    console.log('🔴 handleNodeClick triggered', event.target);
+
+    // Check if click came from Active Work button
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-active-work-button]')) {
+      console.log('🔴 Click came from Active Work button - ignoring');
+      return;
+    }
+
     // Only handle clicks on step nodes, not info card nodes
     if (!isEditMode && onStepClick && node.type === 'stepNode' && node.data.step) {
+      console.log('🔴 Opening drawer for step:', node.data.step.id);
       onStepClick(node.data.step);
     }
   }, [isEditMode, onStepClick]);
@@ -2669,7 +2864,8 @@ function FlowchartEditorInner({
   }), []);
 
   return (
-    <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
+    <ActiveWorkContext.Provider value={{ activeWorkSteps, handleToggleActiveWork, highlightActiveWorkMode }}>
+      <div className="w-full h-full bg-gray-50 dark:bg-gray-900 relative">
       {/* TEMPORARILY DISABLED: Animated Loading Overlay - Fullscreen */}
       {/* {showLoadingOverlay && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900/80 backdrop-blur-md">
@@ -2717,7 +2913,7 @@ function FlowchartEditorInner({
         proOptions={{ hideAttribution: true }}
         // Touch device support with viewport lock
         panOnDrag={isViewportLocked ? false : (!isEditMode ? [1, 2] : [1, 2])}
-        panOnScroll={isViewportLocked ? false : true}
+        panOnScroll={false}
         zoomOnPinch={isViewportLocked ? false : true}
         zoomOnScroll={isViewportLocked ? false : true}
         zoomOnDoubleClick={isViewportLocked ? false : true}
@@ -2730,114 +2926,187 @@ function FlowchartEditorInner({
         )}
 
         {/* Custom horizontal zoom controls at bottom */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-gray-800/50 backdrop-blur-md border border-gray-600/50 rounded-lg p-1 shadow-lg">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 bg-gray-800/10 hover:bg-gray-800/80 backdrop-blur-md border border-gray-600/10 hover:border-gray-600/50 rounded-lg p-1 shadow-lg transition-all duration-300 group">
           <button
             onClick={() => zoomIn({ duration: 200 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
+            className="h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white rounded transition-all duration-300 border-0"
             title="Zoom In"
           >
             <Plus className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           <button
             onClick={() => zoomOut({ duration: 200 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
+            className="h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white rounded transition-all duration-300 border-0"
             title="Zoom Out"
           >
             <Minus className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           <button
             onClick={() => fitView({ padding: 0.15, duration: 400 })}
-            className="h-8 w-8 flex items-center justify-center bg-gray-700/70 hover:bg-gray-600/70 text-white rounded transition-colors border border-gray-600/50"
+            className="h-8 w-8 flex items-center justify-center bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white rounded transition-all duration-300 border-0"
             title="Fit View"
           >
             <Maximize2 className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           <button
             onClick={toggleFullscreen}
             className={cn(
-              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
+              "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
               isFullscreen
                 ? "bg-blue-600/80 hover:bg-blue-700/80 text-white"
-                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
+                : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
             )}
             title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
             <Expand className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           <button
             onClick={() => setIsViewportLocked(!isViewportLocked)}
             className={cn(
-              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
+              "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
               isViewportLocked
                 ? "bg-orange-600/80 hover:bg-orange-700/80 text-white"
-                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
+                : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
             )}
             title={isViewportLocked ? "Unlock Viewport" : "Lock Viewport"}
           >
             {isViewportLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           <button
             onClick={onToggleEditMode}
             className={cn(
-              "h-8 w-8 flex items-center justify-center rounded transition-colors border border-gray-600/50",
+              "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
               isEditMode
                 ? "bg-green-600/80 hover:bg-green-700/80 text-white"
-                : "bg-gray-700/70 hover:bg-gray-600/70 text-white"
+                : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
             )}
             title={isEditMode ? "Exit Edit Mode" : "Enter Edit Mode"}
           >
             <Pencil className="h-4 w-4" />
           </button>
 
-          <div className="w-px h-6 bg-gray-600/50 mx-0.5" />
+          <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
 
           {/* Step Navigation Dropdown */}
           <Select
-            value={selectedStepForNav}
+            value=""
             onValueChange={(value) => {
-              setSelectedStepForNav(value);
               handleZoomToStep(value);
             }}
           >
-            <SelectTrigger className="h-8 w-40 bg-gray-700/70 hover:bg-gray-600/70 border-gray-600/50 text-white text-xs">
+            <SelectTrigger className="h-8 w-44 bg-transparent hover:bg-gray-600/70 border-0 text-white/40 group-hover:text-white hover:text-white text-xs transition-all duration-300">
               <SelectValue placeholder="Jump to step..." />
             </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
+            <SelectContent className="max-h-[400px] bg-gray-800/95 backdrop-blur-md border-gray-700/50">
               {displayedSteps.map((step) => {
                 // Extract step number from id (e.g. "step-1" -> "1", "step-2-1" -> "2.1")
                 const stepNumber = step.id.replace('step-', '').replace(/-/g, '.');
 
+                // Get step title (first line only)
+                const stepTitle = step.title.split('\n')[0];
+
+                // Calculate target duration
+                const targetDurationMinutes = step.durationMinutes || 0;
+                const targetHours = Math.floor(targetDurationMinutes / 60);
+                const targetMins = targetDurationMinutes % 60;
+                const targetDurationText = targetHours > 0 ? `${targetHours}h ${targetMins}m` : `${targetMins}m`;
+
+                // Calculate actual time spent
+                const actualMinutes = step.tasks.reduce((sum, task) => sum + (task.actualTimeMinutes || 0), 0);
+                const actualHours = Math.floor(actualMinutes / 60);
+                const actualMins = actualMinutes % 60;
+                const actualTimeText = actualHours > 0 ? `${actualHours}h ${actualMins}m` : `${actualMins}m`;
+
+                // Count completed and total tasks
+                const completedTasks = step.tasks.filter(t => t.completed).length;
+                const totalTasks = step.tasks?.length || 0;
+                const isComplete = completedTasks === totalTasks && totalTasks > 0;
+                const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+                // Check if overtime
+                const isOvertime = actualMinutes > targetDurationMinutes && targetDurationMinutes > 0;
+                const isAhead = actualMinutes < targetDurationMinutes && actualMinutes > 0;
+
                 return (
-                  <SelectItem key={step.id} value={step.id} className="text-xs">
-                    <div className="grid grid-cols-[80px_auto] gap-3 w-full items-center">
-                      <span className="font-medium text-left">Step {stepNumber}</span>
-                      <div className="flex items-center gap-1 justify-self-start">
-                        {step.technician === "both" ? (
-                          <>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white bg-blue-500">T1</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold text-white bg-purple-500">T2</span>
-                          </>
-                        ) : (
+                  <SelectItem
+                    key={step.id}
+                    value={step.id}
+                    className={cn(
+                      "text-xs hover:bg-gray-700/50 cursor-pointer group/item",
+                      isComplete && "bg-green-900/20 hover:bg-green-900/30"
+                    )}
+                  >
+                    <div className="flex flex-col gap-1.5 py-1.5 w-full">
+                      {/* Step number and title with completion badge */}
+                      <div className="flex items-center gap-2">
+                        {isComplete && <span className="text-green-400 text-sm">✓</span>}
+                        <span className="font-bold text-white">Step {stepNumber}</span>
+                        <span className="text-gray-300 truncate max-w-[180px]">{stepTitle}</span>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              isComplete ? "bg-green-500" : "bg-blue-500"
+                            )}
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                        <span className={cn(
+                          "text-[9px] font-bold min-w-[35px] text-right",
+                          isComplete ? "text-green-400" : "text-gray-400"
+                        )}>
+                          {completedTasks}/{totalTasks}
+                        </span>
+                      </div>
+
+                      {/* Metadata row */}
+                      <div className="flex items-center gap-2 text-[10px] flex-wrap">
+                        {/* Technician badges */}
+                        <div className="flex items-center gap-1">
+                          {step.technician === "both" ? (
+                            <>
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white bg-blue-500">T1</span>
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white bg-purple-500">T2</span>
+                            </>
+                          ) : (
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded text-[9px] font-bold text-white",
+                              step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
+                            )}>
+                              {step.technician}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Target duration */}
+                        <span className="text-gray-400">Target: {targetDurationText}</span>
+
+                        {/* Actual time spent with color coding */}
+                        {actualMinutes > 0 && (
                           <span className={cn(
-                            "px-2 py-0.5 rounded text-[10px] font-bold text-white",
-                            step.technician === "T1" ? "bg-blue-500" : "bg-purple-500"
+                            "font-semibold",
+                            isOvertime ? "text-red-400" : isAhead ? "text-green-400" : "text-blue-400"
                           )}>
-                            {step.technician}
+                            Actual: {actualTimeText}
                           </span>
                         )}
                       </div>
@@ -2847,6 +3116,95 @@ function FlowchartEditorInner({
               })}
             </SelectContent>
           </Select>
+
+          {/* View Mode Filters - Only show in view mode */}
+          {!isEditMode && (
+            <>
+              <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
+
+              {/* Hide Completed Steps */}
+              <button
+                onClick={onToggleHideCompleted}
+                className={cn(
+                  "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
+                  hideCompletedSteps
+                    ? "bg-green-600/80 hover:bg-green-700/80 text-white"
+                    : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
+                )}
+                title={hideCompletedSteps ? "Show Completed Steps" : "Hide Completed Steps"}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+              </button>
+
+              {/* Focus Active Work */}
+              <button
+                onClick={() => {
+                  if (activeWorkSteps.size > 0) {
+                    setHighlightActiveWorkMode(!highlightActiveWorkMode);
+                  }
+                }}
+                disabled={activeWorkSteps.size === 0}
+                className={cn(
+                  "h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0",
+                  activeWorkSteps.size === 0
+                    ? "opacity-30 cursor-not-allowed text-white/20"
+                    : highlightActiveWorkMode
+                      ? "bg-blue-600/80 hover:bg-blue-700/80 text-white"
+                      : "bg-transparent hover:bg-gray-600/70 text-white/40 group-hover:text-white hover:text-white"
+                )}
+                title={
+                  activeWorkSteps.size === 0
+                    ? "Mark steps as Active Work to use this filter"
+                    : highlightActiveWorkMode
+                      ? "Show All Steps"
+                      : "Focus on Active Work"
+                }
+              >
+                {highlightActiveWorkMode ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              </button>
+
+              <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
+
+              {/* Test Completion Slider */}
+              <div className="flex items-center gap-1.5 bg-gray-600/10 hover:bg-gray-600/20 px-2 py-1 rounded transition-all duration-300">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={testCompletionPercent}
+                  onChange={(e) => onTestCompletionChange?.(Number(e.target.value))}
+                  className="w-16 h-1 bg-gray-600/30 rounded-lg appearance-none cursor-pointer accent-gray-400"
+                  title="Test completion percentage"
+                />
+                <button
+                  onClick={() => onTestCompletion?.()}
+                  className="h-6 px-1.5 text-[10px] font-medium text-white/60 hover:text-white hover:bg-gray-600/20 rounded transition-colors"
+                  title={`Complete ${testCompletionPercent}% of tasks`}
+                >
+                  Test {testCompletionPercent}%
+                </button>
+              </div>
+
+              {/* Clear Cache */}
+              <button
+                onClick={() => {
+                  console.log('Clear Cache clicked, onClearCache:', typeof onClearCache);
+                  onClearCache?.();
+                }}
+                disabled={!onClearCache}
+                className="h-8 w-8 flex items-center justify-center rounded transition-all duration-300 border-0 bg-transparent hover:bg-gray-600/70 text-white/40 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Clear Cache"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+
+              <div className="w-px h-6 bg-gray-600/20 group-hover:bg-gray-600/50 mx-0.5 transition-all duration-300" />
+
+              {/* Offline Status */}
+              <OfflineStatusIndicator flowchart={flowchart} steps={steps} side="top" />
+            </>
+          )}
         </div>
 
       </ReactFlow>
@@ -3154,7 +3512,8 @@ function FlowchartEditorInner({
           <Button onClick={onAddStep}>Add First Step</Button>
         </div>
       )}
-    </div>
+      </div>
+    </ActiveWorkContext.Provider>
   );
 }
 

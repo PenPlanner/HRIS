@@ -143,7 +143,7 @@ export function getCumulativeServiceTime(
 
 export interface FlowchartData {
   id: string;
-  flowchartId?: string; // Unique flowchart ID (format: YYYYRR-NNN, e.g., 202501-001)
+  flowchartId?: string; // Unique flowchart ID (format: TTRRR, e.g., 23456) - TT=turbine type (2 digits), RRR=reference number (3 digits)
   model: string;
   serviceType: string;
   optimizedSIF: string;
@@ -176,7 +176,7 @@ export interface FlowchartData {
 // This ensures consistency across all users and sessions.
 export const ENVENTUS_MK0_1Y: FlowchartData = {
   id: "enventus-mk0-1y",
-  flowchartId: "250302", // Example Flow-ID (YY=25, RR=03, NN=02)
+  flowchartId: "23456", // Example Flow-ID (TT=23 for V136, RRR=456 random ref)
   model: "EnVentus Mk 0",
   serviceType: "1Y Service",
   optimizedSIF: "0159-0667",
@@ -851,39 +851,20 @@ export function generateFlowchartId(model: string, serviceType: string): string 
 }
 
 /**
- * Generate a unique flowchart ID with format: YYRRNN
- * YY = Year (last 2 digits)
- * RR = Region code (2 digits, default: 03)
- * NN = Sequential number (2 digits, auto-incremented)
- * Example: 250302, 250303, etc.
- * Total: 6 digits
+ * Generate a unique flowchart ID with format: TTRRR
+ * TT = Turbine type code (2 digits, e.g., 23 for V136)
+ * RRR = Random reference number (3 digits)
+ * Example: 23456, 23789, etc.
+ * Total: 5 digits
  */
-export function generateUniqueFlowchartId(regionCode: string = "03"): string {
-  const year = new Date().getFullYear();
-  const yearShort = year.toString().slice(-2); // Get last 2 digits (e.g., 2025 -> 25)
+export function generateUniqueFlowchartId(turbineTypeCode: string = "23"): string {
+  // Ensure turbine type is exactly 2 digits
+  const turbineCode = turbineTypeCode.padStart(2, '0').slice(0, 2);
 
-  // Get all existing flowchart IDs from localStorage
-  const existingFlowcharts = loadCustomFlowcharts();
-  const prefix = `${yearShort}${regionCode}`;
+  // Generate random 3-digit reference number
+  const randomRef = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
 
-  // Find the highest sequence number for this year and region
-  let maxSequence = 0;
-  existingFlowcharts.forEach(fc => {
-    if (fc.flowchartId && fc.flowchartId.startsWith(prefix)) {
-      // Extract last 2 digits as sequence number
-      const idStr = fc.flowchartId.toString();
-      if (idStr.length === 6) {
-        const sequence = parseInt(idStr.slice(-2));
-        if (!isNaN(sequence) && sequence > maxSequence) {
-          maxSequence = sequence;
-        }
-      }
-    }
-  });
-
-  // Increment and format with leading zeros (2 digits)
-  const nextSequence = (maxSequence + 1).toString().padStart(2, '0');
-  return `${prefix}${nextSequence}`;
+  return `${turbineCode}${randomRef}`;
 }
 
 /**

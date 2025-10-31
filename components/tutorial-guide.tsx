@@ -35,6 +35,9 @@ import {
   CheckCircle,
   AlertCircle,
   Package,
+  Users,
+  ZoomIn,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VersionDialog } from "./version-dialog";
@@ -80,8 +83,96 @@ const tutorialSteps: TutorialStep[] = [
             <div className="h-16 bg-white dark:bg-gray-700 rounded shadow-md" />
           </div>
           <div className="flex items-center gap-2 text-xs text-purple-600 font-semibold">
-            <span>⚲ Scroll to zoom</span>
+            <ZoomIn className="h-4 w-4" />
+            <span>Scroll to zoom in/out</span>
           </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'active-work',
+    title: 'Mark Active Work',
+    description: 'Click the checkbox in the top-right corner of any step to mark it as Active Work. Active steps glow blue so you can easily see what you\'re currently working on!',
+    icon: <Briefcase className="h-6 w-6" />,
+    position: 'center',
+    preview: (
+      <div className="space-y-3">
+        {/* Regular step */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border-2 border-gray-300 relative">
+          <div className="absolute top-2 right-2">
+            <div className="h-6 w-6 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center cursor-pointer">
+              <div className="h-3 w-3 border-2 border-gray-400 rounded" />
+            </div>
+          </div>
+          <div className="font-bold text-sm">Step 2-1: Check Generator</div>
+          <div className="text-xs text-gray-500 mt-1">Click checkbox to activate →</div>
+        </div>
+
+        <div className="text-center">
+          <span className="text-lg">↓</span>
+        </div>
+
+        {/* Active Work step */}
+        <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-4 border-2 border-blue-500 shadow-lg shadow-blue-500/50 relative">
+          <div className="absolute top-2 right-2">
+            <div className="h-6 w-6 rounded bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/50">
+              <CheckSquare className="h-4 w-4 text-white" />
+            </div>
+          </div>
+          <div className="absolute top-2 left-2">
+            <div className="px-2 py-0.5 bg-blue-500 text-white rounded-full text-[10px] font-bold">
+              ACTIVE WORK
+            </div>
+          </div>
+          <div className="font-bold text-sm text-blue-900 dark:text-blue-100 mt-3">Step 2-1: Check Generator</div>
+          <div className="text-xs text-blue-600 mt-1">✓ Marked as active work!</div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: 'technicians',
+    title: 'Assign Technicians',
+    description: 'Assign technicians (T1, T2) and a trainee (T3) to track who is working on the service. Click the technician button in the top toolbar!',
+    icon: <Users className="h-6 w-6" />,
+    position: 'center',
+    preview: (
+      <div className="space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200">
+          <div className="text-xs font-medium mb-3">Assigned Technicians</div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                T1
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-medium">John Smith</div>
+                <div className="text-[10px] text-gray-500">Lead Technician</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">
+                T2
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-medium">Sarah Johnson</div>
+                <div className="text-[10px] text-gray-500">Technician</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold">
+                T3
+              </div>
+              <div className="flex-1">
+                <div className="text-xs font-medium">Mike Davis</div>
+                <div className="text-[10px] text-gray-500">Trainee</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="text-center text-xs text-gray-600">
+          Track who worked on each step
         </div>
       </div>
     ),
@@ -434,6 +525,8 @@ export function TutorialGuide({ onComplete }: TutorialGuideProps) {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { icon: <Navigation className="h-4 w-4" />, text: 'How to navigate' },
+                { icon: <Briefcase className="h-4 w-4" />, text: 'Active Work' },
+                { icon: <Users className="h-4 w-4" />, text: 'Assign technicians' },
                 { icon: <MousePointer2 className="h-4 w-4" />, text: 'Clicking steps' },
                 { icon: <FileText className="h-4 w-4" />, text: 'Finding documents' },
                 { icon: <CheckSquare className="h-4 w-4" />, text: 'Checking tasks' },
@@ -679,9 +772,36 @@ const helpSections = [
     description: 'Move around the flowchart canvas',
     points: [
       'Click and drag to pan the canvas',
-      'Scroll to zoom in and out',
+      'Scroll to zoom in and out (not page scroll)',
       'Use the Controls panel for zoom buttons',
       'Press "F" to fit all steps in view',
+    ],
+  },
+  {
+    id: 'active-work',
+    title: 'Active Work',
+    icon: <Briefcase className="h-5 w-5 text-blue-600" />,
+    description: 'Mark steps you are currently working on',
+    points: [
+      'Click checkbox in top-right corner of any step',
+      'Active steps glow blue with shadow effect',
+      'Shows "ACTIVE WORK" badge on step',
+      'Helps you quickly find what you\'re working on',
+      'Can mark multiple steps as active',
+      'Blue styling persists when opening step drawer',
+    ],
+  },
+  {
+    id: 'technicians',
+    title: 'Technician Assignment',
+    icon: <Users className="h-5 w-5 text-blue-600" />,
+    description: 'Track who is working on the service',
+    points: [
+      'Click technician button in top toolbar',
+      'Assign T1 (Lead), T2 (Support), T3 (Trainee)',
+      'Technician avatars shown in header',
+      'Track activity per technician',
+      'Change assignments anytime during service',
     ],
   },
   {

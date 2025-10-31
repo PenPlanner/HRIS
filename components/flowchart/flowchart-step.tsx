@@ -7,7 +7,7 @@ import { CheckCircle2, Clock, StickyNote, User, Users, FileText } from "lucide-r
 import { cn } from "@/lib/utils";
 import { parseSIIReference, SII_DOCUMENTS } from "@/lib/sii-documents";
 import { getSectionPage } from "@/lib/sii-page-mapping";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { PDFViewerDialog } from "./pdf-viewer-dialog";
 
 interface FlowchartStepProps {
@@ -17,9 +17,11 @@ interface FlowchartStepProps {
   totalTasks: number;
   selectedT1Initials?: string;
   selectedT2Initials?: string;
+  isActive?: boolean;
+  onLongPress?: () => void;
 }
 
-export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selectedT1Initials, selectedT2Initials }: FlowchartStepProps) {
+export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selectedT1Initials, selectedT2Initials, isActive = false, onLongPress }: FlowchartStepProps) {
   const isComplete = completedTasks === totalTasks && totalTasks > 0;
   const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
@@ -27,6 +29,47 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
   const [pdfDocument, setPdfDocument] = useState<number | null>(null);
   const [pdfPage, setPdfPage] = useState<number>(1);
+
+  // Long press detection
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only trigger long press on left mouse button
+    if (e.button !== 0) return;
+
+    setIsLongPressing(true);
+    longPressTimerRef.current = setTimeout(() => {
+      if (onLongPress) {
+        onLongPress();
+        setIsLongPressing(false);
+      }
+    }, 500); // 500ms for long press
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressing(false);
+  };
+
+  const handleMouseLeave = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setIsLongPressing(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
 
   // Handle clicking on a reference number
   const handleRefClick = (refText: string, e: React.MouseEvent) => {
@@ -110,18 +153,39 @@ export function FlowchartStep({ step, onClick, completedTasks, totalTasks, selec
       <Card
         className={cn(
           "relative cursor-pointer hover:shadow-lg transition-all p-4 w-[300px] min-h-[168px]",
-          isComplete && "ring-2 ring-green-500"
+          isComplete && "ring-2 ring-green-500",
+          isActive && "ring-4 ring-blue-500 ring-offset-2 shadow-2xl shadow-blue-500/30",
+          isLongPressing && "scale-[0.98]"
         )}
         style={{
           backgroundColor: `${step.color}15`,
-          borderLeft: `4px solid ${step.color}`
+          borderLeft: `4px solid ${step.color}`,
+          ...(isActive && {
+            boxShadow: '0 0 30px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2)',
+          })
         }}
         onClick={onClick}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         onWheel={(e) => {
           // Stop propagation to allow scrolling inside the card
           e.stopPropagation();
         }}
       >
+      {/* Active Work Indicator - Animated corner badge */}
+      {isActive && (
+        <div className="absolute -top-2 -left-2 z-10">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-500 rounded-full blur-md opacity-60 animate-pulse"></div>
+            <div className="relative bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+              <div className="w-2 h-2 bg-white rounded-full animate-ping absolute"></div>
+              <div className="w-2 h-2 bg-white rounded-full relative"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top badges - Technicians only */}
       <div className="absolute top-2 right-2 flex gap-1">
         {step.technician === "both" ? (
