@@ -56,6 +56,14 @@ export interface FlowchartStep {
   documents?: string[];
   media?: string[];
   notes?: string;
+  bugs?: Array<{
+    id: string;
+    description: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    status: 'open' | 'in-progress' | 'resolved';
+    reportedBy?: string;
+    reportedAt?: string;
+  }>;
   completedAt?: string; // Timestamp when step was completed
   completedBy?: string; // Technician ID who completed this step
   completedByInitials?: string; // Technician initials for quick display

@@ -379,8 +379,7 @@ export function OfflineStatusIndicator({ flowchart, steps = [], side = 'bottom' 
                     const handleOpenPDF = async () => {
                       try {
                         // Open the PDF in a new tab from blob data
-                        const blob = new Blob([pdf.data], { type: 'application/pdf' });
-                        const url = URL.createObjectURL(blob);
+                        const url = URL.createObjectURL(pdf.blob);
                         window.open(url, '_blank');
 
                         // Clean up the URL after a delay
