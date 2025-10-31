@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Public paths that don't require authentication
-const publicPaths = ["/login", "/manifest.json", "/sw.js", "/favicon.ico"];
+const publicPaths = ["/login", "/manifest.json", "/sw.js", "/favicon.ico", "/api"];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAsset = /\.(?:svg|png|jpg|jpeg|gif|webp)$/i.test(pathname);

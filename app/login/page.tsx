@@ -220,14 +220,17 @@ export default function LoginPage() {
         </div>
         {/* Tooltip */}
         {latestCommit && !commitError && (
-          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <div className="absolute bottom-full right-0 mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
             <div className="bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-slate-700">
-              {latestCommit.date}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-slate-500">Last commit</span>
+                <span className="font-mono">{latestCommit.date}</span>
+              </div>
             </div>
           </div>
         )}
         {commitError && (
-          <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+          <div className="absolute bottom-full right-0 mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
             <div className="bg-red-800 text-red-200 text-xs px-3 py-1.5 rounded shadow-lg whitespace-nowrap border border-red-700">
               Failed to load commits
             </div>
