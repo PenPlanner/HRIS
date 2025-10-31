@@ -22,7 +22,15 @@ export async function GET() {
     const gitDir = join(process.cwd(), '.git');
     if (!existsSync(gitDir)) {
       console.log('Git directory not found, using fallback commits');
-      return NextResponse.json({ commits: FALLBACK_COMMITS });
+      return NextResponse.json(
+        { commits: FALLBACK_COMMITS },
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     }
 
     // Get last 15 commits with details
@@ -33,7 +41,15 @@ export async function GET() {
 
     if (!stdout || stdout.trim() === '') {
       console.log('No git output, using fallback commits');
-      return NextResponse.json({ commits: FALLBACK_COMMITS });
+      return NextResponse.json(
+        { commits: FALLBACK_COMMITS },
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
     }
 
     const commits = stdout.split('\n').map(line => {
@@ -41,10 +57,26 @@ export async function GET() {
       return { hash, message, relativeTime, date };
     });
 
-    return NextResponse.json({ commits });
+    return NextResponse.json(
+      { commits },
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching git commits, using fallback:', error);
     // Return fallback commits instead of error
-    return NextResponse.json({ commits: FALLBACK_COMMITS });
+    return NextResponse.json(
+      { commits: FALLBACK_COMMITS },
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   }
 }
