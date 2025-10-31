@@ -1923,7 +1923,7 @@ ${fullLayoutData.map(step =>
                   }}
                   placeholder="81309"
                   maxLength={6}
-                  className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  className="w-[60px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                 />
               </div>
 
@@ -1939,7 +1939,7 @@ ${fullLayoutData.map(step =>
                   }}
                   placeholder="2024"
                   maxLength={4}
-                  className="w-[45px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  className="w-[54px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                 />
               </div>
 
@@ -1951,7 +1951,7 @@ ${fullLayoutData.map(step =>
                     type="text"
                     value={flowchartData.flowchartId}
                     readOnly
-                    className="w-[50px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-not-allowed"
+                    className="w-[60px] h-6 px-2 text-xs font-mono border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center cursor-not-allowed"
                   />
                 </div>
               )}
